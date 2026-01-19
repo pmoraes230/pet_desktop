@@ -1,46 +1,46 @@
 import customtkinter as ctk
+import app.core.colors as colors
 
 class LoginForm(ctk.CTkFrame):
     def __init__(self, master):
         super().__init__(master, fg_color="white")
-        self.grid_rowconfigure((0,1,2,3,4), weight=1)
 
         ctk.CTkLabel(
             self,
             text="Acesse sua conta",
-            font=("Arial", 26, "bold"),
+            font=("Inter", 26, "bold"),
             text_color="#1F2937"
-        ).grid(row=0, padx=60, pady=(60, 10), sticky="w")
+        ).pack(anchor="w", padx=60, pady=(60, 10))
 
-        email = ctk.CTkEntry(
+        ctk.CTkLabel(
+            self,
+            text="Preencha seus dados para continuar.",
+            font=("Inter", 13),
+            text_color="#6B7280"
+        ).pack(anchor="w", padx=60)
+
+        self.email = ctk.CTkEntry(
             self,
             placeholder_text="seu@email.com",
             height=44,
             corner_radius=12
         )
-        email.grid(row=1, padx=60, sticky="ew")
+        self.email.pack(fill="x", padx=60, pady=15)
 
-        senha = ctk.CTkEntry(
+        self.password = ctk.CTkEntry(
             self,
-            placeholder_text="Senha",
+            placeholder_text="••••••••",
             show="•",
             height=44,
             corner_radius=12
         )
-        senha.grid(row=2, padx=60, pady=10, sticky="ew")
+        self.password.pack(fill="x", padx=60)
 
         ctk.CTkButton(
             self,
             text="Entrar",
-            height=44,
+            height=46,
             corner_radius=12,
-            fg_color="#7A1FD1",
-            hover_color="#6A1BC2"
-        ).grid(row=3, padx=60, pady=20, sticky="ew")
-
-        ctk.CTkLabel(
-            self,
-            text="Não tem conta? Criar cadastro",
-            font=("Arial", 12),
-            text_color="#6B7280"
-        ).grid(row=4, padx=60, sticky="w")
+            fg_color=colors.BRAND_DARK_TEAL,
+            hover_color=colors.BRAND_DARK_TEAL_HOVER
+        ).pack(fill="x", padx=60, pady=25)
