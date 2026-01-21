@@ -16,16 +16,26 @@ class LeftPanel(ctk.CTkFrame):
         BASE_DIR = os.path.dirname(os.path.dirname(__file__))
         IMG_PATH = os.path.join(BASE_DIR, "assets", "pet.png")
         
-        self.image = ctk.CTkImage(
+        pet_image = ctk.CTkImage(
             light_image=Image.open(IMG_PATH),
             dark_image=Image.open(IMG_PATH),
-            size=(28, 28)
+            size=(30, 30)
         )
+        
+        header_frame = ctk.CTkFrame(self, fg_color='transparent')
+        header_frame.grid(row=0, padx=40, pady=30, sticky="w")
+                
+        ctk.CTkLabel(
+            header_frame,
+            image=pet_image,
+            text=""
+        ).grid(row=0, column=0, padx=(0,8), sticky="w")
+        
+        header_frame.grid_rowconfigure(0, weight=1)
         
         # Logo
         ctk.CTkLabel(
-            self,
-            image=self.image,
+            header_frame,
             text="Corações em Patas",
             font=("Inter", 20, "bold"),
             text_color="white"

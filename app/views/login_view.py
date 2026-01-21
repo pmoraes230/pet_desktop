@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from app.widgets.left_panel import LeftPanel
-from app.widgets.login_form import LoginForm
+from app.widgets.login_form import VetAuthForm
 
 class LoginView(ctk.CTkFrame):
     def __init__(self, master):
@@ -25,4 +25,4 @@ class LoginView(ctk.CTkFrame):
         self.card.grid_rowconfigure(0, weight=1)
 
         LeftPanel(self.card).grid(row=0, column=0, sticky="nsew")
-        LoginForm(self.card).grid(row=0, column=1, sticky="nsew")
+        VetAuthForm(self.card).grid(row=0, column=1, sticky="nsew")
