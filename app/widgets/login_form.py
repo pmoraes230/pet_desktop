@@ -1,4 +1,3 @@
-# app/widgets/login_form.py
 import customtkinter as ctk
 import webbrowser
 from app.widgets.modal import Modal
@@ -7,10 +6,14 @@ import app.core.colors as colors   # suas cores personalizadas
 # Endereço para criar conta (abre no navegador)
 CADASTRO_URL = "http://127.0.0.1:8000/login/?type=vet&mode=register"
 
+
 class VetAuthForm(ctk.CTkFrame):
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, on_login_success=None, **kwargs):
+        # NÃO repassa on_login_success para o CTkFrame
         super().__init__(master, fg_color="white", **kwargs)
-        self.master = master  
+
+        self.master = master
+        self.on_login_success = on_login_success  # guarda a função de sucesso
         self._criar_tela_login()
 
     def _criar_tela_login(self):
@@ -34,11 +37,11 @@ class VetAuthForm(ctk.CTkFrame):
         # CAMPO DO EMAIL
         # -----------------------
         ctk.CTkLabel(self, text="Email", font=("Arial", 12, "bold")).pack(anchor="w", padx=50, pady=(0, 5))
-        
+
         self.email = ctk.CTkEntry(
             self,
             placeholder_text="digite seu email aqui",
-            width=340,          # tamanho bom e fixo
+            width=340,
             height=42,
             corner_radius=10
         )
@@ -48,11 +51,11 @@ class VetAuthForm(ctk.CTkFrame):
         # CAMPO DA SENHA
         # -----------------------
         ctk.CTkLabel(self, text="Senha", font=("Arial", 12, "bold")).pack(anchor="w", padx=50, pady=(0, 5))
-        
+
         self.senha = ctk.CTkEntry(
             self,
             placeholder_text="••••••••",
-            show="•",           # esconde a senha
+            show="•",
             width=340,
             height=42,
             corner_radius=10
@@ -81,7 +84,7 @@ class VetAuthForm(ctk.CTkFrame):
         link_frame.pack(pady=10)
 
         ctk.CTkLabel(link_frame, text="Não tem conta ainda? ", text_color="gray").pack(side="left")
-        
+
         link = ctk.CTkLabel(
             link_frame,
             text="Criar conta",
@@ -94,11 +97,10 @@ class VetAuthForm(ctk.CTkFrame):
 
     def tentar_entrar(self):
         """Aqui acontece a verificação quando clica em Entrar"""
-        
-        email_digitado = self.email.get().strip()   # remove espaços
+
+        email_digitado = self.email.get().strip()
         senha_digitada = self.senha.get().strip()
 
-        # Verificações simples - mensagens claras para quem está começando
         if email_digitado == "":
             Modal(self, "Atenção", "Digite seu email, por favor.", type="error")
             self.email.focus()
@@ -114,15 +116,13 @@ class VetAuthForm(ctk.CTkFrame):
             self.senha.focus()
             return
 
-
+        # LOGIN DE TESTE
         if email_digitado == "teste@exemplo.com" and senha_digitada == "123456":
             Modal(self, "Sucesso", "Login realizado!\nBem-vindo(a) de volta!", type="success")
-            
-            # Aqui você pode colocar o que acontece depois do login
-            # Exemplo simples: ir para outra tela (se você já tiver o método)
-            # self.master.mostrar_dashboard()
-            
-            # Ou apenas uma mensagem por enquanto:
-            # self.after(1500, lambda: Modal(self, "Próximo passo", "Aqui vai o dashboard no futuro!"))
+
+            # 🔥 chama a função que veio da LoginView (abre o dashboard)
+            if self.on_login_success:
+                self.after(1500, self.on_login_success)
+
         else:
             Modal(self, "Erro", "Email ou senha incorretos.\nTente novamente.", type="error")
