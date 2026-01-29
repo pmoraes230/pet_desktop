@@ -9,7 +9,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Sistema Veterinário")
-        self.geometry("1100x700") # Aumentei um pouco para caber o seu card de 1100
+        self.geometry("900x700") # Aumentei um pouco para caber o seu card de 1100
 
         self.mostrar_login()
 

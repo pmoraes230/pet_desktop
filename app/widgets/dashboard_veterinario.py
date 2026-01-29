@@ -4,50 +4,83 @@ class DashboardVeterinario(ctk.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        # Configuração da malha (Grid) principal
-        self.grid_columnconfigure(0, weight=0) 
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=0) # Linha da Topbar
-        self.grid_rowconfigure(1, weight=1) # Linha do Conteúdo
+        # --- CONFIGURAÇÃO DE COLUNAS/LINHAS ---
+        self.grid_columnconfigure(0, weight=0) # Coluna da Sidebar (fixa)
+        self.grid_columnconfigure(1, weight=1) # Coluna do Conteúdo (expande)
 
-        # --- SIDEBAR ---
-        self.sidebar = ctk.CTkFrame(self, fg_color="#14B8A6", width=260, corner_radius=0)
-        self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
-        self.sidebar.grid_propagate(False)
+        # Agora a linha 0 é SÓ da Topbar e a linha 1 é do resto
+        self.grid_rowconfigure(0, weight=0, minsize=70) # Altura da Topbar
+        self.grid_rowconfigure(1, weight=1)             # Altura da Sidebar e Conteúdo
 
-        # LOGO
-        self.logo_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        self.logo_frame.pack(pady=20, padx=10, fill="x")
-        self.logo_circle = ctk.CTkLabel(self.logo_frame, text="🐾", font=("Arial", 20), width=45, height=45, fg_color="#8B5CF6", text_color="white", corner_radius=22)
-        self.logo_circle.pack(side="left", padx=(10, 5))
-        self.logo_text = ctk.CTkLabel(self.logo_frame, text="Coração em patas", font=("Arial", 15, "bold"), text_color="black")
-        self.logo_text.pack(side="left")
-
-        # --- TOPBAR ---
-        self.topbar = ctk.CTkFrame(self, fg_color="white", height=70, corner_radius=0)
-        self.topbar.grid(row=0, column=1, sticky="ew")
+        # --- TOPBAR (De ponta a ponta) ---
+        self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
+        # columnspan=2 faz ela ocupar a largura da sidebar + a largura do conteúdo
+        self.topbar.grid(row=0, column=0, columnspan=2, sticky="nsew") 
         self.topbar.grid_propagate(False)
 
-        self.linha_separadora = ctk.CTkFrame(self, fg_color="#E2E8F0", height=2)
-        self.linha_separadora.grid(row=0, column=1, sticky="s")
-
+        # Elementos da Topbar (Mantidos)
         ctk.CTkLabel(self.topbar, text="Bom dia, Usuário!", font=("Arial", 16, "bold"), text_color="black").pack(side="left", padx=30)
-
         self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent")
         self.right_info.pack(side="right", padx=20)
         ctk.CTkLabel(self.right_info, text="🔔", font=("Arial", 20), cursor="hand2").pack(side="left", padx=15)
         self.avatar = ctk.CTkLabel(self.right_info, text="U", font=("Arial", 14, "bold"), width=38, height=38, fg_color="#A855F7", text_color="white", corner_radius=19)
         self.avatar.pack(side="left")
 
+        # Linha Separadora (agora embaixo da topbar inteira)
+        self.linha_separadora = ctk.CTkFrame(self, fg_color="#E2E8F0", height=2)
+        self.linha_separadora.grid(row=0, column=0, columnspan=2, sticky="sew")
+
+        # --- SIDEBAR (Abaixo da Topbar) ---
+        # Note que agora o row=1 e não tem mais rowspan=2
+        self.sidebar = ctk.CTkFrame(self, fg_color="#14B8A6", width=260, corner_radius=0)
+        self.sidebar.grid(row=1, column=0, sticky="nsew") 
+        self.sidebar.grid_propagate(False)
+
+
+        # LOGO (Dentro da Sidebar)
+        self.logo_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        self.logo_frame.pack(pady=20, padx=10, fill="x")
+
+        # Criamos um FRAME para ser o círculo perfeito
+        self.logo_circle = ctk.CTkFrame(
+            self.logo_frame, 
+            width=44,            # Largura
+            height=44,           # Altura igual
+            corner_radius=22,    # Metade exata
+            fg_color="#8B5CF6"
+        )
+        self.logo_circle.pack(side="left", padx=(10, 5))
+        self.logo_circle.pack_propagate(False) # Impede que o frame mude de tamanho por causa do texto
+
+        # Colocamos o emoji centralizado dentro do círculo usando 'place'
+        self.emoji_label = ctk.CTkLabel(
+            self.logo_circle, 
+            text="🐾", 
+            font=("Arial", 20),
+            text_color="white"
+        )
+        self.emoji_label.place(relx=0.5, rely=0.5, anchor="center") # Centralização absoluta
+
+        # Texto da Logo
+        self.logo_text = ctk.CTkLabel(
+            self.logo_frame, 
+            text="Coração em patas", 
+            font=("Arial", 15, "bold"), 
+            text_color="black"
+        )
+        self.logo_text.pack(side="left", padx=5)
         # --- ÁREA DE CONTEÚDO ---
-        self.content = ctk.CTkFrame(self, fg_color="#F8FAFC", corner_radius=0)
+        self.content = ctk.CTkFrame(self, fg_color="#F8FAFC", corner_radius=0, height=500)
         self.content.grid(row=1, column=1, sticky="nsew")
 
         # Botões do Menu
         self.criar_botao_sidebar("Dashboard", self.tela_dashboard)
         self.criar_botao_sidebar("Pacientes", self.tela_pacientes)
+        self.criar_botao_sidebar("Prontuário", self.tela_prontuario)
         self.criar_botao_sidebar("Agenda", self.tela_agenda)
         self.criar_botao_sidebar("Financeiro", self.tela_financeiro)
+        
+        
 
         self.tela_dashboard()
 
@@ -64,37 +97,62 @@ class DashboardVeterinario(ctk.CTkFrame):
 
     # --- TELA 1: DASHBOARD ---
     def tela_dashboard(self):
+        # Container principal (Scrollable)
+        # Aumentei o padding para dar "ar" ao layout
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=20, pady=20)
+        scroll.pack(fill="both", expand=True, padx=25, pady=25)
 
+        # --- SEÇÃO DE MÉTRICAS (Cards de cima) ---
         metrics = ctk.CTkFrame(scroll, fg_color="transparent")
         metrics.pack(fill="x", pady=(0, 30))
-        metrics.columnconfigure((0, 1, 2), weight=1)
+        
+        # Garantir que as 3 colunas de métricas sejam iguais
+        metrics.columnconfigure((0, 1, 2), weight=1, uniform="equal")
 
         self.criar_card_metrica(metrics, "1,240", "Total Pacientes", "🟦", "+12%", 0)
         self.criar_card_metrica(metrics, "8", "Consultas hoje", "🟩", None, 1)
         self.criar_card_metrica(metrics, "4.2K", "Faturamento mês", "🟨", None, 2)
 
+        # --- GRID PRINCIPAL (Histórico e Alertas) ---
         main_grid = ctk.CTkFrame(scroll, fg_color="transparent")
         main_grid.pack(fill="both", expand=True)
+        
+        # Configuração de pesos: Coluna 0 (60%), Coluna 1 (40%)
         main_grid.columnconfigure(0, weight=3) 
         main_grid.columnconfigure(1, weight=2) 
+        main_grid.rowconfigure(0, weight=1) # Importante para alinhar a altura das duas colunas
 
-        left = ctk.CTkFrame(main_grid, fg_color="transparent")
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
-        ctk.CTkLabel(left, text="Histórico Recente", font=("Arial", 16, "bold"), text_color="black").pack(anchor="w", pady=(0, 10))
+        # --- LADO ESQUERDO: Histórico ---
+        left_container = ctk.CTkFrame(main_grid, fg_color="transparent")
+        left_container.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
         
-        cont = ctk.CTkFrame(left, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
-        cont.pack(fill="both", expand=True)
-        self.criar_linha_agendamento(cont, "09:00 AM", "Paçoca", "Vacinação Anual", "Confirmado", "#DCFCE7", "#166534")
-        self.criar_linha_agendamento(cont, "10:30 AM", "Luna", "Avaliação", "Aguardando", "#FEF9C3", "#854D0E")
+        ctk.CTkLabel(left_container, text="Histórico Recente", 
+                    font=("Arial", 18, "bold"), text_color="black").pack(anchor="w", pady=(0, 15))
+        
+        # O card branco que segura o histórico
+        hist_card = ctk.CTkFrame(left_container, fg_color="white", corner_radius=20, 
+                                border_width=1, border_color="#E2E8F0")
+        hist_card.pack(fill="both", expand=True, ipady=10) # ipady dá um respiro interno
+        
+        self.criar_linha_agendamento(hist_card, "09:00 AM", "Paçoca", "Vacinação Anual", "Confirmado", "#DCFCE7", "#166534")
+        self.criar_linha_agendamento(hist_card, "10:30 AM", "Luna", "Avaliação", "Aguardando", "#FEF9C3", "#854D0E")
+        self.criar_linha_agendamento(hist_card, "11:00 AM", "Thor", "Retorno", "Confirmado", "#DCFCE7", "#166534")
 
-        right = ctk.CTkFrame(main_grid, fg_color="transparent")
-        right.grid(row=0, column=1, sticky="nsew")
-        al_card = ctk.CTkFrame(right, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
-        al_card.pack(fill="x", pady=(0, 20), ipady=15)
-        ctk.CTkLabel(al_card, text="Alertas de saúde", font=("Arial", 15, "bold")).pack(pady=10)
+        # --- LADO DIREITO: Alertas ---
+        right_container = ctk.CTkFrame(main_grid, fg_color="transparent")
+        right_container.grid(row=0, column=1, sticky="nsew")
+        
+        ctk.CTkLabel(right_container, text="Alertas de saúde", 
+                    font=("Arial", 18, "bold"), text_color="black").pack(anchor="w", pady=(0, 15))
+        
+        # Card de Alerta
+        al_card = ctk.CTkFrame(right_container, fg_color="white", corner_radius=20, 
+                            border_width=1, border_color="#E2E8F0")
+        al_card.pack(fill="both", expand=True, padx=2) # fill="both" para alinhar altura com o da esquerda
+        
+        # Conteúdo interno do alerta
         self.criar_item_alerta(al_card, "Bob (Golden)", "Queda brusca de peso registrada.")
+        self.criar_item_alerta(al_card, "Mel (Poodle)", "Vacina de Raiva vence em 3 dias.")
 
     # --- TELA 2: PACIENTES ---
     def tela_pacientes(self):
@@ -244,3 +302,78 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(t, text=tit, font=("Arial", 13, "bold")).pack(anchor="w")
         ctk.CTkLabel(t, text=data, font=("Arial", 11), text_color="#64748B").pack(anchor="w")
         ctk.CTkLabel(i, text=val, text_color="#22C55E", font=("Arial", 13, "bold")).pack(side="right")
+
+
+    def tela_prontuario(self):
+            # Frame principal do prontuário
+            container = ctk.CTkFrame(self.content, fg_color="transparent")
+            container.pack(fill="both", expand=True, padx=30, pady=20)
+
+            # HEADER DA TELA
+            header = ctk.CTkFrame(container, fg_color="transparent")
+            header.pack(fill="x", pady=(0, 20))
+
+            titulo_box = ctk.CTkFrame(header, fg_color="transparent")
+            titulo_box.pack(side="left")
+            ctk.CTkLabel(titulo_box, text="Prontuário eletrônico", font=("Arial", 24, "bold"), text_color="black").pack(anchor="w")
+            
+            # Seletor de Pet (Para simular a escolha)
+            self.pet_var = ctk.StringVar(value="thor (bulldog)")
+            self.seletor_pet = ctk.CTkOptionMenu(titulo_box, values=["thor (bulldog)", "paçoca (vira-lata)", "luna (siamês)"],
+                                                variable=self.pet_var, fg_color="white", text_color="black", 
+                                                button_color="#E2E8F0", button_hover_color="#CBD5E1")
+            self.seletor_pet.pack(side="left", pady=5)
+            ctk.CTkLabel(titulo_box, text="Consulta atual:", font=("Arial", 13), text_color="#64748B").pack(side="left", padx=5)
+
+            # Botão Salvar
+            ctk.CTkButton(header, text="Salvar prontuário", fg_color="#A855F7", hover_color="#9333EA", 
+                        font=("Arial", 14, "bold"), width=180, height=40).pack(side="right")
+
+            # CORPO DIVIDIDO (ESQUERDA: EDITOR | DIREITA: HISTÓRICO)
+            corpo = ctk.CTkFrame(container, fg_color="transparent")
+            corpo.pack(fill="both", expand=True)
+            corpo.columnconfigure(0, weight=3) # Coluna do Editor
+            corpo.columnconfigure(1, weight=1) # Coluna do Histórico
+
+            # --- LADO ESQUERDO: EDITOR DE ANOTAÇÕES ---
+            editor_frame = ctk.CTkFrame(corpo, fg_color="transparent")
+            editor_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
+
+            ctk.CTkLabel(editor_frame, text="Anotações", font=("Arial", 16, "bold"), text_color="black").pack(anchor="w", pady=(0, 10))
+            
+            # Campo de texto grande
+            self.txt_prontuario = ctk.CTkTextbox(editor_frame, corner_radius=20, border_width=1, 
+                                                border_color="#94A3B8", fg_color="#E5E7EB", 
+                                                text_color="black", font=("Arial", 14))
+            self.txt_prontuario.pack(fill="both", expand=True)
+            self.txt_prontuario.insert("1.0", "Digite aqui as observações, sintomas, temperatura, peso e procedimento realizados durante a consulta...")
+
+            # --- LADO DIREITO: LISTA DE TODOS OS PRONTUÁRIOS ---
+            historico_frame = ctk.CTkFrame(corpo, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
+            historico_frame.grid(row=0, column=1, sticky="nsew")
+
+            ctk.CTkLabel(historico_frame, text="Histórico de Prontuários", font=("Arial", 14, "bold")).pack(pady=15)
+
+            # Scroll para os prontuários anteriores
+            scroll_hist = ctk.CTkScrollableFrame(historico_frame, fg_color="transparent")
+            scroll_hist.pack(fill="both", expand=True, padx=10, pady=5)
+
+            # Simulação de registros anteriores
+            self.criar_item_historico(scroll_hist, "15 Jan 2026", "Vacinação")
+            self.criar_item_historico(scroll_hist, "02 Dez 2025", "Check-up Geral")
+            self.criar_item_historico(scroll_hist, "10 Out 2025", "Tratamento Otite")
+
+    def criar_item_historico(self, master, data, motivo):
+            item = ctk.CTkFrame(master, fg_color="#F1F5F9", corner_radius=10, height=60)
+            item.pack(fill="x", pady=5)
+            item.pack_propagate(False)
+            
+            ctk.CTkLabel(item, text=data, font=("Arial", 12, "bold"), text_color="#1E293B").pack(anchor="w", padx=15, pady=(5,0))
+            ctk.CTkLabel(item, text=motivo, font=("Arial", 11), text_color="#64748B").pack(anchor="w", padx=15)
+            
+            # Ícone de ver detalhes pequeno
+            ctk.CTkLabel(item, text="📄", font=("Arial", 16)).place(relx=0.9, rely=0.5, anchor="center")
+
+
+
+    
