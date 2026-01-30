@@ -11,7 +11,7 @@ class App(ctk.CTk):
         self.configure(fg_color="#F9F9F9") # Fundo da janela (off-white)
 
         # Cores e Fontes
-        self.accent_color = "#8A4FFF" # Roxo vibrante
+        self.accent_color = "#8C52FF" # Roxo vibrante
         self.text_color_primary = "#000000"
         self.text_color_secondary = "#A0A0A0"
         self.font_title = ("Arial", 28, "bold")
@@ -24,8 +24,8 @@ class App(ctk.CTk):
             self,
             fg_color="#FFFFFF",
             corner_radius=30,
-            width=800,
-            height=600,
+            width=900,
+            height=700,
             border_width=0
         )
         self.card_frame.place(relx=0.5, rely=0.5, anchor="center")
@@ -70,7 +70,7 @@ class App(ctk.CTk):
         # Título
         self.title_label = ctk.CTkLabel(
             self.form_frame,
-            text="Troque sua senha",
+            text="Altere sua senha",
             text_color=self.text_color_primary,
             font=self.font_title,
             anchor="w"
@@ -137,8 +137,8 @@ class App(ctk.CTk):
         self.btn_continuar = ctk.CTkButton(
             self.form_frame,
             text="continuar",
-            fg_color=self.accent_color,
-            hover_color="#14B8A6",
+            fg_color="#14B8A6",
+            hover_color="#8C52FF",
             height=50,
             corner_radius=12,
             font=("Arial", 16, "bold"),
