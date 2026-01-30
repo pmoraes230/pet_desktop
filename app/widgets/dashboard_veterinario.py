@@ -4,9 +4,11 @@ class DashboardVeterinario(ctk.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        # Variáveis de controle para o menu de perfil
+        # Variáveis de controle para os menus
         self.menu_perfil_aberto = False
         self.menu_dropdown = None
+        self.notif_aberta = False
+        self.notif_dropdown = None
 
         # --- CONFIGURAÇÃO DE COLUNAS/LINHAS ---
         self.grid_columnconfigure(0, weight=0) # Coluna da Sidebar (fixa)
@@ -25,7 +27,13 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent")
         self.right_info.pack(side="right", padx=20)
         
-        ctk.CTkLabel(self.right_info, text="🔔", font=("Arial", 20), cursor="hand2").pack(side="left", padx=15)
+        # NOTIFICAÇÕES (Transformado em botão clicável)
+        self.btn_notif = ctk.CTkButton(
+            self.right_info, text="🔔", font=("Arial", 20), width=40, height=40,
+            fg_color="transparent", text_color="black", hover_color="#F1F5F9",
+            command=self.toggle_notifications
+        )
+        self.btn_notif.pack(side="left", padx=15)
         
         # AVATAR COMO BOTÃO
         self.avatar = ctk.CTkButton(
@@ -61,12 +69,35 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         # Botões do Menu Lateral
         self.criar_botao_sidebar("Dashboard", self.tela_dashboard)
+        self.criar_botao_sidebar("Mensagens", self.tela_chat) 
         self.criar_botao_sidebar("Pacientes", self.tela_pacientes)
         self.criar_botao_sidebar("Prontuário", self.tela_prontuario)
         self.criar_botao_sidebar("Agenda", self.tela_agenda)
         self.criar_botao_sidebar("Financeiro", self.tela_financeiro)
         
+        
         self.tela_dashboard()
+
+    # --- LÓGICA DAS NOTIFICAÇÕES ---
+    def toggle_notifications(self):
+        if self.notif_aberta:
+            self.notif_dropdown.destroy()
+            self.notif_aberta = False
+        else:
+            if self.menu_perfil_aberto: self.toggle_menu()
+            self.notif_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=15, border_width=1, border_color="#E2E8F0")
+            self.notif_dropdown.place(relx=0.92, rely=0.08, anchor="ne")
+            
+            ctk.CTkLabel(self.notif_dropdown, text="Notificações", font=("Arial", 14, "bold")).pack(pady=10, padx=20, anchor="w")
+            self.criar_item_notificacao("🐶 Paçoca precisa de vacina amanhã")
+            self.criar_item_notificacao("📅 Nova consulta agendada: Thor")
+            self.notif_aberta = True
+
+    def criar_item_notificacao(self, texto):
+        f = ctk.CTkFrame(self.notif_dropdown, fg_color="transparent")
+        f.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(f, text=texto, font=("Arial", 12), wraplength=250, justify="left").pack(padx=10, pady=5)
+        ctk.CTkFrame(self.notif_dropdown, fg_color="#F1F5F9", height=1).pack(fill="x", padx=10)
 
     # --- LÓGICA DO DROPDOWN DO PERFIL ---
     def toggle_menu(self):
@@ -74,6 +105,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             self.menu_dropdown.destroy()
             self.menu_perfil_aberto = False
         else:
+            if self.notif_aberta: self.toggle_notifications()
             self.menu_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
             self.menu_dropdown.place(relx=0.98, rely=0.08, anchor="ne")
             self.criar_item_aba("👤 Editar Perfil", self.tela_configuracoes_perfil)
@@ -100,6 +132,64 @@ class DashboardVeterinario(ctk.CTkFrame):
         for widget in self.content.winfo_children():
             widget.destroy()
         func()
+
+    # --- TELA: CHAT (ADAPTADA DO SEU HTML) ---
+    def tela_chat(self):
+        chat_container = ctk.CTkFrame(self.content, fg_color="transparent")
+        chat_container.pack(fill="both", expand=True, padx=20, pady=20)
+        chat_container.columnconfigure(0, weight=1) # Lista de contatos
+        chat_container.columnconfigure(1, weight=3) # Janela de conversa
+        chat_container.rowconfigure(0, weight=1)
+
+        # Lista de Contatos
+        contatos_frame = ctk.CTkFrame(chat_container, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
+        contatos_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        ctk.CTkLabel(contatos_frame, text="Conversas", font=("Arial", 20, "bold")).pack(anchor="w", padx=25, pady=20)
+        
+        scroll_contatos = ctk.CTkScrollableFrame(contatos_frame, fg_color="transparent")
+        scroll_contatos.pack(fill="both", expand=True, padx=10)
+        
+        # Simulação de contatos
+        self.criar_item_contato(scroll_contatos, "Ana (Tutor)", "🐶", True)
+        self.criar_item_contato(scroll_contatos, "Carlos (Tutor)", "🐱")
+
+        # Janela Principal
+        janela_chat = ctk.CTkFrame(chat_container, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
+        janela_chat.grid(row=0, column=1, sticky="nsew")
+        
+        # Header do chat
+        header = ctk.CTkFrame(janela_chat, fg_color="transparent", height=60)
+        header.pack(fill="x", padx=25, pady=15)
+        ctk.CTkLabel(header, text="Conversando com Ana", font=("Arial", 16, "bold")).pack(side="left")
+
+        # Área de mensagens
+        self.area_msg = ctk.CTkScrollableFrame(janela_chat, fg_color="#F8FAFC", corner_radius=0)
+        self.area_msg.pack(fill="both", expand=True)
+
+        self.criar_bolha_mensagem(self.area_msg, "Olá Dr., a Paçoca está bem?", "09:41", "tutor")
+        self.criar_bolha_mensagem(self.area_msg, "Olá! Sim, ela está ótima.", "09:45", "vet")
+
+        # Input
+        input_f = ctk.CTkFrame(janela_chat, fg_color="white", height=80)
+        input_f.pack(fill="x", side="bottom", padx=20, pady=20)
+        ctk.CTkEntry(input_f, placeholder_text="Digite sua mensagem...", height=50, corner_radius=25).pack(side="left", fill="x", expand=True, padx=(0, 10))
+        ctk.CTkButton(input_f, text="➤", width=50, height=50, corner_radius=25, fg_color="#A855F7").pack(side="right")
+
+    def criar_item_contato(self, master, nome, avatar, sel=False):
+        btn = ctk.CTkButton(master, text=f"{avatar}  {nome}", fg_color="#F3E8FF" if sel else "transparent", 
+                            text_color="black", hover_color="#F8FAFC", anchor="w", height=60, corner_radius=15)
+        btn.pack(fill="x", pady=2)
+
+    def criar_bolha_mensagem(self, master, texto, hora, tipo):
+        side = "right" if tipo == "vet" else "left"
+        cor = "#9333EA" if tipo == "vet" else "white"
+        txt_cor = "white" if tipo == "vet" else "black"
+        f = ctk.CTkFrame(master, fg_color="transparent")
+        f.pack(fill="x", padx=15, pady=5)
+        bolha = ctk.CTkFrame(f, fg_color=cor, corner_radius=15, border_width=1 if tipo=="tutor" else 0, border_color="#E2E8F0")
+        bolha.pack(side=side)
+        ctk.CTkLabel(bolha, text=texto, text_color=txt_cor, wraplength=250, justify="left").pack(padx=15, pady=10)
+        ctk.CTkLabel(f, text=hora, font=("Arial", 9), text_color="#94A3B8").pack(side=side, padx=5)
 
     # --- TELA 1: DASHBOARD ---
     def tela_dashboard(self):
@@ -288,7 +378,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
     # --- MÉTODOS AUXILIARES ---
     def criar_card_metrica(self, master, valor, titulo, icon, badge, col):
-        card = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") # Removido height fixo
+        card = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") 
         card.grid(row=0, column=col, padx=10, sticky="nsew")
         ctk.CTkLabel(card, text=icon, font=("Arial", 24)).pack(anchor="w", padx=25, pady=(20, 0))
         f = ctk.CTkFrame(card, fg_color="transparent"); f.pack(fill="x", padx=25)
@@ -297,7 +387,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(card, text=titulo, text_color="#64748B", font=("Arial", 13), wraplength=150).pack(anchor="w", padx=25, pady=(0, 20))
 
     def criar_linha_agendamento(self, master, hora, pet, info, status, bg, txt):
-        l = ctk.CTkFrame(master, fg_color="transparent") # Removido height fixo
+        l = ctk.CTkFrame(master, fg_color="transparent") 
         l.pack(fill="x", padx=15, pady=5)
         ctk.CTkLabel(l, text=hora, font=("Arial", 12, "bold"), width=70).pack(side="left")
         ctk.CTkLabel(l, text="🐶", font=("Arial", 20), fg_color="#F1F5F9", width=45, height=45, corner_radius=22).pack(side="left", padx=10, pady=10)
@@ -321,7 +411,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkButton(c, text="Ver detalhes", fg_color="white", text_color="black", border_width=1, corner_radius=15, height=35).pack(fill="x", padx=30, pady=20)
 
     def criar_card_agendamento_detalhado(self, master, hora, tit, sub):
-        c = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") # Removido height fixo
+        c = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") 
         c.pack(fill="x", pady=5, padx=10)
         ctk.CTkLabel(c, text="🕒", font=("Arial", 18)).pack(side="left", padx=20, pady=15)
         ctk.CTkLabel(c, text=hora, font=("Arial", 16, "bold")).pack(side="left")
@@ -330,7 +420,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(t, text=sub, font=("Arial", 11), text_color="#64748B", wraplength=300, justify="left").pack(anchor="w")
 
     def criar_card_fin_topo(self, master, tit, val, col):
-        c = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") # Removido height fixo
+        c = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") 
         c.grid(row=0, column=col, padx=10, sticky="ew")
         ctk.CTkLabel(c, text=tit, text_color="#64748B", font=("Arial", 12, "bold")).pack(pady=(20, 5))
         ctk.CTkLabel(c, text=val, font=("Arial", 24, "bold"), text_color="black").pack(pady=(0, 20))
@@ -343,7 +433,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(i, text=val, text_color="#22C55E", font=("Arial", 13, "bold")).pack(side="right")
 
     def criar_item_historico(self, master, data, motivo):
-        item = ctk.CTkFrame(master, fg_color="#F1F5F9", corner_radius=10) # Removido height fixo
+        item = ctk.CTkFrame(master, fg_color="#F1F5F9", corner_radius=10) 
         item.pack(fill="x", pady=5)
         ctk.CTkLabel(item, text=data, font=("Arial", 12, "bold")).pack(anchor="w", padx=15, pady=(10,0))
         ctk.CTkLabel(item, text=motivo, font=("Arial", 11), text_color="#64748B", wraplength=180, justify="left").pack(anchor="w", padx=15, pady=(0, 10))

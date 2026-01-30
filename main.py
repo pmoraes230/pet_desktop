@@ -9,7 +9,9 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Sistema Veterinário")
-        self.geometry("900x700") # Aumentei um pouco para caber o seu card de 1100
+        
+        # Abre a janela maximizada (tamanho do monitor)
+        self.after(0, lambda: self.state('zoomed')) 
 
         self.mostrar_login()
 
@@ -19,12 +21,13 @@ class App(ctk.CTk):
 
     def mostrar_login(self):
         self.limpar_tela()
-        # Aqui enviamos a função mostrar_dashboard para dentro da View
         LoginView(self, on_login_success=self.mostrar_dashboard)
 
     def mostrar_dashboard(self, tipo_usuario="admin"):
         self.limpar_tela()
-        DashboardVeterinario(self).pack(fill="both", expand=True)
+        # O pack fill="both" e expand=True garante que o dashboard preencha a tela toda
+        app_dash = DashboardVeterinario(self)
+        app_dash.pack(fill="both", expand=True)
 
 if __name__ == "__main__":
     app = App()
