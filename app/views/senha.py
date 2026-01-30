@@ -1,14 +1,8 @@
 import customtkinter as ctk
 
-class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-
-        # Configuração da Janela Principal
-        self.title("Coração em patas - Troque sua senha")
-        self.geometry("1000x700")
-        ctk.set_appearance_mode("Light")
-        self.configure(fg_color="#F9F9F9") # Fundo da janela (off-white)
+class TrocaSenhaView(ctk.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master)
 
         # Cores e Fontes
         self.accent_color = "#8C52FF" # Roxo vibrante
@@ -28,7 +22,7 @@ class App(ctk.CTk):
             height=700,
             border_width=0
         )
-        self.card_frame.place(relx=0.5, rely=0.5, anchor="center")
+        self.card_frame.pack(expand=True, fill="both", padx=20, pady=20)
         self.card_frame.pack_propagate(False) # Respeitar tamanho fixo
 
         # --- Cabeçalho (Logo e Nome) ---
@@ -145,7 +139,3 @@ class App(ctk.CTk):
             text_color="white"
         )
         self.btn_continuar.pack(fill="x")
-
-if __name__ == "__main__":
-    app = App()
-    app.mainloop()

@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from app.views.senha import TrocaSenhaView
 
 class DashboardVeterinario(ctk.CTkFrame):
     def __init__(self, master):
@@ -54,6 +55,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.criar_botao("Agenda", self.tela_agenda)
         self.criar_botao("Prontuários", self.tela_prontuarios)
         self.criar_botao("Financeiro", self.tela_financeiro)
+        self.criar_botao("Trocar Senha", self.abrir_troca_senha)
 
         self.tela_dashboard()
 
@@ -218,3 +220,14 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         # Botão de Relatório
         ctk.CTkButton(main_frame, text="Gerar Relatório PDF", fg_color="#1e293b").pack(pady=20)
+
+    def abrir_troca_senha(self):
+        self.trocar_tela(self.tela_troca_senha)
+
+    def tela_troca_senha(self):
+        # Container Principal com scroll se necessário
+        scroll_container = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        scroll_container.pack(fill="both", expand=True, padx=20, pady=20)
+
+        troca_senha_view = TrocaSenhaView(scroll_container)
+        troca_senha_view.pack(fill="both", expand=True)
