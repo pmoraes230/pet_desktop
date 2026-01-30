@@ -27,7 +27,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent")
         self.right_info.pack(side="right", padx=20)
         
-        # NOTIFICAÇÕES (Transformado em botão clicável)
+        # NOTIFICAÇÕES
         self.btn_notif = ctk.CTkButton(
             self.right_info, text="🔔", font=("Arial", 20), width=40, height=40,
             fg_color="transparent", text_color="black", hover_color="#F1F5F9",
@@ -35,7 +35,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         )
         self.btn_notif.pack(side="left", padx=15)
         
-        # AVATAR COMO BOTÃO
+        # AVATAR
         self.avatar = ctk.CTkButton(
             self.right_info, text="U", font=("Arial", 14, "bold"), width=38, height=38, 
             fg_color="#A855F7", text_color="white", corner_radius=19,
@@ -67,14 +67,12 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.content = ctk.CTkFrame(self, fg_color="#F8FAFC", corner_radius=0)
         self.content.grid(row=1, column=1, sticky="nsew")
 
-        # Botões do Menu Lateral
         self.criar_botao_sidebar("Dashboard", self.tela_dashboard)
         self.criar_botao_sidebar("Mensagens", self.tela_chat) 
         self.criar_botao_sidebar("Pacientes", self.tela_pacientes)
         self.criar_botao_sidebar("Prontuário", self.tela_prontuario)
         self.criar_botao_sidebar("Agenda", self.tela_agenda)
         self.criar_botao_sidebar("Financeiro", self.tela_financeiro)
-        
         
         self.tela_dashboard()
 
@@ -87,7 +85,6 @@ class DashboardVeterinario(ctk.CTkFrame):
             if self.menu_perfil_aberto: self.toggle_menu()
             self.notif_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=15, border_width=1, border_color="#E2E8F0")
             self.notif_dropdown.place(relx=0.92, rely=0.08, anchor="ne")
-            
             ctk.CTkLabel(self.notif_dropdown, text="Notificações", font=("Arial", 14, "bold")).pack(pady=10, padx=20, anchor="w")
             self.criar_item_notificacao("🐶 Paçoca precisa de vacina amanhã")
             self.criar_item_notificacao("📅 Nova consulta agendada: Thor")
@@ -128,48 +125,36 @@ class DashboardVeterinario(ctk.CTkFrame):
                       text_color="white", font=("Arial", 16), height=45, 
                       command=lambda: self.trocar_tela(comando)).pack(fill="x", padx=20, pady=6)
 
-    def trocar_tela(self, func):
+    def trocar_tela(self, func, *args):
         for widget in self.content.winfo_children():
             widget.destroy()
-        func()
+        func(*args)
 
-    # --- TELA: CHAT (ADAPTADA DO SEU HTML) ---
+    # --- TELA: CHAT ---
     def tela_chat(self):
         chat_container = ctk.CTkFrame(self.content, fg_color="transparent")
         chat_container.pack(fill="both", expand=True, padx=20, pady=20)
-        chat_container.columnconfigure(0, weight=1) # Lista de contatos
-        chat_container.columnconfigure(1, weight=3) # Janela de conversa
+        chat_container.columnconfigure(0, weight=1)
+        chat_container.columnconfigure(1, weight=3)
         chat_container.rowconfigure(0, weight=1)
 
-        # Lista de Contatos
         contatos_frame = ctk.CTkFrame(chat_container, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
         contatos_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         ctk.CTkLabel(contatos_frame, text="Conversas", font=("Arial", 20, "bold")).pack(anchor="w", padx=25, pady=20)
-        
         scroll_contatos = ctk.CTkScrollableFrame(contatos_frame, fg_color="transparent")
         scroll_contatos.pack(fill="both", expand=True, padx=10)
-        
-        # Simulação de contatos
         self.criar_item_contato(scroll_contatos, "Ana (Tutor)", "🐶", True)
         self.criar_item_contato(scroll_contatos, "Carlos (Tutor)", "🐱")
 
-        # Janela Principal
         janela_chat = ctk.CTkFrame(chat_container, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
         janela_chat.grid(row=0, column=1, sticky="nsew")
-        
-        # Header do chat
         header = ctk.CTkFrame(janela_chat, fg_color="transparent", height=60)
         header.pack(fill="x", padx=25, pady=15)
         ctk.CTkLabel(header, text="Conversando com Ana", font=("Arial", 16, "bold")).pack(side="left")
-
-        # Área de mensagens
         self.area_msg = ctk.CTkScrollableFrame(janela_chat, fg_color="#F8FAFC", corner_radius=0)
         self.area_msg.pack(fill="both", expand=True)
-
         self.criar_bolha_mensagem(self.area_msg, "Olá Dr., a Paçoca está bem?", "09:41", "tutor")
         self.criar_bolha_mensagem(self.area_msg, "Olá! Sim, ela está ótima.", "09:45", "vet")
-
-        # Input
         input_f = ctk.CTkFrame(janela_chat, fg_color="white", height=80)
         input_f.pack(fill="x", side="bottom", padx=20, pady=20)
         ctk.CTkEntry(input_f, placeholder_text="Digite sua mensagem...", height=50, corner_radius=25).pack(side="left", fill="x", expand=True, padx=(0, 10))
@@ -195,36 +180,29 @@ class DashboardVeterinario(ctk.CTkFrame):
     def tela_dashboard(self):
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=25, pady=25)
-
         metrics = ctk.CTkFrame(scroll, fg_color="transparent")
         metrics.pack(fill="x", pady=(0, 30))
         metrics.columnconfigure((0, 1, 2), weight=1, uniform="equal")
         self.criar_card_metrica(metrics, "1,240", "Total Pacientes", "🟦", "+12%", 0)
         self.criar_card_metrica(metrics, "8", "Consultas hoje", "🟩", None, 1)
         self.criar_card_metrica(metrics, "4.2K", "Faturamento mês", "🟨", None, 2)
-
         main_grid = ctk.CTkFrame(scroll, fg_color="transparent")
         main_grid.pack(fill="both", expand=True)
         main_grid.columnconfigure(0, weight=3) 
         main_grid.columnconfigure(1, weight=2) 
-        main_grid.rowconfigure(0, weight=1)
-
         left_container = ctk.CTkFrame(main_grid, fg_color="transparent")
         left_container.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
-        ctk.CTkLabel(left_container, text="Histórico Recente", font=("Arial", 18, "bold"), text_color="black").pack(anchor="w", pady=(0, 15))
+        ctk.CTkLabel(left_container, text="Histórico Recente", font=("Arial", 18, "bold")).pack(anchor="w", pady=(0, 15))
         hist_card = ctk.CTkFrame(left_container, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
         hist_card.pack(fill="both", expand=True, ipady=10)
         self.criar_linha_agendamento(hist_card, "09:00 AM", "Paçoca", "Vacinação Anual", "Confirmado", "#DCFCE7", "#166534")
         self.criar_linha_agendamento(hist_card, "10:30 AM", "Luna", "Avaliação", "Aguardando", "#FEF9C3", "#854D0E")
-        self.criar_linha_agendamento(hist_card, "11:00 AM", "Thor", "Retorno", "Confirmado", "#DCFCE7", "#166534")
-
         right_container = ctk.CTkFrame(main_grid, fg_color="transparent")
         right_container.grid(row=0, column=1, sticky="nsew")
-        ctk.CTkLabel(right_container, text="Alertas de saúde", font=("Arial", 18, "bold"), text_color="black").pack(anchor="w", pady=(0, 15))
+        ctk.CTkLabel(right_container, text="Alertas de saúde", font=("Arial", 18, "bold")).pack(anchor="w", pady=(0, 15))
         al_card = ctk.CTkFrame(right_container, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
         al_card.pack(fill="both", expand=True, padx=2)
         self.criar_item_alerta(al_card, "Bob (Golden)", "Queda brusca de peso registrada.")
-        self.criar_item_alerta(al_card, "Mel (Poodle)", "Vacina de Raiva vence em 3 dias.")
 
     # --- TELA 2: PACIENTES ---
     def tela_pacientes(self):
@@ -232,7 +210,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         scroll.pack(fill="both", expand=True, padx=30, pady=20)
         header = ctk.CTkFrame(scroll, fg_color="transparent")
         header.pack(fill="x", pady=(0, 20))
-        ctk.CTkLabel(header, text="Pacientes", font=("Arial", 28, "bold"), text_color="black").pack(side="left")
+        ctk.CTkLabel(header, text="Pacientes", font=("Arial", 28, "bold")).pack(side="left")
         ctk.CTkButton(header, text="+ Novo Paciente", fg_color="#14B8A6", width=150, corner_radius=10).pack(side="right")
         search_row = ctk.CTkFrame(scroll, fg_color="transparent")
         search_row.pack(fill="x", pady=(0, 30))
@@ -244,16 +222,112 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.criar_card_paciente(grid, "Luna", "Saudável", "Siamês • 2 Anos", "🐱", 1)
         self.criar_card_paciente(grid, "Thor", "Saudável", "Bulldog • 3 Anos", "🐶", 2)
 
+    # --- TELA: PERFIL DO PET (TRANSFORMADO DO HTML) ---
+    def tela_perfil_pet(self, nome_pet, raca_pet, emoji):
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=30, pady=30)
+        
+        container = ctk.CTkFrame(scroll, fg_color="transparent")
+        container.pack(fill="both", expand=True)
+        container.columnconfigure(0, weight=0) # Card esquerda
+        container.columnconfigure(1, weight=1) # Conteúdo direita
+
+        # --- LADO ESQUERDO: CARD PERFIL ---
+        card_esq = ctk.CTkFrame(container, fg_color="white", corner_radius=40, width=350, border_width=1, border_color="#F1F5F9")
+        card_esq.grid(row=0, column=0, sticky="nsew", padx=(0, 30))
+        
+        img_placeholder = ctk.CTkFrame(card_esq, fg_color="#F8FAFC", height=220, corner_radius=30)
+        img_placeholder.pack(fill="x", padx=20, pady=20)
+        ctk.CTkLabel(img_placeholder, text=emoji, font=("Arial", 80)).place(relx=0.5, rely=0.5, anchor="center")
+        
+        ctk.CTkLabel(card_esq, text=nome_pet, font=("Arial", 32, "bold"), text_color="#1E293B").pack()
+        ctk.CTkLabel(card_esq, text=raca_pet.upper(), font=("Arial", 12, "bold"), text_color="#14B8A6").pack(pady=(0, 20))
+        
+        tutor_box = ctk.CTkFrame(card_esq, fg_color="#F8FAFC", corner_radius=15)
+        tutor_box.pack(fill="x", padx=20, pady=10)
+        ctk.CTkLabel(tutor_box, text="TUTOR RESPONSÁVEL", font=("Arial", 10, "bold"), text_color="#94A3B8").pack(anchor="w", padx=15, pady=(10, 0))
+        ctk.CTkLabel(tutor_box, text="Ana Souza", font=("Arial", 14, "bold"), text_color="#1E293B").pack(anchor="w", padx=15, pady=(0, 10))
+
+        # Peso e Sexo
+        row_stats = ctk.CTkFrame(card_esq, fg_color="transparent")
+        row_stats.pack(fill="x", padx=20, pady=20)
+        p_box = ctk.CTkFrame(row_stats, fg_color="#F0FDFA", corner_radius=15, height=80); p_box.pack(side="left", fill="both", expand=True, padx=(0, 5))
+        ctk.CTkLabel(p_box, text="PESO", font=("Arial", 10, "bold"), text_color="#134E4A").pack(pady=(10, 0))
+        ctk.CTkLabel(p_box, text="12 kg", font=("Arial", 18, "bold"), text_color="#134E4A").pack()
+        
+        s_box = ctk.CTkFrame(row_stats, fg_color="#EFF6FF", corner_radius=15, height=80); s_box.pack(side="left", fill="both", expand=True, padx=(5, 0))
+        ctk.CTkLabel(s_box, text="SEXO", font=("Arial", 10, "bold"), text_color="#1E3A8A").pack(pady=(10, 0))
+        ctk.CTkLabel(s_box, text="Macho", font=("Arial", 18, "bold"), text_color="#1E3A8A").pack()
+
+        # Card Próxima Consulta
+        prox_c = ctk.CTkFrame(card_esq, fg_color="#14B8A6", corner_radius=30)
+        prox_c.pack(fill="x", padx=20, pady=20)
+        ctk.CTkLabel(prox_c, text="Próxima consulta", font=("Arial", 14), text_color="white").pack(anchor="w", padx=20, pady=(15, 0))
+        ctk.CTkLabel(prox_c, text="15 de Fev", font=("Arial", 28, "bold"), text_color="white").pack(anchor="w", padx=20)
+        ctk.CTkLabel(prox_c, text="Vacinação", font=("Arial", 14), text_color="white").pack(anchor="w", padx=20, pady=(0, 15))
+
+        # --- LADO DIREITO: ABAS ---
+        self.right_col = ctk.CTkFrame(container, fg_color="white", corner_radius=40, border_width=1, border_color="#F1F5F9")
+        self.right_col.grid(row=0, column=1, sticky="nsew")
+        
+        # Seletor de Abas
+        tab_header = ctk.CTkFrame(self.right_col, fg_color="#F1F5F9", corner_radius=25, height=50)
+        tab_header.pack(pady=30, padx=30, anchor="w")
+        self.btn_sobre = ctk.CTkButton(tab_header, text="SOBRE", width=120, corner_radius=25, fg_color="#14B8A6", text_color="white", command=lambda: self.mudar_aba_pet("sobre"))
+        self.btn_sobre.pack(side="left", padx=2, pady=2)
+        self.btn_saude = ctk.CTkButton(tab_header, text="SAÚDE", width=120, corner_radius=25, fg_color="transparent", text_color="#64748B", hover_color="#E2E8F0", command=lambda: self.mudar_aba_pet("saude"))
+        self.btn_saude.pack(side="left", padx=2, pady=2)
+
+        self.container_abas = ctk.CTkFrame(self.right_col, fg_color="transparent")
+        self.container_abas.pack(fill="both", expand=True, padx=40)
+        
+        self.mudar_aba_pet("sobre")
+
+    def mudar_aba_pet(self, aba):
+        for w in self.container_abas.winfo_children(): w.destroy()
+        if aba == "sobre":
+            self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
+            self.btn_saude.configure(fg_color="transparent", text_color="#64748B")
+            
+            ctk.CTkLabel(self.container_abas, text="📝 Observações Gerais", font=("Arial", 16, "bold")).pack(anchor="w")
+            txt = ctk.CTkTextbox(self.container_abas, fg_color="#F8FAFC", corner_radius=20, height=150, border_width=1, border_color="#E2E8F0")
+            txt.pack(fill="x", pady=15)
+            txt.insert("1.0", "Pet dócil, porém agitado em consultas. Histórico de alergia a certos medicamentos...")
+
+            ctk.CTkLabel(self.container_abas, text="Comportamento", font=("Arial", 16, "bold")).pack(anchor="w", pady=(20, 10))
+            tags = ["Brincalhão", "Curioso", "Agitado"]
+            f_tags = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+            f_tags.pack(fill="x")
+            for t in tags:
+                ctk.CTkLabel(f_tags, text=t, fg_color="#F0FDFA", text_color="#14B8A6", corner_radius=15, padx=15, pady=5, font=("Arial", 11, "bold")).pack(side="left", padx=5)
+
+        else: # ABA SAÚDE
+            self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
+            self.btn_sobre.configure(fg_color="transparent", text_color="#64748B")
+            
+            h = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+            h.pack(fill="x", pady=(0, 20))
+            ctk.CTkLabel(h, text="Protocolo de Vacinação", font=("Arial", 18, "bold")).pack(side="left")
+            ctk.CTkButton(h, text="+ Novo Registro", fg_color="#14B8A6", width=120, corner_radius=20).pack(side="right")
+
+            vacinas = [("V10", "10/01/2026", "10/01/2027"), ("Raiva", "15/12/2025", "15/12/2026")]
+            for n, d, p in vacinas:
+                v_card = ctk.CTkFrame(self.container_abas, fg_color="white", corner_radius=25, border_width=1, border_color="#F1F5F9")
+                v_card.pack(fill="x", pady=10)
+                ctk.CTkLabel(v_card, text="💉", font=("Arial", 25)).pack(side="left", padx=20, pady=20)
+                ctk.CTkLabel(v_card, text=f"{n}\nAplicada: {d}", font=("Arial", 13, "bold"), justify="left").pack(side="left")
+                ctk.CTkLabel(v_card, text=f"Reforço\n{p}", font=("Arial", 13, "bold"), text_color="#14B8A6", justify="right").pack(side="right", padx=20)
+
     # --- TELA 3: AGENDA ---
     def tela_agenda(self):
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=30, pady=20)
         header = ctk.CTkFrame(scroll, fg_color="transparent")
         header.pack(fill="x", pady=(0, 20))
-        ctk.CTkLabel(header, text="Agendamentos", font=("Arial", 24, "bold"), text_color="black").pack(side="left")
+        ctk.CTkLabel(header, text="Agendamentos", font=("Arial", 24, "bold")).pack(side="left")
         badge = ctk.CTkFrame(header, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
         badge.pack(side="right")
-        ctk.CTkLabel(badge, text="Fevereiro 2026", font=("Arial", 14, "bold"), text_color="black").pack(padx=20, pady=5)
+        ctk.CTkLabel(badge, text="Fevereiro 2026", font=("Arial", 14, "bold")).pack(padx=20, pady=5)
         dias_frame = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
         dias_frame.pack(fill="x", pady=(0, 30))
         dias_frame.columnconfigure((0,1,2,3,4,5,6), weight=1)
@@ -262,7 +336,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             d_card = ctk.CTkFrame(dias_frame, fg_color="transparent")
             d_card.grid(row=0, column=i, pady=20)
             ctk.CTkLabel(d_card, text=nome, font=("Arial", 13), text_color="#64748B").pack()
-            ctk.CTkLabel(d_card, text=num, font=("Arial", 16, "bold"), text_color="black").pack()
+            ctk.CTkLabel(d_card, text=num, font=("Arial", 16, "bold")).pack()
         consultas = [("08:00", "09:00", "Vacinação: Paçoca", "Dr. Silva . Sala 03"), ("09:00", "10:30", "Raio-X: Thor", "Dr. Helena . Sala 03")]
         for hf, hp, tit, det in consultas:
             r = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -274,7 +348,7 @@ class DashboardVeterinario(ctk.CTkFrame):
     def tela_financeiro(self):
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=30, pady=20)
-        ctk.CTkLabel(scroll, text="Painel Financeiro", font=("Arial", 24, "bold"), text_color="black").pack(anchor="w", pady=(0, 25))
+        ctk.CTkLabel(scroll, text="Painel Financeiro", font=("Arial", 24, "bold")).pack(anchor="w", pady=(0, 25))
         metrics = ctk.CTkFrame(scroll, fg_color="transparent")
         metrics.pack(fill="x", pady=(0, 30))
         metrics.columnconfigure((0, 1, 2), weight=1)
@@ -301,7 +375,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         header.pack(fill="x", pady=(0, 20))
         titulo_box = ctk.CTkFrame(header, fg_color="transparent")
         titulo_box.pack(side="left")
-        ctk.CTkLabel(titulo_box, text="Prontuário eletrônico", font=("Arial", 24, "bold"), text_color="black").pack(anchor="w")
+        ctk.CTkLabel(titulo_box, text="Prontuário eletrônico", font=("Arial", 24, "bold")).pack(anchor="w")
         self.pet_var = ctk.StringVar(value="thor (bulldog)")
         ctk.CTkOptionMenu(titulo_box, values=["thor (bulldog)", "paçoca (vira-lata)", "luna (siamês)"], variable=self.pet_var, fg_color="white", text_color="black", button_color="#E2E8F0").pack(side="left", pady=5)
         ctk.CTkButton(header, text="Salvar prontuário", fg_color="#A855F7", font=("Arial", 14, "bold"), width=180, height=40).pack(side="right")
@@ -311,7 +385,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         corpo.columnconfigure(1, weight=1)
         editor = ctk.CTkFrame(corpo, fg_color="transparent")
         editor.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
-        ctk.CTkLabel(editor, text="Anotações", font=("Arial", 16, "bold"), text_color="black").pack(anchor="w", pady=(0, 10))
+        ctk.CTkLabel(editor, text="Anotações", font=("Arial", 16, "bold")).pack(anchor="w", pady=(0, 10))
         txt = ctk.CTkTextbox(editor, corner_radius=20, border_width=1, border_color="#94A3B8", fg_color="#E5E7EB", text_color="black")
         txt.pack(fill="both", expand=True)
         txt.insert("1.0", "Digite aqui as observações...")
@@ -322,7 +396,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.criar_item_historico(scroll_h, "15 Jan 2026", "Vacinação")
         self.criar_item_historico(scroll_h, "02 Dez 2025", "Check-up Geral")
 
-    # --- TELA 5: EDITAR PERFIL ---
+        # --- TELA 5: EDITAR PERFIL ---
     def tela_configuracoes_perfil(self):
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=40, pady=20)
@@ -384,7 +458,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         f = ctk.CTkFrame(card, fg_color="transparent"); f.pack(fill="x", padx=25)
         ctk.CTkLabel(f, text=valor, font=("Arial", 28, "bold")).pack(side="left")
         if badge: ctk.CTkLabel(f, text=badge, text_color="#22C55E", font=("Arial", 12, "bold")).pack(side="right")
-        ctk.CTkLabel(card, text=titulo, text_color="#64748B", font=("Arial", 13), wraplength=150).pack(anchor="w", padx=25, pady=(0, 20))
+        ctk.CTkLabel(card, text=titulo, text_color="#64748B", font=("Arial", 13)).pack(anchor="w", padx=25, pady=(0, 20))
 
     def criar_linha_agendamento(self, master, hora, pet, info, status, bg, txt):
         l = ctk.CTkFrame(master, fg_color="transparent") 
@@ -393,7 +467,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(l, text="🐶", font=("Arial", 20), fg_color="#F1F5F9", width=45, height=45, corner_radius=22).pack(side="left", padx=10, pady=10)
         t = ctk.CTkFrame(l, fg_color="transparent"); t.pack(side="left", fill="x", expand=True)
         ctk.CTkLabel(t, text=pet, font=("Arial", 14, "bold")).pack(anchor="w")
-        ctk.CTkLabel(t, text=info, font=("Arial", 11), text_color="#64748B", wraplength=200, justify="left").pack(anchor="w")
+        ctk.CTkLabel(t, text=info, font=("Arial", 11), text_color="#64748B").pack(anchor="w")
         ctk.CTkLabel(l, text=status, text_color=txt, fg_color=bg, corner_radius=8, width=100, font=("Arial", 11, "bold")).pack(side="right", padx=10)
 
     def criar_item_alerta(self, master, pet, msg):
@@ -407,8 +481,10 @@ class DashboardVeterinario(ctk.CTkFrame):
         img = ctk.CTkFrame(c, fg_color="#CBD5E1", height=150, corner_radius=15); img.pack(fill="x", padx=5, pady=5)
         ctk.CTkLabel(img, text=icon, font=("Arial", 60)).place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(c, text=nome, font=("Arial", 18, "bold")).pack(anchor="w", padx=15, pady=(5,0))
-        ctk.CTkLabel(c, text=info, font=("Arial", 12), text_color="#64748B", wraplength=180, justify="left").pack(anchor="w", padx=15)
-        ctk.CTkButton(c, text="Ver detalhes", fg_color="white", text_color="black", border_width=1, corner_radius=15, height=35).pack(fill="x", padx=30, pady=20)
+        ctk.CTkLabel(c, text=info, font=("Arial", 12), text_color="#64748B").pack(anchor="w", padx=15)
+        # BOTÃO DETALHES AGORA LIGADO À NOVA TELA
+        ctk.CTkButton(c, text="Ver detalhes", fg_color="white", text_color="black", border_width=1, corner_radius=15, height=35,
+                      command=lambda: self.trocar_tela(self.tela_perfil_pet, nome, info, icon)).pack(fill="x", padx=30, pady=20)
 
     def criar_card_agendamento_detalhado(self, master, hora, tit, sub):
         c = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") 
@@ -416,19 +492,19 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(c, text="🕒", font=("Arial", 18)).pack(side="left", padx=20, pady=15)
         ctk.CTkLabel(c, text=hora, font=("Arial", 16, "bold")).pack(side="left")
         t = ctk.CTkFrame(c, fg_color="transparent"); t.pack(side="left", padx=20, fill="x", expand=True)
-        ctk.CTkLabel(t, text=tit, font=("Arial", 14, "bold"), wraplength=300, justify="left").pack(anchor="w")
-        ctk.CTkLabel(t, text=sub, font=("Arial", 11), text_color="#64748B", wraplength=300, justify="left").pack(anchor="w")
+        ctk.CTkLabel(t, text=tit, font=("Arial", 14, "bold")).pack(anchor="w")
+        ctk.CTkLabel(t, text=sub, font=("Arial", 11), text_color="#64748B").pack(anchor="w")
 
     def criar_card_fin_topo(self, master, tit, val, col):
         c = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") 
         c.grid(row=0, column=col, padx=10, sticky="ew")
         ctk.CTkLabel(c, text=tit, text_color="#64748B", font=("Arial", 12, "bold")).pack(pady=(20, 5))
-        ctk.CTkLabel(c, text=val, font=("Arial", 24, "bold"), text_color="black").pack(pady=(0, 20))
+        ctk.CTkLabel(c, text=val, font=("Arial", 24, "bold")).pack(pady=(0, 20))
 
     def criar_item_transacao(self, master, tit, data, val):
         i = ctk.CTkFrame(master, fg_color="transparent"); i.pack(fill="x", padx=20, pady=10)
         t = ctk.CTkFrame(i, fg_color="transparent"); t.pack(side="left", fill="x", expand=True)
-        ctk.CTkLabel(t, text=tit, font=("Arial", 13, "bold"), wraplength=150, justify="left").pack(anchor="w")
+        ctk.CTkLabel(t, text=tit, font=("Arial", 13, "bold")).pack(anchor="w")
         ctk.CTkLabel(t, text=data, font=("Arial", 11), text_color="#64748B").pack(anchor="w")
         ctk.CTkLabel(i, text=val, text_color="#22C55E", font=("Arial", 13, "bold")).pack(side="right")
 
@@ -436,10 +512,18 @@ class DashboardVeterinario(ctk.CTkFrame):
         item = ctk.CTkFrame(master, fg_color="#F1F5F9", corner_radius=10) 
         item.pack(fill="x", pady=5)
         ctk.CTkLabel(item, text=data, font=("Arial", 12, "bold")).pack(anchor="w", padx=15, pady=(10,0))
-        ctk.CTkLabel(item, text=motivo, font=("Arial", 11), text_color="#64748B", wraplength=180, justify="left").pack(anchor="w", padx=15, pady=(0, 10))
+        ctk.CTkLabel(item, text=motivo, font=("Arial", 11), text_color="#64748B").pack(anchor="w", padx=15, pady=(0, 10))
 
     def criar_campo_input(self, master, label_text, placeholder, row, col):
         f = ctk.CTkFrame(master, fg_color="transparent"); f.grid(row=row, column=col, padx=15, pady=10, sticky="nsew")
         ctk.CTkLabel(f, text=label_text, font=("Arial", 10, "bold"), text_color="#94A3B8").pack(anchor="w", padx=5)
         e = ctk.CTkEntry(f, height=45, corner_radius=12, border_width=0, fg_color="#F8FAFC", text_color="#1E293B", font=("Arial", 13, "bold"))
         e.insert(0, placeholder); e.pack(fill="x", pady=5)
+
+if __name__ == "__main__":
+    app = ctk.CTk()
+    app.title("Sistema Veterinário")
+    app.geometry("1280x720")
+    dash = DashboardVeterinario(app)
+    dash.pack(fill="both", expand=True)
+    app.mainloop()
