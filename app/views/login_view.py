@@ -14,9 +14,6 @@ class LoginView(ctk.CTkFrame):
         self.card.grid_columnconfigure((0, 1), weight=1)
         self.card.grid_rowconfigure(0, weight=1)
 
-        # Lado Esquerdo (Painel azul/imagem)
         LeftPanel(self.card).grid(row=0, column=0, sticky="nsew")
-
-        # Lado Direito (Formulário) - PASSANDO on_login_success AQUI
         self.form = VetAuthForm(self.card, on_login_success=on_login_success)
         self.form.grid(row=0, column=1, sticky="nsew")
