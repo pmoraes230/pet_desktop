@@ -52,6 +52,7 @@ class ModuloConfiguracoes:
         ctk.CTkLabel(c_lang, text="🌐 Idioma", font=("Arial", 14, "bold")).pack(side="left", padx=20, pady=20)
         ctk.CTkOptionMenu(c_lang, values=["Português", "English"], fg_color="#F8FAFC", text_color="black").pack(side="right", padx=20)
         
+        
         # Notificações
         c_not = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
         c_not.pack(fill="x", pady=10)
@@ -62,6 +63,15 @@ class ModuloConfiguracoes:
             f.pack(fill="x", padx=20, pady=5)
             ctk.CTkLabel(f, text=t).pack(side="left")
             ctk.CTkSwitch(f, text="").pack(side="right")
+
+        # --- SEÇÃO: ALTERAR SENHA (ADICIONADA) ---
+        c_senha = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
+        c_senha.pack(fill="x", pady=10)
+        ctk.CTkLabel(c_senha, text="🔒 Segurança da conta", font=("Arial", 14, "bold"), text_color="black").pack(anchor="w", padx=20, pady=(15, 0))
+        ctk.CTkLabel(c_senha, text="Atualize sua senha periodicamente para manter seu perfil seguro.", font=("Arial", 12)).pack(anchor="w", padx=20)
+        ctk.CTkButton(c_senha, text="Mudar senha", fg_color="#14B8A6", text_color="white", font=("Arial", 13, "bold"), 
+                      command=lambda: self.trocar_tela(self.tela_configuracoes_senha)).pack(anchor="w", padx=20, pady=15)
+    
             
         # Perigo (Desativar)
         c_dang = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#FCA5A5")
