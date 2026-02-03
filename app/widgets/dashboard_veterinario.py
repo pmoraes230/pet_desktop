@@ -18,14 +18,34 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         self.notif_dropdown = None
 
         # --- CONFIGURAÇÃO DE LAYOUT ---
-        self.grid_columnconfigure(0, weight=0) # Sidebar fixa
-        self.grid_columnconfigure(1, weight=1) # Conteúdo expansível
-        self.grid_rowconfigure(0, weight=0, minsize=70) # Topbar
-        self.grid_rowconfigure(1, weight=1)             # Corpo
+        # Coluna 0 (Sidebar) | Coluna 1 (Topbar e Conteúdo)
+        self.grid_columnconfigure(0, weight=0) 
+        self.grid_columnconfigure(1, weight=1) 
+        
+        # Linha 0 (Topbar) | Linha 1 (Conteúdo)
+        self.grid_rowconfigure(0, weight=0, minsize=70) 
+        self.grid_rowconfigure(1, weight=1)             
 
-        # --- TOPBAR ---
-        self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
-        self.topbar.grid(row=0, column=0, columnspan=2, sticky="nsew") 
+        # --- SIDEBAR (Agora ocupa row 0 e row 1) ---
+        self.sidebar = ctk.CTkFrame(self, fg_color="#0c5c54", width=260, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew") 
+        self.sidebar.grid_propagate(False)
+
+        logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        logo_f.pack(pady=20, padx=10, fill="x")
+        ctk.CTkLabel(logo_f, text="🐾 Coração em patas", font=("Arial", 15, "bold"), text_color="white").pack(side="left", padx=5)
+
+        # Botões da Sidebar
+        self.criar_botao_sidebar("Dashboard", self.tela_dashboard)
+        self.criar_botao_sidebar("Mensagens", self.tela_chat) 
+        self.criar_botao_sidebar("Pacientes", self.tela_pacientes)
+        self.criar_botao_sidebar("Prontuário", self.tela_prontuario)
+        self.criar_botao_sidebar("Agenda", self.tela_agenda)
+        self.criar_botao_sidebar("Financeiro", self.tela_financeiro)
+
+        # --- TOPBAR (Agora começa na coluna 1) ---
+        self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0, height=70)
+        self.topbar.grid(row=0, column=1, sticky="nsew") 
         self.topbar.grid_propagate(False)
 
         ctk.CTkLabel(self.topbar, text="Bom dia, Usuário!", font=("Arial", 16, "bold"), text_color="black").pack(side="left", padx=30)
@@ -48,52 +68,34 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         self.avatar.pack(side="left")
 
         # Linha separadora abaixo da topbar
-        ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=0, columnspan=2, sticky="sew")
-
-        # --- SIDEBAR ---
-        self.sidebar = ctk.CTkFrame(self, fg_color="#14B8A6", width=260, corner_radius=0)
-        self.sidebar.grid(row=1, column=0, sticky="nsew") 
-        self.sidebar.grid_propagate(False)
-
-        logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        logo_f.pack(pady=20, padx=10, fill="x")
-        ctk.CTkLabel(logo_f, text="🐾 Coração em patas", font=("Arial", 15, "bold"), text_color="black").pack(side="left", padx=5)
+        self.separator = ctk.CTkFrame(self, fg_color="#E2E8F0", height=2)
+        self.separator.grid(row=0, column=1, sticky="sew")
 
         # --- ÁREA DE CONTEÚDO ---
         self.content = ctk.CTkFrame(self, fg_color="#F8FAFC", corner_radius=0)
         self.content.grid(row=1, column=1, sticky="nsew")
-
-        # Botões da Sidebar
-        self.criar_botao_sidebar("Dashboard", self.tela_dashboard)
-        self.criar_botao_sidebar("Mensagens", self.tela_chat) 
-        self.criar_botao_sidebar("Pacientes", self.tela_pacientes)
-        self.criar_botao_sidebar("Prontuário", self.tela_prontuario)
-        self.criar_botao_sidebar("Agenda", self.tela_agenda)
-        self.criar_botao_sidebar("Financeiro", self.tela_financeiro)
         
         # Iniciar na tela principal
         self.tela_dashboard()
 
     # --- NAVEGAÇÃO ---
     def trocar_tela(self, func, *args):
-        # Limpa o frame de conteúdo antes de carregar a nova função
         for widget in self.content.winfo_children():
             widget.destroy()
         func(*args)
 
     def criar_botao_sidebar(self, texto, comando):
         ctk.CTkButton(
-            self.sidebar, text=texto, fg_color="#14B8A6", hover_color="#188C7F", 
+            self.sidebar, text=texto, fg_color="#0c5c54", hover_color="#115E59", 
             text_color="white", font=("Arial", 16), height=45, 
             command=lambda: self.trocar_tela(comando)
         ).pack(fill="x", padx=20, pady=6)
 
     # --- TELA DASHBOARD ---
     def tela_dashboard(self):
-        self.trocar_tela(self._construir_dashboard)
+        self._construir_dashboard()
 
     def _construir_dashboard(self):
-        # Scroll para o dashboard
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=25, pady=25)
         scroll.grid_columnconfigure((0, 1, 2), weight=1, uniform="equal")
@@ -103,7 +105,7 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         self.criar_card_metrica(scroll, "8", "Consultas hoje", "🟩", None, 1)
         self.criar_card_metrica(scroll, "4.2K", "Faturamento mês", "🟨", None, 2)
 
-        # Títulos das tabelas
+        # Títulos
         ctk.CTkLabel(scroll, text="Histórico Recente", font=("Arial", 18, "bold"), text_color="black").grid(
             row=1, column=0, columnspan=2, sticky="w", pady=(30, 15), padx=10
         )
@@ -111,18 +113,17 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
             row=1, column=2, sticky="w", pady=(30, 15), padx=10
         )
 
-        # Card de Histórico
+        # Card Histórico
         hist_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
         hist_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10)
         self.criar_linha_agendamento(hist_card, "09:00 AM", "Paçoca", "Vacinação Anual", "Confirmado", "#DCFCE7", "#166534")
         self.criar_linha_agendamento(hist_card, "10:30 AM", "Luna", "Avaliação", "Aguardando", "#FEF9C3", "#854D0E")
 
-        # Card de Alertas
+        # Card Alertas
         al_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
         al_card.grid(row=2, column=2, sticky="nsew", padx=10)
         self.criar_item_alerta(al_card, "Bob (Golden)", "Queda brusca de peso registrada.")
 
-    # --- COMPONENTES AUXILIARES ---
     def criar_card_metrica(self, master, valor, titulo, icon, badge, col):
         card = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") 
         card.grid(row=0, column=col, padx=10, sticky="nsew")
@@ -158,7 +159,7 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         else:
             if self.menu_perfil_aberto: self.toggle_menu()
             self.notif_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
-            self.notif_dropdown.place(relx=0.92, rely=0.08, anchor="ne")
+            self.notif_dropdown.place(relx=0.95, y=75, anchor="ne")
             ctk.CTkLabel(self.notif_dropdown, text="Notificações", font=("Arial", 14, "bold"), text_color="black").pack(pady=10, padx=20)
             self.notif_aberta = True
 
@@ -169,18 +170,11 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         else:
             if self.notif_aberta: self.toggle_notifications()
             self.menu_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
-            self.menu_dropdown.place(relx=0.98, rely=0.08, anchor="ne")
-            
-            # Itens do Menu (Usando as funções dos Mixins)
+            self.menu_dropdown.place(relx=0.98, y=75, anchor="ne")
             self.criar_item_aba("👤 Editar Perfil", self.tela_configuracoes_perfil)
             self.criar_item_aba("⚙️ Configurações", self.tela_configuracoes_gerais)
-            
-            # Separador
             ctk.CTkFrame(self.menu_dropdown, fg_color="#E2E8F0", height=1).pack(fill="x", padx=10, pady=5)
-            
-            # Botão Sair (Chama None ou comando de logout)
             self.criar_item_aba("🚪 Sair", None, cor_texto="#EF4444")
-            
             self.menu_perfil_aberto = True
 
     def criar_item_aba(self, texto, comando, cor_texto="black"):

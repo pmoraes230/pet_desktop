@@ -34,7 +34,7 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloDashboard, ModuloPacientes, Modul
         ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=0, columnspan=2, sticky="sew")
 
         # --- SIDEBAR ---
-        self.sidebar = ctk.CTkFrame(self, fg_color="#14B8A6", width=260, corner_radius=0)
+        self.sidebar = ctk.CTkFrame(self, fg_color="#0c5c54", width=260, corner_radius=0)
         self.sidebar.grid(row=1, column=0, sticky="nsew"); self.sidebar.grid_propagate(False)
         logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent"); logo_f.pack(pady=20, padx=10, fill="x")
         ctk.CTkLabel(logo_f, text="🐾 Coração em patas", font=("Arial", 15, "bold"), text_color="black").pack(side="left", padx=5)
