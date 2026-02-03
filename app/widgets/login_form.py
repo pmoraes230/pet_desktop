@@ -1,11 +1,10 @@
 import customtkinter as ctk
 import webbrowser
 from app.widgets.modal import Modal
-import app.core.colors as colors   # suas cores personalizadas
+import app.core.colors as colors
 
 # Endereço para criar conta (abre no navegador)
 CADASTRO_URL = "http://127.0.0.1:8000/login/?type=vet&mode=register"
-
 
 class VetAuthForm(ctk.CTkFrame):
     def __init__(self, master, on_login_success=None, **kwargs):
@@ -122,6 +121,7 @@ class VetAuthForm(ctk.CTkFrame):
 
             # 🔥 chama a função que veio da LoginView (abre o dashboard)
             if self.on_login_success:
+                # self.after garante que o modal de sucesso apareça antes da troca de tela
                 self.after(1500, self.on_login_success)
 
         else:

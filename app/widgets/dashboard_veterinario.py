@@ -1,4 +1,10 @@
 import customtkinter as ctk
+from .modulo_pacientes import ModuloPacientes
+from .modulo_financeiro import ModuloFinanceiro
+from .modulo_configuracoes import ModuloConfiguracoes
+from .modulo_agenda import ModuloAgenda
+from .modulo_prontuario import ModuloProntuario
+from .modulo_chat import ModuloChat
 
 # Importação das funções que criam as telas
 from app.widgets.screens.dashboard_screen import create_dashboard_screen
@@ -16,7 +22,7 @@ class DashboardVeterinario(ctk.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        # Variáveis de controle para os menus
+        # Variáveis de controle
         self.menu_perfil_aberto = False
         self.menu_dropdown = None
         self.notif_aberta = False
@@ -55,25 +61,17 @@ class DashboardVeterinario(ctk.CTkFrame):
         )
         self.avatar.pack(side="left")
 
-        self.linha_separadora = ctk.CTkFrame(self, fg_color="#E2E8F0", height=2)
-        self.linha_separadora.grid(row=0, column=0, columnspan=2, sticky="sew")
+        # Linha separadora abaixo da topbar
+        ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=0, columnspan=2, sticky="sew")
 
         # --- SIDEBAR ---
         self.sidebar = ctk.CTkFrame(self, fg_color="#14B8A6", width=260, corner_radius=0)
         self.sidebar.grid(row=1, column=0, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
-        self.logo_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        self.logo_frame.pack(pady=20, padx=10, fill="x")
-
-        self.logo_circle = ctk.CTkFrame(self.logo_frame, width=44, height=44, corner_radius=22, fg_color="#8B5CF6")
-        self.logo_circle.pack(side="left", padx=(10, 5))
-        self.logo_circle.pack_propagate(False)
-        self.emoji_label = ctk.CTkLabel(self.logo_circle, text="🐾", font=("Arial", 20), text_color="white")
-        self.emoji_label.place(relx=0.5, rely=0.5, anchor="center")
-
-        self.logo_text = ctk.CTkLabel(self.logo_frame, text="Coração em patas", font=("Arial", 15, "bold"), text_color="black")
-        self.logo_text.pack(side="left", padx=5)
+        logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        logo_f.pack(pady=20, padx=10, fill="x")
+        ctk.CTkLabel(logo_f, text="🐾 Coração em patas", font=("Arial", 15, "bold"), text_color="black").pack(side="left", padx=5)
 
         # --- ÁREA DE CONTEÚDO ---
         self.content = ctk.CTkFrame(self, fg_color="#F8FAFC", corner_radius=0)
@@ -137,10 +135,17 @@ class DashboardVeterinario(ctk.CTkFrame):
                 self.toggle_notifications()
             self.menu_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
             self.menu_dropdown.place(relx=0.98, rely=0.08, anchor="ne")
+            
+            # Itens do Menu (Usando as funções dos Mixins)
             self.criar_item_aba("👤 Editar Perfil", self.tela_configuracoes_perfil)
             self.criar_item_aba("⚙️ Configurações", self.tela_configuracoes_gerais)
+            
+            # Separador
             ctk.CTkFrame(self.menu_dropdown, fg_color="#E2E8F0", height=1).pack(fill="x", padx=10, pady=5)
+            
+            # Botão Sair (Chama None ou comando de logout)
             self.criar_item_aba("🚪 Sair", None, cor_texto="#EF4444")
+            
             self.menu_perfil_aberto = True
 
     def criar_item_aba(self, texto, comando, cor_texto="black"):
