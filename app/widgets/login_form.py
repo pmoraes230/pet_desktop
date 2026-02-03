@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import webbrowser
 from app.widgets.modal import Modal
+from app.controllers.auth_controller import AuthController
 import app.core.colors as colors
 
 # Endereço para criar conta (abre no navegador)
@@ -95,11 +96,12 @@ class VetAuthForm(ctk.CTkFrame):
         link.bind("<Button-1>", lambda e: webbrowser.open(CADASTRO_URL))
 
     def tentar_entrar(self):
-        """Aqui acontece a verificação quando clica em Entrar"""
+        """Valida e autentica o usuário com o controller"""
 
         email_digitado = self.email.get().strip()
         senha_digitada = self.senha.get().strip()
 
+        # Validações locais
         if email_digitado == "":
             Modal(self, "Atenção", "Digite seu email, por favor.", type="error")
             self.email.focus()
@@ -115,14 +117,21 @@ class VetAuthForm(ctk.CTkFrame):
             self.senha.focus()
             return
 
-        # LOGIN DE TESTE
-        if email_digitado == "teste@exemplo.com" and senha_digitada == "123456":
-            Modal(self, "Sucesso", "Login realizado!\nBem-vindo(a) de volta!", type="success")
-
-            # 🔥 chama a função que veio da LoginView (abre o dashboard)
-            if self.on_login_success:
+        # Chama o controller para autenticar
+        try:
+            controller = AuthController(email_digitado, senha_digitada)
+            sucesso, resposta = controller.login()
+            
+            if sucesso:
+                Modal(self, "Sucesso", f"{resposta['message']}\nBem-vindo(a) de volta!", type="success")
+                # Armazenar dados do usuário se necessário
+                self.user_data = controller.get_user_data()
+                
                 # self.after garante que o modal de sucesso apareça antes da troca de tela
-                self.after(1500, self.on_login_success)
-
-        else:
-            Modal(self, "Erro", "Email ou senha incorretos.\nTente novamente.", type="error")
+                if self.on_login_success:
+                    self.after(1500, self.on_login_success)
+            else:
+                Modal(self, "Erro", resposta['message'], type="error")
+                
+        except Exception as e:
+            Modal(self, "Erro", f"Erro no sistema: {str(e)}", type="error")

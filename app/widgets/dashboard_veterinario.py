@@ -5,11 +5,16 @@ from .modulo_configuracoes import ModuloConfiguracoes
 from .modulo_agenda import ModuloAgenda
 from .modulo_prontuario import ModuloProntuario
 from .modulo_chat import ModuloChat
+from app.controllers.auth_controller import AuthController
+from app.widgets.modal import Modal
 
 class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, ModuloConfiguracoes, 
                            ModuloAgenda, ModuloProntuario, ModuloChat):
-    def __init__(self, master):
+    def __init__(self, master, on_logout=None):
         super().__init__(master)
+        
+        # Função para retornar à tela de login
+        self.on_logout = on_logout
 
         # Variáveis de controle
         self.menu_perfil_aberto = False
@@ -178,15 +183,28 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
             # Separador
             ctk.CTkFrame(self.menu_dropdown, fg_color="#E2E8F0", height=1).pack(fill="x", padx=10, pady=5)
             
-            # Botão Sair (Chama None ou comando de logout)
-            self.criar_item_aba("🚪 Sair", None, cor_texto="#EF4444")
+            # Botão Sair (Chama função de logout)
+            self.criar_item_aba("🚪 Sair", self.fazer_logout, cor_texto="#EF4444")
             
             self.menu_perfil_aberto = True
+    
+    def fazer_logout(self):
+        """Faz logout do usuário"""
+        # Criar controller vazio apenas para limpar
+        controller = AuthController("", "")
+        controller.logout()
+        
+        # Mostrar confirmação
+        Modal(self, "Logout", "Você foi desconectado com sucesso!", type="success")
+        
+        # Retornar à tela de login após 1 segundo
+        if self.on_logout:
+            self.after(1000, self.on_logout)
 
     def criar_item_aba(self, texto, comando, cor_texto="black"):
         btn = ctk.CTkButton(
             self.menu_dropdown, text=texto, fg_color="transparent", text_color=cor_texto, 
             hover_color="#F1F5F9", anchor="w", font=("Arial", 13), height=35, width=150,
-            command=lambda: [self.toggle_menu(), self.trocar_tela(comando) if comando else None]
+            command=lambda: [self.toggle_menu(), comando() if comando else None]
         )
         btn.pack(padx=5, pady=2)

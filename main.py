@@ -23,7 +23,7 @@ class App(ctk.CTk):
 
     def mostrar_dashboard(self):
         self.limpar_tela()
-        app_dash = DashboardVeterinario(self)
+        app_dash = DashboardVeterinario(self, on_logout=self.mostrar_login)
         app_dash.pack(fill="both", expand=True)
 
 if __name__ == "__main__":
