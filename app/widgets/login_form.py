@@ -124,12 +124,12 @@ class VetAuthForm(ctk.CTkFrame):
             
             if sucesso:
                 Modal(self, "Sucesso", f"{resposta['message']}\nBem-vindo(a) de volta!", type="success")
-                # Armazenar dados do usuário se necessário
+                # Armazenar dados do usuário
                 self.user_data = controller.get_user_data()
-                
-                # self.after garante que o modal de sucesso apareça antes da troca de tela
+
+                # Passa user_data para o callback de sucesso (ex.: main.mostrar_dashboard)
                 if self.on_login_success:
-                    self.after(1500, self.on_login_success)
+                    self.after(1500, lambda: self.on_login_success(self.user_data))
             else:
                 Modal(self, "Erro", resposta['message'], type="error")
                 

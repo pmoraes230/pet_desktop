@@ -3,8 +3,6 @@ from typing import Dict, Optional
 from app.config.database import connectdb
 
 # Configurar Django minimamente (apenas para validação de senha)
-import os
-import django
 from django.conf import settings
 
 if not settings.configured:
@@ -102,7 +100,7 @@ class AuthUserModal:
     def _is_valid_input(self) -> bool:
         """Valida os dados de entrada."""
         if not self.username or not self.password:
-            return False
+            return False    
         if len(self.username) < 3:
             return False
         if len(self.password) < 3:

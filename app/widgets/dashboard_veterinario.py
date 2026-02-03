@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from datetime import datetime
 from .modulo_pacientes import ModuloPacientes
 from .modulo_financeiro import ModuloFinanceiro
 from .modulo_configuracoes import ModuloConfiguracoes
@@ -6,13 +7,27 @@ from .modulo_agenda import ModuloAgenda
 from .modulo_prontuario import ModuloProntuario
 from .modulo_chat import ModuloChat
 from app.controllers.auth_controller import AuthController
+from app.controllers.vet_controller import VetController
 from app.widgets.modal import Modal
+import app.core.colors as colors
 
 class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, ModuloConfiguracoes, 
                            ModuloAgenda, ModuloProntuario, ModuloChat):
-    def __init__(self, master, on_logout=None):
+    def __init__(self, master, current_user: dict = None, on_logout=None):
         super().__init__(master)
-        
+
+        # Dados do usuário autenticado
+        self.current_user = current_user or {}
+        self.current_user_id = None
+        if isinstance(self.current_user, dict) and 'id' in self.current_user:
+            self.current_user_id = self.current_user['id']
+
+        # Nome exibido no header
+        self.user_name = (self.current_user.get('name') if isinstance(self.current_user, dict) else None) or "Usuário"
+
+        # Controller do veterinário (instancia com id do usuário autenticado se disponível)
+        self.vet_controller = VetController(self.current_user_id) if self.current_user_id else None
+
         # Função para retornar à tela de login
         self.on_logout = on_logout
 
@@ -30,10 +45,12 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
 
         # --- TOPBAR ---
         self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
-        self.topbar.grid(row=0, column=0, columnspan=2, sticky="nsew") 
+        self.topbar.grid(row=0, column=1, sticky="nsew") 
         self.topbar.grid_propagate(False)
 
-        ctk.CTkLabel(self.topbar, text="Bom dia, Usuário!", font=("Arial", 16, "bold"), text_color="black").pack(side="left", padx=30)
+        # Saudação com o nome do usuário autenticado
+        self.greeting_label = ctk.CTkLabel(self.topbar, text=f"{self._get_greeting()}, {self.user_name}!", font=("Arial", 16, "bold"), text_color="black")
+        self.greeting_label.pack(side="left", padx=30)
         
         self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent")
         self.right_info.pack(side="right", padx=20)
@@ -45,19 +62,21 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         )
         self.btn_notif.pack(side="left", padx=15)
         
+        # Avatar mostra a inicial do usuário
+        initial = (self.user_name[0].upper() if self.user_name else "U")
         self.avatar = ctk.CTkButton(
-            self.right_info, text="U", font=("Arial", 14, "bold"), width=38, height=38, 
+            self.right_info, text=initial, font=("Arial", 14, "bold"), width=38, height=38, 
             fg_color="#A855F7", text_color="white", corner_radius=19,
             hover_color="#9333EA", command=self.toggle_menu
         )
         self.avatar.pack(side="left")
 
-        # Linha separadora abaixo da topbar
-        ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=0, columnspan=2, sticky="sew")
+        # Linha separadora abaixo da topbar (apenas no lado direito)
+        ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=1, sticky="sew")
 
-        # --- SIDEBAR ---
-        self.sidebar = ctk.CTkFrame(self, fg_color="#14B8A6", width=260, corner_radius=0)
-        self.sidebar.grid(row=1, column=0, sticky="nsew") 
+        # --- SIDEBAR (ocupa toda altura) ---
+        self.sidebar = ctk.CTkFrame(self, fg_color=colors.BRAND_DARK_TEAL_HOVER, width=260, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew") 
         self.sidebar.grid_propagate(False)
 
         logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent")
@@ -86,9 +105,19 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
             widget.destroy()
         func(*args)
 
+    def _get_greeting(self) -> str:
+        """Retorna saudação dinâmica baseada na hora do dia."""
+        hora = datetime.now().hour
+        if hora < 12:
+            return "Bom dia"
+        elif hora < 18:
+            return "Boa tarde"
+        else:
+            return "Boa noite"
+
     def criar_botao_sidebar(self, texto, comando):
         ctk.CTkButton(
-            self.sidebar, text=texto, fg_color="#14B8A6", hover_color="#188C7F", 
+            self.sidebar, text=texto, fg_color=colors.BRAND_DARK_TEAL_HOVER, hover_color="#188C7F", 
             text_color="white", font=("Arial", 16), height=45, 
             command=lambda: self.trocar_tela(comando)
         ).pack(fill="x", padx=20, pady=6)
