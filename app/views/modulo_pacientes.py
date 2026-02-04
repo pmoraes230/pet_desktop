@@ -1,6 +1,15 @@
+from doctest import master
 import customtkinter as ctk
+from ..models.pets_vet import PetAll
+from ..controllers.pet_controller import PetController
 
 class ModuloPacientes:
+
+    def __init__(self, content, trocar_tela):
+        self.content = content
+        self.trocar_tela = trocar_tela
+        self.pet_controller = PetController()
+
     def tela_pacientes(self):
         for widget in self.content.winfo_children():
             widget.destroy()
@@ -16,9 +25,43 @@ class ModuloPacientes:
         grid = ctk.CTkFrame(scroll, fg_color="transparent")
         grid.pack(fill="both", expand=True)
         grid.columnconfigure((0, 1, 2), weight=1)  
-        self.criar_card_paciente(grid, "Paçoca", "Saudável", "Vira-lata • 4 Anos", "🐶", 0)
-        self.criar_card_paciente(grid, "Luna", "Saudável", "Siamês • 2 Anos", "🐱", 1)
-        self.criar_card_paciente(grid, "Thor", "Saudável", "Bulldog • 3 Anos", "🐶", 2)
+
+        pets = PetAll.listar_pets()
+
+        for i, pet in enumerate(pets):
+            emoji = "🐶" if pet["especie"] == "Cachorro" else "🐱"
+            info = f'{pet["raca"]} • {pet["idade"]} Anos'
+
+            self.criar_card_paciente(
+                grid,
+                pet["nome_pet"],
+                "Saudável",
+                info,
+                emoji,
+                i % 3
+            )
+
+        pets = self.pet_controller.listar_pets()
+
+        for i, pet in enumerate(pets):
+            emoji = "🐶" if pet["especie"] == "Cachorro" else "🐱"
+            info = f'{pet["raca"]} • {pet["idade"]} Anos'
+
+            row = i // 3
+            col = i % 3
+
+            self.criar_card_paciente(
+                grid,
+                pet["nome_pet"],
+                "Saudável",
+                info,
+                emoji,
+                row,
+                col
+            )
+
+
+
 
     def abrir_popup_novo_paciente(self):
         self.overlay = ctk.CTkFrame(self, fg_color="transparent") 
@@ -98,12 +141,6 @@ class ModuloPacientes:
                 v_card = ctk.CTkFrame(self.container_abas, fg_color="white", corner_radius=25, border_width=1, border_color="#F1F5F9"); v_card.pack(fill="x", pady=10)
                 ctk.CTkLabel(v_card, text=f"{n}\nAplicada: {d}", font=("Arial", 13, "bold"), justify="left").pack(side="left", padx=20)
 
-    def criar_card_paciente(self, master, nome, status, info, icon, col):
-        c = ctk.CTkFrame(master, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
-        c.grid(row=0, column=col, padx=10, pady=10, sticky="nsew")
-        img = ctk.CTkFrame(c, fg_color="#CBD5E1", height=150, corner_radius=15); img.pack(fill="x", padx=5, pady=5)
-        ctk.CTkLabel(img, text=icon, font=("Arial", 60)).place(relx=0.5, rely=0.5, anchor="center")
-        ctk.CTkLabel(c, text=nome, font=("Arial", 18, "bold")).pack(anchor="w", padx=15, pady=(5,0))
-        ctk.CTkLabel(c, text=info, font=("Arial", 12), text_color="#64748B").pack(anchor="w", padx=15)
-        ctk.CTkButton(c, text="Ver detalhes", fg_color="white", text_color="black", border_width=1, corner_radius=15, height=35,
-                      command=lambda: self.trocar_tela(self.tela_perfil_pet, nome, info, icon)).pack(fill="x", padx=30, pady=20)
+    def criar_card_paciente(self, master, nome, status, info, icon, row, col):
+        c = ctk.CTkFrame(master, fg_color="white", corner_radius=20, border_width=1)
+        c.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
