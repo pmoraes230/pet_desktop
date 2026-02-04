@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from app.views.login_view import LoginView
-from app.widgets.dashboard_veterinario import DashboardVeterinario
+from app.views.dashboard_veterinario import DashboardVeterinario
 from app.config.database import connectdb
 import os
 
