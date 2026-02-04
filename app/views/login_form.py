@@ -1,6 +1,6 @@
 import customtkinter as ctk
 import webbrowser
-from app.widgets.modal import Modal
+from app.views.modal import Modal
 from app.controllers.auth_controller import AuthController
 import app.core.colors as colors
 

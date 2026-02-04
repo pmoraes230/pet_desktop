@@ -1,6 +1,6 @@
 import customtkinter as ctk
-from app.widgets.left_panel import LeftPanel
-from app.widgets.login_form import VetAuthForm
+from app.views.left_panel import LeftPanel
+from app.views.login_form import VetAuthForm
 
 class LoginView(ctk.CTkFrame):
     def __init__(self, master, on_login_success):

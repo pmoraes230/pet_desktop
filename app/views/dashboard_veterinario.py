@@ -8,7 +8,7 @@ from .modulo_prontuario import ModuloProntuario
 from .modulo_chat import ModuloChat
 from app.controllers.auth_controller import AuthController
 from app.controllers.vet_controller import VetController
-from app.widgets.modal import Modal
+from app.views.modal import Modal
 import app.core.colors as colors
 
 class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, ModuloConfiguracoes, 
