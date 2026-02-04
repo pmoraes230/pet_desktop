@@ -9,97 +9,152 @@ from .modulo_chat import ModuloChat
 from app.controllers.auth_controller import AuthController
 from app.controllers.vet_controller import VetController
 from app.views.modal import Modal
+from ..controllers.perfil_controller import FotoPerfil
 import app.core.colors as colors
+from io import BytesIO
+import requests
+from PIL import Image, ImageDraw
 
-class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, ModuloConfiguracoes, 
+
+class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, ModuloConfiguracoes,
                            ModuloAgenda, ModuloProntuario, ModuloChat):
+
     def __init__(self, master, current_user: dict = None, on_logout=None):
         super().__init__(master)
 
-        # Dados do usuário autenticado
         self.current_user = current_user or {}
-        self.current_user_id = None
-        if isinstance(self.current_user, dict) and 'id' in self.current_user:
-            self.current_user_id = self.current_user['id']
-
-        # Nome exibido no header
-        self.user_name = (self.current_user.get('name') if isinstance(self.current_user, dict) else None) or "Usuário"
-
-        # Controller do veterinário (instancia com id do usuário autenticado se disponível)
+        self.current_user_id = self.current_user.get('id')
+        self.user_name = self.current_user.get('name', "Usuário")
+        self.foto_perfil = FotoPerfil(self.current_user_id)
         self.vet_controller = VetController(self.current_user_id) if self.current_user_id else None
-
-        # Função para retornar à tela de login
         self.on_logout = on_logout
 
-        # Variáveis de controle
         self.menu_perfil_aberto = False
         self.menu_dropdown = None
         self.notif_aberta = False
         self.notif_dropdown = None
 
-        # --- CONFIGURAÇÃO DE LAYOUT ---
-        # Coluna 0 (Sidebar) | Coluna 1 (Topbar e Conteúdo)
-        self.grid_columnconfigure(0, weight=0) 
-        self.grid_columnconfigure(1, weight=1) 
-        
-        # Linha 0 (Topbar) | Linha 1 (Conteúdo)
-        self.grid_rowconfigure(0, weight=0, minsize=70) 
-        self.grid_rowconfigure(1, weight=1)             
+        # Layout base
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=0, minsize=70)
+        self.grid_rowconfigure(1, weight=1)
 
-        # --- SIDEBAR (Ocupa row 0 e row 1 - altura total) ---
+        # Sidebar
         self.sidebar = ctk.CTkFrame(self, fg_color=colors.BRAND_DARK_TEAL_HOVER, width=260, corner_radius=0)
-        self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew") 
+        self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
         logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         logo_f.pack(pady=20, padx=10, fill="x")
         ctk.CTkLabel(logo_f, text="🐾 Coração em patas", font=("Arial", 15, "bold"), text_color="white").pack(side="left", padx=5)
 
-        # Botões da Sidebar
+        # Botões da sidebar
         self.criar_botao_sidebar("Dashboard", self.tela_dashboard)
-        self.criar_botao_sidebar("Mensagens", self.tela_chat) 
+        self.criar_botao_sidebar("Mensagens", self.tela_chat)
         self.criar_botao_sidebar("Pacientes", self.tela_pacientes)
         self.criar_botao_sidebar("Prontuário", self.tela_prontuario)
         self.criar_botao_sidebar("Agenda", self.tela_agenda)
         self.criar_botao_sidebar("Financeiro", self.tela_financeiro)
 
-        # --- TOPBAR ---
+        # Topbar
         self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
-        self.topbar.grid(row=0, column=1, sticky="nsew") 
-        self.topbar.grid_propagate(False)
+        self.topbar.grid(row=0, column=1, sticky="nsew")
 
-        # Saudação com o nome do usuário autenticado
-        self.greeting_label = ctk.CTkLabel(self.topbar, text=f"{self._get_greeting()}, {self.user_name}!", font=("Arial", 16, "bold"), text_color="black")
+        self.greeting_label = ctk.CTkLabel(
+            self.topbar,
+            text=f"{self._get_greeting()}, {self.user_name}!",
+            font=("Arial", 16, "bold"),
+            text_color="black"
+        )
         self.greeting_label.pack(side="left", padx=30)
-        
+
         self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent")
         self.right_info.pack(side="right", padx=20)
-        
+
         self.btn_notif = ctk.CTkButton(
-            self.right_info, text="🔔", font=("Arial", 20), width=40, height=40,
-            fg_color="transparent", text_color="black", hover_color="#F1F5F9",
+            self.right_info, text="🔔", font=("Arial", 20),
+            width=40, height=40, fg_color="transparent",
+            text_color="black", hover_color="#F1F5F9",
             command=self.toggle_notifications
         )
         self.btn_notif.pack(side="left", padx=15)
-        
-        # Avatar mostra a inicial do usuário
-        initial = (self.user_name[0].upper() if self.user_name else "U")
-        self.avatar = ctk.CTkButton(
-            self.right_info, text=initial, font=("Arial", 14, "bold"), width=38, height=38, 
-            fg_color="#A855F7", text_color="white", corner_radius=19,
-            hover_color="#9333EA", command=self.toggle_menu
-        )
+
+        # Área de conteúdo
+        self.content = ctk.CTkFrame(self, fg_color="#F8FAFC")
+        self.content.grid(row=1, column=1, sticky="nsew")
+        self.content.grid_columnconfigure(0, weight=1)
+        self.content.grid_rowconfigure(0, weight=1)
+
+        # Avatar AWS
+        perfil = self.foto_perfil.fetch_perfil_data()
+        foto_key = perfil.get("imagem_perfil_veterinario")
+        avatar_size = (38, 38)
+
+        if foto_key:
+            try:
+                url = f"https://coracao-em-patas.s3.amazonaws.com/{foto_key}"
+                response = requests.get(url, timeout=5)
+                response.raise_for_status()
+                pil_img = Image.open(BytesIO(response.content))
+                pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
+
+                self.avatar_img = ctk.CTkImage(light_image=pil_img, size=avatar_size)
+                self.avatar = ctk.CTkButton(
+                    self.right_info, image=self.avatar_img, text="",
+                    width=38, height=38, corner_radius=19,
+                    fg_color="transparent", hover_color="#E5E7EB",
+                    command=self.toggle_menu
+                )
+            except Exception as e:
+                print("Erro ao carregar avatar AWS:", e)
+                self._criar_avatar_padrao()
+        else:
+            self._criar_avatar_padrao()
+
         self.avatar.pack(side="left")
 
-        # Linha separadora abaixo da topbar (apenas no lado direito)
+        # Linha separadora
         ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=1, sticky="sew")
 
-        # --- ÁREA DE CONTEÚDO ---
-        self.content = ctk.CTkFrame(self, fg_color="#F8FAFC", corner_radius=0)
-        self.content.grid(row=1, column=1, sticky="nsew")
-        
-        # Iniciar na tela principal
+        # Tela inicial
         self.tela_dashboard()
+
+    # ================= MÉTODOS =================
+
+    def atualizar_avatar_topo(self, nova_key):
+        try:
+            url = f"https://coracao-em-patas.s3.amazonaws.com/{nova_key}?t={datetime.now().timestamp()}"
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            pil_img = Image.open(BytesIO(response.content))
+            avatar_size = (38, 38)
+            pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
+            self.avatar_img = ctk.CTkImage(light_image=pil_img, size=avatar_size)
+            self.avatar.configure(image=self.avatar_img, text="")
+            print(f"Topbar atualizada com a foto: {nova_key}")
+        except Exception as e:
+            print(f"Erro ao atualizar avatar do topo: {e}")
+            self._criar_avatar_padrao()
+
+    def criar_imagem_redonda(self, pil_img, size):
+        pil_img = pil_img.resize(size).convert("RGBA")
+        mask = Image.new("L", size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0) + size, fill=255)
+        output = Image.new("RGBA", size, (0, 0, 0, 0))
+        output.paste(pil_img, (0, 0), mask)
+        return output
+
+    def _criar_avatar_padrao(self):
+        initial = self.user_name[0].upper()
+        self.avatar = ctk.CTkButton(
+            self.right_info, text=initial,
+            font=("Arial", 14, "bold"), width=38, height=38,
+            fg_color="#A855F7", text_color="white",
+            corner_radius=19, hover_color="#9333EA",
+            command=self.toggle_menu
+        )
 
     # --- NAVEGAÇÃO ---
     def trocar_tela(self, func, *args):
@@ -108,7 +163,6 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         func(*args)
 
     def _get_greeting(self) -> str:
-        """Retorna saudação dinâmica baseada na hora do dia."""
         hora = datetime.now().hour
         if hora < 12:
             return "Bom dia"
@@ -117,14 +171,15 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         else:
             return "Boa noite"
 
+    # --- SIDEBAR ---
     def criar_botao_sidebar(self, texto, comando):
         ctk.CTkButton(
-            self.sidebar, text=texto, fg_color=colors.BRAND_DARK_TEAL_HOVER, hover_color="#188C7F", 
-            text_color="white", font=("Arial", 16), height=45, 
+            self.sidebar, text=texto, fg_color=colors.BRAND_DARK_TEAL_HOVER, hover_color="#188C7F",
+            text_color="white", font=("Arial", 16), height=45,
             command=lambda: self.trocar_tela(comando)
         ).pack(fill="x", padx=20, pady=6)
 
-    # --- TELA DASHBOARD ---
+    # --- DASHBOARD ---
     def tela_dashboard(self):
         self.trocar_tela(self._construir_dashboard)
 
@@ -157,6 +212,7 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         al_card.grid(row=2, column=2, sticky="nsew", padx=10)
         self.criar_item_alerta(al_card, "Bob (Golden)", "Queda brusca de peso registrada.")
 
+    # --- COMPONENTES DASHBOARD ---
     def criar_card_metrica(self, master, valor, titulo, icon, badge, col):
         card = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0") 
         card.grid(row=0, column=col, padx=10, sticky="nsew")
@@ -184,7 +240,7 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         ctk.CTkLabel(i, text=pet, font=("Arial", 12, "bold"), text_color="black").pack(anchor="w")
         ctk.CTkLabel(i, text=msg, font=("Arial", 11), text_color="#64748B", wraplength=220, justify="left").pack(anchor="w")
 
-    # --- MENUS (DROPDOWN) ---
+    # --- MENUS ---
     def toggle_notifications(self):
         if self.notif_aberta:
             self.notif_dropdown.destroy()
@@ -207,22 +263,13 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
             self.criar_item_aba("👤 Editar Perfil", self.tela_configuracoes_perfil)
             self.criar_item_aba("⚙️ Configurações", self.tela_configuracoes_gerais)
             ctk.CTkFrame(self.menu_dropdown, fg_color="#E2E8F0", height=1).pack(fill="x", padx=10, pady=5)
-            
-            # Botão Sair (Chama função de logout)
             self.criar_item_aba("🚪 Sair", self.fazer_logout, cor_texto="#EF4444")
-            
             self.menu_perfil_aberto = True
-    
+
     def fazer_logout(self):
-        """Faz logout do usuário"""
-        # Criar controller vazio apenas para limpar
         controller = AuthController("", "")
         controller.logout()
-        
-        # Mostrar confirmação
         Modal(self, "Logout", "Você foi desconectado com sucesso!", type="success")
-        
-        # Retornar à tela de login após 1 segundo
         if self.on_logout:
             self.after(1000, self.on_logout)
 

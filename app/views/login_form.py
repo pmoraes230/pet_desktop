@@ -61,6 +61,8 @@ class VetAuthForm(ctk.CTkFrame):
             corner_radius=10
         )
         self.senha.pack(fill="x", padx=50, pady=(0, 25))
+        self.email.bind("<Return>", lambda event: self.tentar_entrar())        
+        self.senha.bind("<Return>", lambda event: self.tentar_entrar())
 
         # -----------------------
         # BOTÃO ENTRAR
@@ -76,6 +78,7 @@ class VetAuthForm(ctk.CTkFrame):
             font=("Arial", 14, "bold"),
             command=self.tentar_entrar
         ).pack(pady=(10, 20))
+
 
         # -----------------------
         # Link "Não tem conta?"
@@ -94,6 +97,9 @@ class VetAuthForm(ctk.CTkFrame):
         )
         link.pack(side="left")
         link.bind("<Button-1>", lambda e: webbrowser.open(CADASTRO_URL))
+        self.email.focus()
+
+
 
     def tentar_entrar(self):
         """Valida e autentica o usuário com o controller"""
