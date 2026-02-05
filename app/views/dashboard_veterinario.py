@@ -194,28 +194,70 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
         self.trocar_tela(self._construir_dashboard)
 
     def _construir_dashboard(self):
+        print("ID do veterinário atual:", self.current_user_id)
+
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=25, pady=25)
-        scroll.grid_columnconfigure((0, 1, 2), weight=1, uniform="equal")
+        scroll.grid_columnconfigure((0, 1, 2), weight=1, uniform="col")
 
-        # Métricas
-        self.criar_card_metrica(scroll, "1,240", "Total Pacientes", "🟦", "+12%", 0)
-        self.criar_card_metrica(scroll, "8", "Consultas hoje", "🟩", None, 1)
-        self.criar_card_metrica(scroll, "4.2K", "Faturamento mês", "🟨", None, 2)
+        # ================== MÉTRICAS ==================
+        metrics = self.vet_controller.fetch_metrics() if self.vet_controller else {}
+        self.criar_card_metrica(scroll, str(metrics.get("total_pets", 0)), "Total Pacientes", "🟦", "+12%", 0)
+        self.criar_card_metrica(scroll, str(metrics.get("consultas_hoje", 0)), "Consultas hoje", "🟩", None, 1)
+        self.criar_card_metrica(scroll, f'R$ {metrics.get("faturamento_mes", 0):,.2f}', "Faturamento mês", "🟨", None, 2)
 
-        # Títulos
-        ctk.CTkLabel(scroll, text="Histórico Recente", font=("Arial", 18, "bold"), text_color="black").grid(
-            row=1, column=0, columnspan=2, sticky="w", pady=(30, 15), padx=10
-        )
-        ctk.CTkLabel(scroll, text="Alertas de saúde", font=("Arial", 18, "bold"), text_color="black").grid(
-            row=1, column=2, sticky="w", pady=(30, 15), padx=10
-        )
 
-        # Card Histórico
+        # ================== HISTÓRICO DE PETS ==================
+        ctk.CTkLabel(scroll, text="Pets Atendidos Recentemente", font=("Arial", 18, "bold"), text_color="black")\
+            .grid(row=1, column=0, columnspan=3, sticky="w", pady=(30, 15), padx=10)
+
+        # Pegar pets do banco
+        pets = []
+        if self.vet_controller:
+            try:
+                pets = self.vet_controller.fetch_recent_pets()
+            except Exception as e:
+                print(f"Erro ao buscar pets no dashboard: {e}")
+
+        # Card Histórico de Pets
         hist_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
-        hist_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10)
-        self.criar_linha_agendamento(hist_card, "09:00 AM", "Paçoca", "Vacinação Anual", "Confirmado", "#DCFCE7", "#166534")
-        self.criar_linha_agendamento(hist_card, "10:30 AM", "Luna", "Avaliação", "Aguardando", "#FEF9C3", "#854D0E")
+        hist_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+        hist_card.grid_columnconfigure(0, weight=1)
+
+        if pets:
+            for pet in pets:
+                self.criar_linha_agendamento(
+                    hist_card,
+                    hora="-",
+                    pet=pet.get("nome_pet", "Desconhecido"),
+                    info=f'{pet.get("ESPECIE","")} - {pet.get("RACA","")}',
+                    status="Atendido",
+                    bg="#DCFCE7",
+                    txt="#166534"
+                )
+        else:
+            ctk.CTkLabel(hist_card, text="Nenhum pet atendido ainda.", font=("Arial", 12), text_color="#64748B")\
+                .pack(pady=20)
+
+        # ================== ALERTAS ==================
+        al_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
+        al_card.grid(row=2, column=2, sticky="nsew", padx=10, pady=10)
+        al_card.grid_columnconfigure(0, weight=1)
+
+        alertas = []
+        if self.vet_controller:
+            try:
+                alertas = self.vet_controller.fetch_alerts()  # criar método no controller
+            except Exception as e:
+                print(f"Erro ao buscar alertas: {e}")
+
+        if alertas:
+            for alerta in alertas:
+                self.criar_item_alerta(al_card, alerta["nome_pet"], alerta["mensagem"])
+        else:
+            ctk.CTkLabel(al_card, text="Nenhum alerta no momento.", font=("Arial", 12), text_color="#64748B")\
+                .pack(pady=20)
+
 
         # Card Alertas
         al_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
