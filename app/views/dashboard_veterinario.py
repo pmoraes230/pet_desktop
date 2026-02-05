@@ -2,7 +2,7 @@ import customtkinter as ctk
 from datetime import datetime
 from .modulo_pacientes import ModuloPacientes
 from .modulo_financeiro import ModuloFinanceiro
-from .modulo_configuracoes import ModuloConfiguracoes
+from app.views.modulo_configuracoes import ModuloConfiguracoes
 from .modulo_agenda import ModuloAgenda
 from .modulo_prontuario import ModuloProntuario
 from .modulo_chat import ModuloChat
@@ -14,6 +14,9 @@ import app.core.colors as colors
 from io import BytesIO
 import requests
 from PIL import Image, ImageDraw
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 
 
 class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, ModuloConfiguracoes,
@@ -125,8 +128,15 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
     def atualizar_avatar_topo(self, nova_key):
         try:
             url = f"https://coracao-em-patas.s3.amazonaws.com/{nova_key}?t={datetime.now().timestamp()}"
-            response = requests.get(url, timeout=5)
+
+            # Session com retries
+            session = requests.Session()
+            retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+            session.mount('https://', HTTPAdapter(max_retries=retries))
+
+            response = session.get(url, timeout=15)
             response.raise_for_status()
+
             pil_img = Image.open(BytesIO(response.content))
             avatar_size = (38, 38)
             pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
@@ -260,11 +270,17 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
             if self.notif_aberta: self.toggle_notifications()
             self.menu_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
             self.menu_dropdown.place(relx=0.98, y=75, anchor="ne")
-            self.criar_item_aba("👤 Editar Perfil", self.tela_configuracoes_perfil)
-            self.criar_item_aba("⚙️ Configurações", self.tela_configuracoes_gerais)
+
+            # Usando lambda para garantir que não execute na hora
+            self.criar_item_aba("👤 Editar Perfil", lambda: self.tela_configuracoes_perfil())
+            self.criar_item_aba("⚙️ Configurações", lambda: self.tela_configuracoes_gerais())
+
             ctk.CTkFrame(self.menu_dropdown, fg_color="#E2E8F0", height=1).pack(fill="x", padx=10, pady=5)
             self.criar_item_aba("🚪 Sair", self.fazer_logout, cor_texto="#EF4444")
+
             self.menu_perfil_aberto = True
+
+
 
     def fazer_logout(self):
         controller = AuthController("", "")
@@ -280,3 +296,7 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
             command=lambda: [self.toggle_menu(), comando() if comando else None]
         )
         btn.pack(padx=5, pady=2)
+
+
+
+   

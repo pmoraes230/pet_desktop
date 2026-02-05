@@ -57,7 +57,7 @@ class ModuloConfiguracoes:
             height=35,
             corner_radius=17,
             fg_color="#14B8A6",
-            command=self.escolher_nova_foto
+            command=self.escolher_nova_foto  # 👈 agora funciona
         ).place(relx=0.9, rely=0.9, anchor="center")
 
         # Carregar foto já existente do usuário
@@ -98,28 +98,28 @@ class ModuloConfiguracoes:
         self.criar_campo_input(grid, "E-MAIL", "usuario@email.com", 0, 1)
         self.criar_campo_input(grid, "CRMV", "12345-SP", 1, 0)
         self.criar_campo_input(grid, "ESTADO (UF)", "São Paulo", 1, 1)
-def escolher_nova_foto(self):
-    file_path = filedialog.askopenfilename(
-        filetypes=[("Imagens", "*.png *.jpg *.jpeg")]
-    )
-    if not file_path:
-        return
+    def escolher_nova_foto(self):
+        file_path = filedialog.askopenfilename(
+            filetypes=[("Imagens", "*.png *.jpg *.jpeg")]
+        )
+        if not file_path:
+            return
 
-    # 1. Salva no S3 e no Banco (isso você já faz)
-    key = salvar_nova_foto(self.current_user_id, file_path)
+        # 1. Salva no S3 e no Banco (isso você já faz)
+        key = salvar_nova_foto(self.current_user_id, file_path)
 
-    if key:
-        # 2. Atualiza o preview grande da tela de edição (onde você está)
-        self.atualizar_preview_foto(file_path)
-        
-        # 3. CORREÇÃO AQUI: Chama o método do dashboard diretamente
-        # Não use self.master, use apenas self
-        if hasattr(self, "atualizar_avatar_topo"):
-            self.atualizar_avatar_topo(key)
+        if key:
+            # 2. Atualiza o preview grande da tela de edição (onde você está)
+            self.atualizar_preview_foto(file_path)
+            
+            # 3. CORREÇÃO AQUI: Chama o método do dashboard diretamente
+            # Não use self.master, use apenas self
+            if hasattr(self, "atualizar_avatar_topo"):
+                self.atualizar_avatar_topo(key)
 
-        print("Foto atualizada com sucesso!")
-    else:
-        print("Falha ao atualizar foto.")
+            print("Foto atualizada com sucesso!")
+        else:
+            print("Falha ao atualizar foto.")
 
     def atualizar_preview_foto(self, file_path):
         img = Image.open(file_path)
