@@ -4,11 +4,12 @@ from ..models.pets_vet import PetAll
 from ..controllers.pet_controller import PetController
 
 class ModuloPacientes:
-
-    def __init__(self, content, trocar_tela):
+    def __init__(self, content, pet_controller: PetController):
         self.content = content
-        self.trocar_tela = trocar_tela
-        self.pet_controller = PetController()
+        self.pet_controller = pet_controller
+
+
+    
 
     def tela_pacientes(self):
         for widget in self.content.winfo_children():
@@ -29,22 +30,21 @@ class ModuloPacientes:
         pets = PetAll.listar_pets()
 
         for i, pet in enumerate(pets):
-            emoji = "🐶" if pet["especie"] == "Cachorro" else "🐱"
-            info = f'{pet["raca"]} • {pet["idade"]} Anos'
+            especie = pet.get("especie", "").lower()
 
-            self.criar_card_paciente(
-                grid,
-                pet["nome_pet"],
-                "Saudável",
-                info,
-                emoji,
-                i % 3
-            )
+            if especie == "cachorro":
+                emoji = "🐶"
+            elif especie == "gato":
+                emoji = "🐱"
+            else:
+                emoji = "🐾"
+
+            info = f'{pet.get("raca", "Sem raça")} • {pet.get("idade", "?")} Anos'
 
         pets = self.pet_controller.listar_pets()
 
         for i, pet in enumerate(pets):
-            emoji = "🐶" if pet["especie"] == "Cachorro" else "🐱"
+            emoji = "🐶" if pet["tipo"] == "Cachorro" else "🐱"
             info = f'{pet["raca"]} • {pet["idade"]} Anos'
 
             row = i // 3

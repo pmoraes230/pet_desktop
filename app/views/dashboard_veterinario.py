@@ -233,3 +233,4 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloPacientes, ModuloFinanceiro, Modu
             command=lambda: [self.toggle_menu(), comando() if comando else None]
         )
         btn.pack(padx=5, pady=2)
+        
