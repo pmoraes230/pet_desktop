@@ -28,3 +28,4 @@ class ModuloProntuario:
         item = ctk.CTkFrame(master, fg_color="#F1F5F9", corner_radius=10); item.pack(fill="x", pady=5)
         ctk.CTkLabel(item, text=data, font=("Arial", 12, "bold")).pack(anchor="w", padx=15, pady=(10,0))
         ctk.CTkLabel(item, text=motivo, font=("Arial", 11), text_color="#64748B").pack(anchor="w", padx=15, pady=(0, 10))
+        
