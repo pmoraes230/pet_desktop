@@ -9,7 +9,7 @@ class PetController:
         Retorna todos os pets cadastrados
         """
         try:
-            return self.pet_model.listar_pets()
+            return PetAll.listar_pets()   # ← chama na classe, não na instância
         except Exception as e:
             print(f"Erro ao listar pets: {str(e)}")
             return []

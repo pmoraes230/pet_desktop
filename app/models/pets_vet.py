@@ -1,19 +1,30 @@
 from ..config.database import connectdb
 
 class PetAll:
-    @staticmethod
     def listar_pets():
-        conn = connectdb()
-        cursor = conn.cursor(dictionary=True)
+        try:
+            conn = connectdb()
+            cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("""
-            SELECT *
-            FROM pet
-        """)
+            cursor.execute("""
+                SELECT id, NOME, ESPECIE, RACA, DATA_NASCIMENTO, SEXO, PESO, CASTRADO, PERSONALIDADE, IMAGEM, ID_TUTOR
+                FROM pet
+                ORDER BY NOME
+            """)
 
-        pets = cursor.fetchall()
-        conn.close()
-        return pets
+            pets = cursor.fetchall()
+            print(f">>> [DEBUG PetAll] Pets encontrados: {len(pets)}")  # Debug no terminal
+            if pets:
+                print(">>> Primeiro pet:", pets[0])  # Mostra o que veio do banco
+
+            conn.close()
+            return pets
+
+        except Exception as e:
+            print(f"Erro ao listar pets: {str(e)}")
+            if 'conn' in locals():
+                conn.close()
+            return []
 
 
     @staticmethod
