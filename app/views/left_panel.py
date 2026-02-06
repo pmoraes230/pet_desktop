@@ -44,7 +44,7 @@ class LeftPanel(ctk.CTkFrame):
         # Badge
         ctk.CTkLabel(
             self,
-            text="ÁREA DO TUTOR",
+            text="ÁREA DO VETERINÁRIO",
             font=("Inter", 11, "bold"),
             fg_color=colors.TEXT_GRAY,
             corner_radius=10,
