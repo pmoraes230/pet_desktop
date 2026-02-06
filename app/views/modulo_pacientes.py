@@ -8,12 +8,6 @@ class ModuloPacientes:
         self.pet_controller = pet_controller
 
     def tela_pacientes(self):
-        # Limpa a tela anterior
-        for widget in self.content.winfo_children():
-            widget.destroy()
-
-        print(">>> Entrou em tela_pacientes")
-
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=30, pady=20)
 
@@ -50,12 +44,6 @@ class ModuloPacientes:
 
         # Busca os pets reais do banco
         pets = self.pet_controller.listar_pets()
-
-        print(f">>> Número de pets retornados: {len(pets)}")
-        if pets:
-            print(">>> Primeiro pet:", pets[0])
-        else:
-            print(">>> Lista vazia! Verifique o banco ou o método listar_pets()")
 
         for i, pet in enumerate(pets):
             # CHAVES CORRETAS do seu banco (conforme o print)
