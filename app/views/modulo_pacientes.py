@@ -234,21 +234,6 @@ class ModuloPacientes:
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=30, pady=30)
 
-        # Botão Voltar no topo
-        header_back = ctk.CTkFrame(scroll, fg_color="transparent")
-        header_back.pack(fill="x", pady=(0, 20))
-        
-        ctk.CTkButton(
-            header_back,
-            text="← Voltar",
-            fg_color="#94A3B8",
-            hover_color="#64748B",
-            text_color="white",
-            width=120,
-            corner_radius=10,
-            command=self.tela_pacientes
-        ).pack(side="left")
-
         container = ctk.CTkFrame(scroll, fg_color="transparent")
         container.pack(fill="both", expand=True)
         container.columnconfigure(0, weight=0)
