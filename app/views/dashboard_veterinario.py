@@ -11,6 +11,7 @@ from app.controllers.auth_controller import AuthController
 from app.controllers.vet_controller import VetController
 from app.controllers.pet_controller import PetController
 from app.controllers.perfil_controller import FotoPerfil
+from app.services.s3_client import get_url_s3
 
 # Módulos (composição)
 from .modulo_pacientes import ModuloPacientes
@@ -129,7 +130,10 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         if foto_key:
             try:
-                url = f"https://coracao-em-patas.s3.amazonaws.com/{foto_key}"
+                url = get_url_s3(foto_key, expires_in=604800)  # 7 dias, para carregar inicial
+                if not url:
+                    raise Exception("Falha ao gerar URL assinada")
+
                 session = requests.Session()
                 retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
                 session.mount('https://', HTTPAdapter(max_retries=retries))
@@ -141,6 +145,10 @@ class DashboardVeterinario(ctk.CTkFrame):
                 pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
 
                 self.avatar_img = ctk.CTkImage(light_image=pil_img, size=avatar_size)
+
+                if hasattr(self, 'avatar') and self.avatar is not None:
+                    self.avatar.destroy()
+
                 self.avatar = ctk.CTkButton(
                     self.right_info, image=self.avatar_img, text="",
                     width=38, height=38, corner_radius=19,
@@ -159,6 +167,9 @@ class DashboardVeterinario(ctk.CTkFrame):
         """Método para atualizar avatar após upload (chame quando salvar nova foto)"""
         try:
             url = f"https://coracao-em-patas.s3.amazonaws.com/{nova_key}?t={datetime.now().timestamp()}"
+            if not url:
+                raise Exception("Falha ao gerar URL assinada")
+            
             session = requests.Session()
             retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
             session.mount('https://', HTTPAdapter(max_retries=retries))
