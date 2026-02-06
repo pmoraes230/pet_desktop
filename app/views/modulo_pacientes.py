@@ -85,14 +85,16 @@ class ModuloPacientes:
                 i % 3     # coluna
             )
 
-            # Botão invisível que cobre TODO o card (para clicar e abrir perfil)
-            ctk.CTkButton(
-                card,  # ← importante: pai é o card
-                text="",
-                fg_color="transparent",
-                hover_color="#E0F7FA",  # leve destaque ao passar o mouse
-                command=lambda pid=id_pet, n=nome, r=raca, e=emoji: self.tela_perfil_pet(pid, n, r, e)
-            ).place(relx=0, rely=0, relwidth=1, relheight=1)  # cobre 100% do card
+            # Tornar o card clicável sem sobrepor widgets — liga evento de clique ao frame
+            def _abrir_perfil(event=None, pid=id_pet, n=nome, r=raca, e_emoji=emoji):
+                self.tela_perfil_pet(pid, n, r, e_emoji)
+
+            card.bind("<Button-1>", _abrir_perfil)
+            # opcional: mudar cursor ao passar o mouse
+            try:
+                card.configure(cursor="hand2")
+            except Exception:
+                pass
 
     def calcular_idade(self, data_nasc):
         """Calcula idade em anos a partir da data de nascimento"""
@@ -116,7 +118,7 @@ class ModuloPacientes:
             fg_color="white",
             corner_radius=20,
             border_width=4,               # borda grossa vermelha para ver o limite
-            border_color="#FF0000"
+            border_color="#FFFFFF"
         )
         card.grid(row=row, column=col, padx=15, pady=15, sticky="nsew")
 
@@ -133,7 +135,7 @@ class ModuloPacientes:
             card,
             text="DEBUG: CARD VISÍVEL AGORA",
             font=("Arial", 16, "bold"),
-            text_color="#FF0000"
+            text_color="#FFFFFf"
         )
         debug.grid(row=0, column=0, columnspan=3, pady=10, sticky="ew")
 
