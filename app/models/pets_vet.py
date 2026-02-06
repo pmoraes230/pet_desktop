@@ -13,9 +13,6 @@ class PetAll:
             """)
 
             pets = cursor.fetchall()
-            print(f">>> [DEBUG PetAll] Pets encontrados: {len(pets)}")  # Debug no terminal
-            if pets:
-                print(">>> Primeiro pet:", pets[0])  # Mostra o que veio do banco
 
             conn.close()
             return pets

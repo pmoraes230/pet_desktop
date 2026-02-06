@@ -40,14 +40,6 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.pet_controller = PetController()
         self.foto_perfil = FotoPerfil(self.current_user_id)
 
-        # ── Instâncias dos módulos (composição) ──────────────────────────────
-        self.mod_pacientes = ModuloPacientes(self, self.pet_controller)   # note: passa self como content
-        self.mod_financeiro = ModuloFinanceiro(self)
-        self.mod_configuracoes = ModuloConfiguracoes(self)
-        self.mod_agenda = ModuloAgenda(self)
-        self.mod_prontuario = ModuloProntuario(self)
-        self.mod_chat = ModuloChat(self)
-
         # ── Controle de UI ───────────────────────────────────────────────────
         self.menu_perfil_aberto = False
         self.menu_dropdown = None
@@ -103,6 +95,14 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.content.grid(row=1, column=1, sticky="nsew")
         self.content.grid_columnconfigure(0, weight=1)
         self.content.grid_rowconfigure(0, weight=1)
+
+        # ── Instâncias dos módulos (composição) ──────────────────────────────
+        self.mod_pacientes = ModuloPacientes(self.content, self.pet_controller)   # note: passa self como content
+        self.mod_financeiro = ModuloFinanceiro(self.content)
+        self.mod_configuracoes = ModuloConfiguracoes(self.content)
+        self.mod_agenda = ModuloAgenda(self.content)
+        self.mod_prontuario = ModuloProntuario(self.content)
+        self.mod_chat = ModuloChat(self.content)
 
         # ── Configura botões da sidebar com os métodos reais dos módulos ─────
         botoes = [
@@ -240,8 +240,6 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.trocar_tela(self._construir_dashboard)
 
     def _construir_dashboard(self):
-        print("ID do veterinário atual:", self.current_user_id)
-
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=25, pady=25)
         scroll.grid_columnconfigure((0, 1, 2), weight=1, uniform="col")
