@@ -70,7 +70,9 @@ class ModuloPacientes:
                 emoji,
                 peso,
                 i // 3,   # linha
-                i % 3     # coluna
+                i % 3,     # coluna
+                id_pet,
+                raca
             )
 
             # Tornar o card clicável sem sobrepor widgets — liga evento de clique ao frame
@@ -99,33 +101,24 @@ class ModuloPacientes:
         except Exception:
             return "?"
 
-    def criar_card_paciente(self, master, nome, status, info, icon, peso, row, col):
-        """Versão com grid interno + debug forte para forçar visibilidade"""
+    def criar_card_paciente(self, master, nome, status, info, icon, peso, row, col, id_pet, raca):
+        """Card com botão para ver perfil"""
         card = ctk.CTkFrame(
             master,
             fg_color="white",
             corner_radius=20,
-            border_width=4,               # borda grossa vermelha para ver o limite
-            border_color="#FFFFFF"
+            border_width=1,
+            border_color="#E2E8F0"
         )
         card.grid(row=row, column=col, padx=15, pady=15, sticky="nsew")
 
         # Força tamanho fixo (importante!)
         card.grid_propagate(False)
-        card.configure(width=320, height=380)
+        card.configure(width=320, height=420)
 
-        # Configura grid interno do card (3 colunas para centralizar)
+        # Configura grid interno do card
         card.columnconfigure(0, weight=1)
-        card.rowconfigure((0,1,2,3,4,5,6), weight=1)
-
-        # DEBUG TOPO - vermelho grande
-        debug = ctk.CTkLabel(
-            card,
-            text="DEBUG: CARD VISÍVEL AGORA",
-            font=("Arial", 16, "bold"),
-            text_color="#FFFFFf"
-        )
-        debug.grid(row=0, column=0, columnspan=3, pady=10, sticky="ew")
+        card.rowconfigure((0, 1, 2, 3, 4, 5, 6), weight=1)
 
         # Emoji
         emoji_lbl = ctk.CTkLabel(
@@ -133,7 +126,7 @@ class ModuloPacientes:
             text=icon,
             font=("Arial", 80)
         )
-        emoji_lbl.grid(row=1, column=0, columnspan=3, pady=10, sticky="n")
+        emoji_lbl.grid(row=0, column=0, columnspan=3, pady=10, sticky="n")
 
         # Nome
         nome_lbl = ctk.CTkLabel(
@@ -142,7 +135,7 @@ class ModuloPacientes:
             font=("Arial", 20, "bold"),
             text_color="#000000"
         )
-        nome_lbl.grid(row=2, column=0, columnspan=3, pady=5, sticky="ew")
+        nome_lbl.grid(row=1, column=0, columnspan=3, pady=5, sticky="ew")
 
         # Status
         status_lbl = ctk.CTkLabel(
@@ -154,7 +147,7 @@ class ModuloPacientes:
             corner_radius=8,
             padx=12, pady=6
         )
-        status_lbl.grid(row=3, column=0, columnspan=3, pady=5, sticky="ew")
+        status_lbl.grid(row=2, column=0, columnspan=3, pady=5, sticky="ew")
 
         # Info
         info_lbl = ctk.CTkLabel(
@@ -163,7 +156,7 @@ class ModuloPacientes:
             font=("Arial", 14),
             text_color="#64748B"
         )
-        info_lbl.grid(row=4, column=0, columnspan=3, pady=5, sticky="ew")
+        info_lbl.grid(row=3, column=0, columnspan=3, pady=5, sticky="ew")
 
         # Peso
         peso_lbl = ctk.CTkLabel(
@@ -172,9 +165,27 @@ class ModuloPacientes:
             font=("Arial", 13),
             text_color="#94A3B8"
         )
-        peso_lbl.grid(row=5, column=0, columnspan=3, pady=5, sticky="ew")
+        peso_lbl.grid(row=4, column=0, columnspan=3, pady=5, sticky="ew")
+
+        # Botão Ver Perfil
+        def abrir_perfil():
+            self.tela_perfil_pet(id_pet, nome, raca, icon)
+
+        btn_perfil = ctk.CTkButton(
+            card,
+            text="👁️ Ver Perfil",
+            fg_color="#14B8A6",
+            hover_color="#0D9488",
+            text_color="white",
+            font=("Arial", 13, "bold"),
+            corner_radius=10,
+            height=40,
+            command=abrir_perfil
+        )
+        btn_perfil.grid(row=5, column=0, columnspan=3, pady=15, padx=15, sticky="ew")
 
         return card
+        
 
     def abrir_popup_novo_paciente(self):
         self.overlay = ctk.CTkFrame(self.content.master, fg_color="transparent") 
