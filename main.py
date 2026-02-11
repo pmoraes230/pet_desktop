@@ -1,12 +1,16 @@
+# main.py
+import asyncio
 import customtkinter as ctk
 import os
 import sys
-import tkinter as tk  # para PhotoImage
+import tkinter as tk
+import threading
 from app.views.login_view import LoginView
 from app.views.dashboard_veterinario import DashboardVeterinario
 from app.utils.loading_overlay import LoadingOverlay
 from app.config.database import connectdb
 from app.core.theme import apply_theme
+from app.backend.chat_server import start_chat_server  # ← import correto
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green")
@@ -18,6 +22,7 @@ class App(ctk.CTk):
         apply_theme()
         self.title("Coração em patas")
 
+        # Configuração de ícone (seu código já está bom)
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             BASE_DIR = sys._MEIPASS
         else:
@@ -37,11 +42,10 @@ class App(ctk.CTk):
                 ICON_PATH = path
                 break
 
-        if ICON_PATH is None:
-            print("Nenhum caminho válido para pet.ico encontrado")
-            # Aqui você pode definir um fallback ou continuar sem ícone
-        else:
+        if ICON_PATH:
             self.after(400, lambda: self.iconbitmap(ICON_PATH))
+        else:
+            print("Nenhum caminho válido para pet.ico encontrado")
 
         # Maximizar janela
         self.after(100, self.maximizar_janela)
@@ -71,7 +75,19 @@ class App(ctk.CTk):
         app_dash.pack(fill="both", expand=True)
 
 
+# Função global para rodar o servidor asyncio em thread separada
+def run_chat_server_thread():
+    """
+    Executa o loop asyncio do servidor WebSocket em uma thread dedicada.
+    """
+    try:
+        asyncio.run(start_chat_server(host="127.0.0.1", port=8765))
+    except Exception as e:
+        print(f"Erro ao iniciar servidor WebSocket: {e}")
+
+
 if __name__ == "__main__":
+    # Testa conexão com banco
     try:
         conn = connectdb()
         if conn:
@@ -80,5 +96,16 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Erro ao conectar ao banco de dados: {e}")
 
+    # Inicia o servidor WebSocket em background (thread separada)
+    server_thread = threading.Thread(
+        target=run_chat_server_thread,
+        name="ChatServerThread",
+        daemon=True
+    )
+    server_thread.start()
+
+    print("Servidor WebSocket iniciado em background (ws://127.0.0.1:8765)")
+
+    # Inicia a aplicação Tkinter
     app = App()
     app.mainloop()

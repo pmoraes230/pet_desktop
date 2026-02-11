@@ -28,26 +28,23 @@ def criar_imagem_redonda(pil_img, size):
     return output
 
 class ModuloConfiguracoes:
-    def __init__(self, master=None):
-        self.master = master   
+    def __init__(self, content_frame, master=None):
+        self.content_frame = content_frame
         self.current_user_id = None
         self.foto_perfil = None
+        self.master = master
 
     # --- TELA: EDITAR PERFIL ---
     def tela_configuracoes_perfil(self):
-        if not self.master or not hasattr(self.master, "content"):
-            print("Erro: master ou master.content não encontrado.")
-            return
-        
-        content = self.master.content
+        self.content = self.content_frame
         
         self.current_user_id = self.master.current_user_id
         self.foto_perfil = self.master.foto_perfil
 
-        for widget in content.winfo_children():
+        for widget in self.content.winfo_children():
             widget.destroy()
 
-        scroll = ctk.CTkScrollableFrame(content, fg_color="transparent")
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=40, pady=20)
         
         ctk.CTkLabel(scroll, text="Editar Perfil Profissional", font=("Arial", 24, "bold"), text_color="#1E293B").pack(pady=(0, 30))
