@@ -105,7 +105,9 @@ class ModuloProntuario:
         pets = self.controller.listar_pets()
 
         nomes = []
-        for pet_id, nome in pets:
+        for pet in pets:
+            pet_id = pet.get('id')
+            nome = pet.get('NOME', 'Sem nome')
             nomes.append(nome)
             self.pets_map[nome] = pet_id
 
@@ -134,8 +136,20 @@ class ModuloProntuario:
             ).pack(pady=20)
             return
 
-        for data, texto in historico:
-            data_str = data.strftime("%d %b %Y")
+        for registro in historico:
+            data = registro.get('DATA_CONSULTA')
+            texto = registro.get('OBSERVACOES') or ''
+            
+            # Converter string para datetime se necessário
+            if isinstance(data, str):
+                try:
+                    from datetime import datetime
+                    data = datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
+                    data_str = data.strftime("%d %b %Y")
+                except:
+                    data_str = data
+            else:
+                data_str = data.strftime("%d %b %Y") if hasattr(data, 'strftime') else str(data)
 
             item = ctk.CTkFrame(self.hist, fg_color="#F1F5F9", corner_radius=10)
             item.pack(fill="x", pady=5, padx=10)

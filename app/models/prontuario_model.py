@@ -2,16 +2,16 @@ from ..config.database import connectdb, closedb
 
 class ProntuarioModel:
     def get_pets_do_vet(self, vet_id):
-        """Retorna os pets do veterinário"""
+        """Retorna os pets para o prontuário"""
         try:
             conn = connectdb()
             cursor = conn.cursor(dictionary=True)
+            # Retorna todos os pets (não há relação direta entre pet e veterinário na estrutura)
             cursor.execute("""
-                SELECT id, nome
+                SELECT id, NOME
                 FROM pet
-                WHERE id_veterinario = %s
-                ORDER BY nome
-            """, (vet_id,))
+                ORDER BY NOME
+            """)
             resultado = cursor.fetchall()
             closedb(conn)
             return resultado
@@ -40,12 +40,15 @@ class ProntuarioModel:
     def salvar_prontuario(self, pet_id, texto):
         """Salva um novo prontuário"""
         try:
+            from uuid import uuid4
             conn = connectdb()
             cursor = conn.cursor()
+            # Usa apenas hex do UUID (32 caracteres, sem hífens)
+            consulta_id = uuid4().hex
             cursor.execute("""
-                INSERT INTO consulta (ID_PET, OBSERVACOES, DATA_CONSULTA)
-                VALUES (%s, %s, NOW())
-            """, (pet_id, texto))
+                INSERT INTO consulta (id, ID_PET, OBSERVACOES, DATA_CONSULTA)
+                VALUES (%s, %s, %s, NOW())
+            """, (consulta_id, pet_id, texto))
             conn.commit()
             closedb(conn)
             return True
