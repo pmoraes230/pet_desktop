@@ -40,3 +40,13 @@ class PetController:
         except Exception as e:
             print(f"Erro ao buscar pet: {str(e)}")
             return {}
+
+    def atualizar_imagem_pet(self, id_pet: int, imagem_key: str) -> bool:
+        """
+        Atualiza a imagem do pet no banco de dados
+        """
+        try:
+            return self.pet_model.atualizar_imagem_pet(id_pet, imagem_key)
+        except Exception as e:
+            print(f"Erro ao atualizar imagem do pet: {str(e)}")
+            return False

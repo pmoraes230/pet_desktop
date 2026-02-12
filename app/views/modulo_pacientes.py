@@ -1,6 +1,14 @@
 import customtkinter as ctk
 from datetime import datetime
-from ..controllers.pet_controller import PetController
+from tkinter import filedialog, messagebox
+from PIL import Image
+from io import BytesIO
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from app.controllers.pet_controller import PetController
+from app.services.s3_client import upload_foto_pet_s3, get_url_s3
 
 class ModuloPacientes:
     def __init__(self, content_frame, pet_controller: PetController):
@@ -55,6 +63,7 @@ class ModuloPacientes:
             sexo      = pet.get('SEXO', 'Não informado')
             castrado  = pet.get('CASTRADO', 'Não informado')
             peso      = pet.get('PESO') or '? kg'            # evita None
+            imagem_key = pet.get('IMAGEM')  # Nova: pega a chave da imagem
 
             idade     = self.calcular_idade(data_nasc)
             emoji     = "🐶" if "cachorro" in especie else "🐱" if "gato" in especie else "🐾"
@@ -70,7 +79,8 @@ class ModuloPacientes:
                 i // 3,   # linha
                 i % 3,     # coluna
                 id_pet,
-                raca
+                raca,
+                imagem_key  # Novo: passa a chave da imagem
             )
 
             # Tornar o card clicável sem sobrepor widgets — liga evento de clique ao frame
@@ -99,7 +109,7 @@ class ModuloPacientes:
         except Exception:
             return "?"
 
-    def criar_card_paciente(self, master, nome, info, icon, peso, row, col, id_pet, raca):
+    def criar_card_paciente(self, master, nome, info, icon, peso, row, col, id_pet, raca, imagem_key=None):
         """Card com botão para ver perfil"""
         card = ctk.CTkFrame(
             master,
@@ -118,13 +128,21 @@ class ModuloPacientes:
         card.columnconfigure(0, weight=1)
         card.rowconfigure((0, 1, 2, 3, 4, 5), weight=1)
 
-        # Emoji
+        # Container para imagem/emoji
+        img_frame = ctk.CTkFrame(card, fg_color="transparent")
+        img_frame.grid(row=0, column=0, columnspan=3, pady=10, sticky="nsew")
+
+        # Label para emoji ou imagem
         emoji_lbl = ctk.CTkLabel(
-            card,
+            img_frame,
             text=icon,
             font=("Arial", 80)
         )
-        emoji_lbl.grid(row=0, column=0, columnspan=3, pady=10, sticky="n")
+        emoji_lbl.pack(fill="both", expand=True)
+
+        # Tentar carregar foto do S3 se existir (com delay para renderização)
+        if imagem_key and str(imagem_key).strip():
+            card.after(300, lambda: self._carregar_foto_card(emoji_lbl, imagem_key))
 
         # Nome
         nome_lbl = ctk.CTkLabel(
@@ -214,6 +232,9 @@ class ModuloPacientes:
             self.overlay.destroy()
 
     def tela_perfil_pet(self, id_pet, nome_pet, raca_pet, emoji):
+        # Guardar id do pet para usar nas funções de atualizar foto
+        self.pet_atual_id = id_pet
+        
         for widget in self.content.winfo_children():
             widget.destroy()
 
@@ -229,9 +250,40 @@ class ModuloPacientes:
                                width=350, border_width=1, border_color="#F1F5F9")
         card_esq.grid(row=0, column=0, sticky="nsew", padx=(0, 30))
 
-        img_placeholder = ctk.CTkFrame(card_esq, fg_color="#F8FAFC", height=220, corner_radius=30)
-        img_placeholder.pack(fill="x", padx=20, pady=20)
-        ctk.CTkLabel(img_placeholder, text=emoji, font=("Arial", 80)).place(relx=0.5, rely=0.5, anchor="center")
+        # Container para imagem com botão de mudar
+        img_container = ctk.CTkFrame(card_esq, fg_color="#F8FAFC", height=220, corner_radius=30)
+        img_container.pack(fill="x", padx=20, pady=20)
+        img_container.pack_propagate(False)
+        
+        # Frame para a imagem
+        self.img_placeholder = ctk.CTkFrame(img_container, fg_color="#F8FAFC")
+        self.img_placeholder.pack(fill="both", expand=True)
+        
+        # Label da imagem/emoji
+        self.img_label = ctk.CTkLabel(
+            self.img_placeholder, 
+            text=emoji, 
+            font=("Arial", 80),
+            fg_color="#F8FAFC"
+        )
+        self.img_label.pack(fill="both", expand=True)
+        
+        # Tentar carregar foto do S3 se existir (com delay para garantir renderização)
+        self.content.after(500, lambda: self._carregar_foto_pet(id_pet, emoji))
+        
+        # Botão para mudar foto (overlay)
+        btn_mudar = ctk.CTkButton(
+            img_container,
+            text="📷 Mudar Foto",
+            font=("Arial", 12, "bold"),
+            text_color="white",
+            fg_color="#14B8A6",
+            hover_color="#0D9488",
+            height=35,
+            corner_radius=10,
+            command=self.escolher_foto_pet
+        )
+        btn_mudar.place(relx=0.5, rely=0.9, anchor="center")
 
         ctk.CTkLabel(card_esq, text=nome_pet, font=("Arial", 32, "bold"), text_color="#1E293B").pack()
         ctk.CTkLabel(card_esq, text=raca_pet.upper(), font=("Arial", 12, "bold"), text_color="#14B8A6").pack(pady=(0, 20))
@@ -285,6 +337,114 @@ class ModuloPacientes:
         self.container_abas.pack(fill="both", expand=True, padx=40)
 
         self.mudar_aba_pet("sobre")
+
+    def _carregar_foto_pet(self, id_pet, emoji_padrao):
+        """Carrega a foto do pet do S3 se existir"""
+        try:
+            pet = self.pet_controller.buscar_pet(id_pet)
+            
+            if not pet:
+                print(f"Pet com ID {id_pet} não encontrado")
+                return
+            
+            imagem_key = pet.get("IMAGEM")
+            print(f"Buscando imagem para pet {id_pet}: chave = {imagem_key}")
+            
+            if imagem_key and str(imagem_key).strip():  # Verifica se não é None ou vazio
+                try:
+                    url = get_url_s3(imagem_key, expires_in=604800)
+                    print(f"URL gerada: {url is not None}")
+                    
+                    if url:
+                        session = requests.Session()
+                        retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+                        session.mount('https://', HTTPAdapter(max_retries=retries))
+                        
+                        print("Baixando imagem do S3...")
+                        response = session.get(url, timeout=10)
+                        response.raise_for_status()
+                        print(f"Imagem baixada: {len(response.content)} bytes")
+                        
+                        pil_img = Image.open(BytesIO(response.content))
+                        print(f"Imagem aberta: {pil_img.size}")
+                        
+                        # Redimensionar para caber no placeholder
+                        pil_img = pil_img.resize((200, 200), Image.Resampling.LANCZOS)
+                        
+                        ctk_img = ctk.CTkImage(light_image=pil_img, size=(200, 200))
+                        
+                        # Limpar label anterior e adicionar imagem
+                        self.img_label.destroy()
+                        self.img_label = ctk.CTkLabel(
+                            self.img_placeholder,
+                            image=ctk_img,
+                            text="",
+                            fg_color="#F8FAFC"
+                        )
+                        self.img_label.image = ctk_img  # Manter referência
+                        self.img_label.pack(fill="both", expand=True)
+                        print("Imagem exibida com sucesso!")
+                except Exception as e:
+                    print(f"Erro ao carregar foto do S3: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"Nenhuma imagem armazenada para este pet (chave: {imagem_key})")
+        except Exception as e:
+            print(f"Erro ao verificar imagem do pet: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def escolher_foto_pet(self):
+        """Abre diálogo para escolher foto do pet"""
+        file_path = filedialog.askopenfilename(
+            title="Selecione uma foto para o pet",
+            filetypes=[("Imagens", "*.jpg *.jpeg *.png"), ("Todos", "*.*")]
+        )
+        
+        if file_path:
+            self._fazer_upload_foto_pet(file_path)
+
+    def _fazer_upload_foto_pet(self, file_path):
+        """Faz upload da foto para o S3 e atualiza o banco"""
+        try:
+            # Fazer upload no S3
+            imagem_key = upload_foto_pet_s3(file_path, self.pet_atual_id)
+            
+            if not imagem_key:
+                messagebox.showerror("Erro", "Falha ao fazer upload da foto")
+                return
+            
+            # Atualizar no banco de dados
+            sucesso = self.pet_controller.atualizar_imagem_pet(self.pet_atual_id, imagem_key)
+            
+            if sucesso:
+                # Carregar a nova foto
+                try:
+                    pil_img = Image.open(file_path)
+                    pil_img = pil_img.resize((200, 200), Image.Resampling.LANCZOS)
+                    
+                    ctk_img = ctk.CTkImage(light_image=pil_img, size=(200, 200))
+                    
+                    # Atualizar label com nova imagem
+                    self.img_label.destroy()
+                    self.img_label = ctk.CTkLabel(
+                        self.img_placeholder,
+                        image=ctk_img,
+                        text=""
+                    )
+                    self.img_label.image = ctk_img
+                    self.img_label.pack(fill="both", expand=True)
+                    
+                    messagebox.showinfo("Sucesso", "Foto do pet atualizada com sucesso!")
+                except Exception as e:
+                    print(f"Erro ao exibir foto: {e}")
+                    messagebox.showwarning("Aviso", "Foto salva no banco mas não foi possível exibir")
+            else:
+                messagebox.showerror("Erro", "Falha ao atualizar foto no banco de dados")
+        except Exception as e:
+            print(f"Erro ao fazer upload: {e}")
+            messagebox.showerror("Erro", f"Erro ao processar foto: {str(e)}")
 
     def mudar_aba_pet(self, aba):
         for w in self.container_abas.winfo_children():
@@ -340,7 +500,6 @@ class ModuloPacientes:
             criar_tag(tags_frame, "Protetor")
             criar_tag(tags_frame, "Guloso")
 
-
         else:
             self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
             self.btn_sobre.configure(fg_color="transparent", text_color="#64748B")
@@ -352,3 +511,31 @@ class ModuloPacientes:
                 v_card.pack(fill="x", pady=10)
                 ctk.CTkLabel(v_card, text=f"{n}\nAplicada: {d}", font=("Arial", 13, "bold"),
                              justify="left").pack(side="left", padx=20)
+
+    def _carregar_foto_card(self, label, imagem_key):
+        """Carrega foto do S3 para exibir no card de pacientes"""
+        try:
+            if not imagem_key or not str(imagem_key).strip():
+                return
+            
+            url = get_url_s3(imagem_key, expires_in=604800)
+            
+            if url:
+                session = requests.Session()
+                retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+                session.mount('https://', HTTPAdapter(max_retries=retries))
+                
+                response = session.get(url, timeout=10)
+                response.raise_for_status()
+                
+                pil_img = Image.open(BytesIO(response.content))
+                # Redimensionar para caber no card
+                pil_img = pil_img.resize((130, 130), Image.Resampling.LANCZOS)
+                
+                ctk_img = ctk.CTkImage(light_image=pil_img, size=(130, 130))
+                
+                # Atualizar label com a foto
+                label.configure(image=ctk_img, text="")
+                label.image = ctk_img  # Manter referência
+        except Exception as e:
+            print(f"Erro ao carregar foto no card: {e}")

@@ -11,6 +11,7 @@ from app.controllers.auth_controller import AuthController
 from app.controllers.vet_controller import VetController
 from app.controllers.pet_controller import PetController
 from app.controllers.perfil_controller import FotoPerfil
+from app.controllers.prontuario_controller import ProntuarioController
 from app.services.s3_client import get_url_s3
 
 # Módulos (composição)
@@ -38,6 +39,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         # ── Controllers ──────────────────────────────────────────────────────
         self.vet_controller = VetController(self.current_user_id) if self.current_user_id else None
         self.pet_controller = PetController()
+        self.prontuario_controller = ProntuarioController(self.current_user_id) if self.current_user_id else None
         self.foto_perfil = FotoPerfil(self.current_user_id)
 
         # ── Controle de UI ───────────────────────────────────────────────────
@@ -101,7 +103,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.mod_financeiro = ModuloFinanceiro(self.content)
         self.mod_configuracoes = ModuloConfiguracoes(self.content)
         self.mod_agenda = ModuloAgenda(self.content)
-        self.mod_prontuario = ModuloProntuario(self.content)
+        self.mod_prontuario = ModuloProntuario(self.content, self.prontuario_controller)
         self.mod_chat = ModuloChat(self.content)
 
         # ── Configura botões da sidebar com os métodos reais dos módulos ─────
