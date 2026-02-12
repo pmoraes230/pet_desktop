@@ -59,13 +59,11 @@ class ModuloPacientes:
             idade     = self.calcular_idade(data_nasc)
             emoji     = "🐶" if "cachorro" in especie else "🐱" if "gato" in especie else "🐾"
             info      = f"{raca} • {idade} anos • {sexo}"
-            status    = "Saudável" if castrado == "Sim" else "A castrar"
 
             # Cria o card e OBTÉM o frame retornado
             card = self.criar_card_paciente(
                 grid,
                 nome,
-                status,
                 info,
                 emoji,
                 peso,
@@ -101,7 +99,7 @@ class ModuloPacientes:
         except Exception:
             return "?"
 
-    def criar_card_paciente(self, master, nome, status, info, icon, peso, row, col, id_pet, raca):
+    def criar_card_paciente(self, master, nome, info, icon, peso, row, col, id_pet, raca):
         """Card com botão para ver perfil"""
         card = ctk.CTkFrame(
             master,
@@ -118,7 +116,7 @@ class ModuloPacientes:
 
         # Configura grid interno do card
         card.columnconfigure(0, weight=1)
-        card.rowconfigure((0, 1, 2, 3, 4, 5, 6), weight=1)
+        card.rowconfigure((0, 1, 2, 3, 4, 5), weight=1)
 
         # Emoji
         emoji_lbl = ctk.CTkLabel(
@@ -137,18 +135,6 @@ class ModuloPacientes:
         )
         nome_lbl.grid(row=1, column=0, columnspan=3, pady=5, sticky="ew")
 
-        # Status
-        status_lbl = ctk.CTkLabel(
-            card,
-            text=status,
-            font=("Arial", 14, "bold"),
-            text_color="#F59E0B" if status == "A castrar" else "#22C55E",
-            fg_color="#FEF3E8" if status == "A castrar" else "#F0FDF4",
-            corner_radius=8,
-            padx=12, pady=6
-        )
-        status_lbl.grid(row=2, column=0, columnspan=3, pady=5, sticky="ew")
-
         # Info
         info_lbl = ctk.CTkLabel(
             card,
@@ -156,7 +142,7 @@ class ModuloPacientes:
             font=("Arial", 14),
             text_color="#64748B"
         )
-        info_lbl.grid(row=3, column=0, columnspan=3, pady=5, sticky="ew")
+        info_lbl.grid(row=2, column=0, columnspan=3, pady=5, sticky="ew")
 
         # Peso
         peso_lbl = ctk.CTkLabel(
@@ -165,7 +151,7 @@ class ModuloPacientes:
             font=("Arial", 13),
             text_color="#94A3B8"
         )
-        peso_lbl.grid(row=4, column=0, columnspan=3, pady=5, sticky="ew")
+        peso_lbl.grid(row=3, column=0, columnspan=3, pady=5, sticky="ew")
 
         # Botão Ver Perfil
         def abrir_perfil():
@@ -182,17 +168,17 @@ class ModuloPacientes:
             height=40,
             command=abrir_perfil
         )
-        btn_perfil.grid(row=5, column=0, columnspan=3, pady=15, padx=15, sticky="ew")
+        btn_perfil.grid(row=4, column=0, columnspan=3, pady=15, padx=15, sticky="ew")
 
         return card
         
 
     def abrir_popup_novo_paciente(self):
-        self.overlay = ctk.CTkFrame(self.content.master, fg_color="transparent") 
+        self.overlay = ctk.CTkFrame(self.content.master, fg_color="#1A1A1A") 
         self.overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
 
         self.modal_frame = ctk.CTkFrame(self.overlay, width=400, height=520, corner_radius=20, 
-                                       border_width=2, border_color="#14B8A6")
+                                       border_width=2, border_color="#14B8A6", fg_color="white")
         self.modal_frame.place(relx=0.5, rely=0.5, anchor="center")
         self.modal_frame.pack_propagate(False)
 
@@ -272,7 +258,7 @@ class ModuloPacientes:
 
         prox_c = ctk.CTkFrame(card_esq, fg_color="#14B8A6", corner_radius=30)
         prox_c.pack(fill="x", padx=20, pady=20)
-        ctk.CTkLabel(prox_c, text="15 de Fev", font=("Arial", 28, "bold"), text_color="white").pack(anchor="w", padx=20)
+        ctk.CTkLabel(prox_c, text="proxima consulta: 15 de Fev", font=("Arial", 18, "bold"), text_color="white").pack(anchor="w", padx=20)
 
         self.right_col = ctk.CTkFrame(container, fg_color="white", corner_radius=40, 
                                      border_width=1, border_color="#F1F5F9")
@@ -307,14 +293,54 @@ class ModuloPacientes:
         if aba == "sobre":
             self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
             self.btn_saude.configure(fg_color="transparent", text_color="#64748B")
-            
-            ctk.CTkLabel(self.container_abas, text="📝 Observações Gerais", 
-                         font=("Arial", 16, "bold")).pack(anchor="w")
-            
-            txt = ctk.CTkTextbox(self.container_abas, fg_color="#F8FAFC", corner_radius=20,
-                                height=150, border_width=1, border_color="#E2E8F0")
-            txt.pack(fill="x", pady=15)
-            txt.insert("1.0", "Pet dócil, porém agitado...")
+
+            # Título
+            ctk.CTkLabel(
+                self.container_abas,
+                text="Sobre o pet:",
+                font=("Arial", 18, "bold"),
+                text_color="#1E293B"
+            ).pack(anchor="w", pady=(10, 5))
+
+            # Texto descritivo
+            desc = ctk.CTkLabel(
+                self.container_abas,
+                text="Pet dócil, porém agitado. Gosta de brincar e é muito apegado ao tutor.",
+                font=("Arial", 14),
+                text_color="#334155",
+                wraplength=600,
+                justify="left"
+            )
+            desc.pack(anchor="w", pady=(0, 20))
+
+            # Título personalidade
+            ctk.CTkLabel(
+                self.container_abas,
+                text="Personalidade",
+                font=("Arial", 16, "bold"),
+                text_color="#1E293B"
+            ).pack(anchor="w", pady=(0, 10))
+
+            # Container das tags
+            tags_frame = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+            tags_frame.pack(anchor="w")
+
+            def criar_tag(master, texto):
+                tag = ctk.CTkFrame(master, fg_color="#FEF3C7", corner_radius=20, height=35)
+                tag.pack(side="left", padx=5)
+                ctk.CTkLabel(
+                    tag,
+                    text=texto,
+                    font=("Arial", 12, "bold"),
+                    text_color="#92400E"
+                ).pack(padx=15, pady=5)
+
+            # Exemplo de tags
+            criar_tag(tags_frame, "Brincalhão")
+            criar_tag(tags_frame, "Protetor")
+            criar_tag(tags_frame, "Guloso")
+
+
         else:
             self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
             self.btn_sobre.configure(fg_color="transparent", text_color="#64748B")
