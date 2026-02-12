@@ -28,26 +28,28 @@ def criar_imagem_redonda(pil_img, size):
     return output
 
 class ModuloConfiguracoes:
-    def __init__(self, master=None):
-        self.master = master   
+    def __init__(self, content_frame=None, parent=None):
+        # content_frame: frame onde as telas serão renderizadas (ex.: Dashboard.content)
+        # parent: referência ao dashboard (opcional) para acessar métodos como atualizar_avatar_topo
+        self.content = content_frame
+        self.parent = parent
         self.current_user_id = None
         self.foto_perfil = None
 
     # --- TELA: EDITAR PERFIL ---
     def tela_configuracoes_perfil(self):
-        if not self.master or not hasattr(self.master, "content"):
-            print("Erro: master ou master.content não encontrado.")
+        if not self.content:
+            print("Erro: content onde renderizar não fornecido.")
             return
-        
-        content = self.master.content
-        
-        self.current_user_id = self.master.current_user_id
-        self.foto_perfil = self.master.foto_perfil
 
-        for widget in content.winfo_children():
+        # tenta obter dados do dashboard pai quando disponível
+        self.current_user_id = getattr(self.parent, 'current_user_id', None)
+        self.foto_perfil = getattr(self.parent, 'foto_perfil', None)
+
+        for widget in self.content.winfo_children():
             widget.destroy()
 
-        scroll = ctk.CTkScrollableFrame(content, fg_color="transparent")
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=40, pady=20)
         
         ctk.CTkLabel(scroll, text="Editar Perfil Profissional", font=("Arial", 24, "bold"), text_color="#1E293B").pack(pady=(0, 30))
@@ -79,7 +81,7 @@ class ModuloConfiguracoes:
 
         # Carregar foto já existente do usuário
         try:
-            perfil = self.foto_perfil.fetch_perfil_data()
+            perfil = self.foto_perfil.fetch_perfil_data() if self.foto_perfil else {}
             key = perfil.get("imagem_perfil_veterinario")
 
             if key:
@@ -130,11 +132,11 @@ class ModuloConfiguracoes:
 
             self.atualizar_preview_foto(file_path)
             
-            if hasattr(self.master, "atualizar_avatar_topo"):
-                self.master.atualizar_avatar_topo(key)
+            if self.parent and hasattr(self.parent, "atualizar_avatar_topo"):
+                self.parent.atualizar_avatar_topo(key)
                 print("Foto atualizada com sucesso!")
             else:
-                print("Aviso: master não tem método atualizar_avatar_topo")
+                print("Aviso: parent não tem método atualizar_avatar_topo")
             
             return key
 
@@ -156,16 +158,14 @@ class ModuloConfiguracoes:
 
     # --- TELA: CONFIGURAÇÕES GERAIS ---
     def tela_configuracoes_gerais(self):
-        if not self.master or not hasattr(self.master, 'content'):
-            print("Erro: master ou master.content não existe")
+        if not self.content:
+            print("Erro: content onde renderizar não existe")
             return
-        
-        content = self.master.content
 
         for widget in self.content.winfo_children():
             widget.destroy()
 
-        scroll = ctk.CTkScrollableFrame(content, fg_color="transparent")
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=40, pady=20)
         
         ctk.CTkLabel(scroll, text="Configurações da Conta", font=("Arial", 24, "bold")).pack(anchor="w", pady=(0, 20))
@@ -194,7 +194,7 @@ class ModuloConfiguracoes:
         ctk.CTkLabel(c_senha, text="🔒 Segurança da conta", font=("Arial", 14, "bold"), text_color="black").pack(anchor="w", padx=20, pady=(15, 0))
         ctk.CTkLabel(c_senha, text="Atualize sua senha periodicamente para manter seu perfil seguro.", font=("Arial", 12)).pack(anchor="w", padx=20)
         ctk.CTkButton(c_senha, text="Mudar senha", fg_color="#14B8A6", text_color="white", font=("Arial", 13, "bold"), 
-                      command=lambda: self.trocar_tela(self.tela_configuracoes_senha)).pack(anchor="w", padx=20, pady=15)
+                  command=lambda: (self.parent.trocar_tela(self.tela_configuracoes_senha) if self.parent and hasattr(self.parent, 'trocar_tela') else self.tela_configuracoes_senha())).pack(anchor="w", padx=20, pady=15)
     
             
         # Perigo (Desativar)
@@ -206,9 +206,14 @@ class ModuloConfiguracoes:
 
     # --- AUXILIARES ---
     def mostrar_modal(self):
-        self.m_bg = ctk.CTkFrame(self, fg_color="black")
+        parent_widget = self.content.master if self.content else None
+        if not parent_widget:
+            print("Erro: não há widget pai para mostrar modal")
+            return
+
+        self.m_bg = ctk.CTkFrame(parent_widget, fg_color="black")
         self.m_bg.place(relx=0, rely=0, relwidth=1, relheight=1)
-        self.m_box = ctk.CTkFrame(self, width=300, height=200, corner_radius=20)
+        self.m_box = ctk.CTkFrame(parent_widget, width=300, height=200, corner_radius=20)
         self.m_box.place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(self.m_box, text="Tem certeza?", font=("Arial", 16, "bold")).pack(pady=20)
         ctk.CTkButton(self.m_box, text="Cancelar", command=lambda:[self.m_bg.destroy(), self.m_box.destroy()]).pack(pady=5)
@@ -220,6 +225,24 @@ class ModuloConfiguracoes:
         e = ctk.CTkEntry(f, height=45, corner_radius=12, border_width=0, fg_color="#F8FAFC", text_color="#1E293B", font=("Arial", 13, "bold"))
         e.insert(0, placeholder)
         e.pack(fill="x", pady=5)
+
+
+    def tela_configuracoes_senha(self):
+        """Tela simples para alterar senha (placeholder)."""
+        if not self.content:
+            print("Erro: content não definido para tela de senha")
+            return
+
+        for w in self.content.winfo_children():
+            w.destroy()
+
+        frm = ctk.CTkFrame(self.content, fg_color="transparent")
+        frm.pack(fill="both", expand=True, padx=40, pady=40)
+        ctk.CTkLabel(frm, text="Mudar Senha", font=("Arial", 22, "bold")).pack(pady=10)
+        ctk.CTkEntry(frm, placeholder_text="Senha atual", show="*").pack(fill="x", pady=5)
+        ctk.CTkEntry(frm, placeholder_text="Nova senha", show="*").pack(fill="x", pady=5)
+        ctk.CTkEntry(frm, placeholder_text="Confirmar nova senha", show="*").pack(fill="x", pady=5)
+        ctk.CTkButton(frm, text="Salvar", fg_color="#14B8A6").pack(pady=10)
 
 
     
