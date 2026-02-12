@@ -30,15 +30,30 @@ class PetAll:
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute("""
-            SELECT 
-                p.*, 
-                t.nome AS nome_tutor, 
-                t.telefone
-            FROM pets p
-            JOIN tutores t ON t.id_tutor = p.id_tutor
-            WHERE p.id_pet = %s
+            SELECT id, NOME, ESPECIE, RACA, DATA_NASCIMENTO, SEXO, PESO, CASTRADO, PERSONALIDADE, IMAGEM, ID_TUTOR
+            FROM pet
+            WHERE id = %s
         """, (id_pet,))
 
         pet = cursor.fetchone()
         conn.close()
         return pet
+
+    @staticmethod
+    def atualizar_imagem_pet(id_pet, imagem_key):
+        """Atualiza a imagem do pet no banco de dados"""
+        try:
+            conn = connectdb()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE pet 
+                SET IMAGEM = %s 
+                WHERE id = %s
+            """, (imagem_key, id_pet))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Erro ao atualizar imagem do pet: {e}")
+            return False
