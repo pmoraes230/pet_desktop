@@ -5,6 +5,7 @@ import requests
 from PIL import Image, ImageDraw
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import threading
 
 # Controllers
 from app.controllers.auth_controller import AuthController
@@ -126,42 +127,53 @@ class DashboardVeterinario(ctk.CTkFrame):
     #   Avatar com foto do S3 (mantido exatamente como estava)
     # ────────────────────────────────────────────────────────────────────────
     def _carregar_avatar(self):
-        perfil = self.foto_perfil.fetch_perfil_data()
-        foto_key = perfil.get("imagem_perfil_veterinario")
-        avatar_size = (38, 38)
+        # Carregar em thread separada para não bloquear UI
+        thread = threading.Thread(target=self._carregar_avatar_thread, daemon=True)
+        thread.start()
 
-        if foto_key:
-            try:
-                url = get_url_s3(foto_key, expires_in=604800)  # 7 dias, para carregar inicial
-                if not url:
-                    raise Exception("Falha ao gerar URL assinada")
+    def _carregar_avatar_thread(self):
+        try:
+            perfil = self.foto_perfil.fetch_perfil_data()
+            foto_key = perfil.get("imagem_perfil_veterinario")
+            avatar_size = (38, 38)
 
-                session = requests.Session()
-                retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
-                session.mount('https://', HTTPAdapter(max_retries=retries))
+            if foto_key:
+                try:
+                    url = get_url_s3(foto_key, expires_in=604800)  # 7 dias
+                    if not url:
+                        raise Exception("Falha ao gerar URL assinada")
 
-                response = session.get(url, timeout=10)
-                response.raise_for_status()
+                    session = requests.Session()
+                    retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+                    session.mount('https://', HTTPAdapter(max_retries=retries))
 
-                pil_img = Image.open(BytesIO(response.content))
-                pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
+                    # Aumentar timeout para 30 segundos
+                    response = session.get(url, timeout=30)
+                    response.raise_for_status()
 
-                self.avatar_img = ctk.CTkImage(light_image=pil_img, size=avatar_size)
+                    pil_img = Image.open(BytesIO(response.content))
+                    pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
 
-                if hasattr(self, 'avatar') and self.avatar is not None:
-                    self.avatar.destroy()
+                    self.avatar_img = ctk.CTkImage(light_image=pil_img, size=avatar_size)
 
-                self.avatar = ctk.CTkButton(
-                    self.right_info, image=self.avatar_img, text="",
-                    width=38, height=38, corner_radius=19,
-                    fg_color="transparent", hover_color="#E5E7EB",
-                    command=self.toggle_menu
-                )
-            except Exception as e:
-                print("Erro ao carregar avatar AWS:", e)
-                self._criar_avatar_padrao()
-        else:
-            self._criar_avatar_padrao()
+                    if hasattr(self, 'avatar') and self.avatar is not None:
+                        self.avatar.destroy()
+
+                    self.avatar = ctk.CTkButton(
+                        self.right_info, image=self.avatar_img, text="",
+                        width=38, height=38, corner_radius=19,
+                        fg_color="transparent", hover_color="#E5E7EB",
+                        command=self.toggle_menu
+                    )
+                    return
+                except Exception as e:
+                    print("Erro ao carregar avatar AWS:", e)
+            
+            # Se chegou aqui, usar avatar padrão
+            self.after(0, self._criar_avatar_padrao)
+        except Exception as e:
+            print(f"Erro ao processar avatar: {e}")
+            self.after(0, self._criar_avatar_padrao)
 
         self.avatar.pack(side="left")
 

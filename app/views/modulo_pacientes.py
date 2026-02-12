@@ -361,7 +361,7 @@ class ModuloPacientes:
                         session.mount('https://', HTTPAdapter(max_retries=retries))
                         
                         print("Baixando imagem do S3...")
-                        response = session.get(url, timeout=10)
+                        response = session.get(url, timeout=30)
                         response.raise_for_status()
                         print(f"Imagem baixada: {len(response.content)} bytes")
                         
@@ -525,7 +525,7 @@ class ModuloPacientes:
                 retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
                 session.mount('https://', HTTPAdapter(max_retries=retries))
                 
-                response = session.get(url, timeout=10)
+                response = session.get(url, timeout=30)
                 response.raise_for_status()
                 
                 pil_img = Image.open(BytesIO(response.content))
