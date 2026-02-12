@@ -99,7 +99,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         # ── Instâncias dos módulos (composição) ──────────────────────────────
         self.mod_pacientes = ModuloPacientes(self.content, self.pet_controller)   # note: passa self como content
         self.mod_financeiro = ModuloFinanceiro(self.content)
-        self.mod_configuracoes = ModuloConfiguracoes(self.content)
+        self.mod_configuracoes = ModuloConfiguracoes(self.content, parent=self)
         self.mod_agenda = ModuloAgenda(self.content)
         self.mod_prontuario = ModuloProntuario(self.content)
         self.mod_chat = ModuloChat(self.content)
