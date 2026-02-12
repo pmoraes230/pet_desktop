@@ -19,7 +19,7 @@ if not settings.configured:
 from django.contrib.auth.hashers import check_password
 
 # Configurar logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)    
 
 class AuthUserModal:
     def __init__(self, username: str, password: str):

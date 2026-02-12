@@ -305,19 +305,26 @@ class ModuloChat:
         self.current_contact_id = contact_id
         self.header_label.configure(text=f"Conversando com {nome_contato}")
 
+        # Fecha conexão antiga com segurança
         if self.ws:
             try:
                 self.ws.close()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Erro ao fechar WS antigo: {e}")
 
-        ws_url = f"ws://127.0.0.1:8765/chat/{contact_id}"
+        # URL correta
+        # Local: ws://127.0.0.1:8000/ws/chat/{contact_id}/
+        # Produção (Railway): wss://coracaoempatas.up.railway.app/ws/chat/{contact_id}/
+        # Use wss:// em produção para evitar bloqueio
+        ws_url = f"wss://coracaoempatas.up.railway.app/ws/chat/{contact_id}/"
+        # Para teste local: ws_url = f"ws://127.0.0.1:8000/ws/chat/{contact_id}/"
 
         def on_message(ws, raw_message):
             try:
                 data = json.loads(raw_message)
                 if "error" in data:
                     logger.error(f"Erro do servidor: {data['error']}")
+                    # Opcional: mostrar popup ou label de erro na tela
                     return
 
                 texto = data.get("mensagem")
@@ -331,29 +338,37 @@ class ModuloChat:
                 self.criar_bolha_mensagem(self.area_msg, texto, hora, tipo)
                 self.area_msg._parent_canvas.yview_moveto(1.0)
 
+            except json.JSONDecodeError:
+                logger.error("Mensagem recebida inválida (não JSON)")
             except Exception as e:
                 logger.error(f"Erro ao processar mensagem recebida: {e}")
 
         def on_open(ws):
-            ws.send(json.dumps({
-                "user_id": self.current_user_id,
-                "user_role": self.current_user_role
-            }))
-            logger.info(f"Conectado ao chat com {nome_contato}")
-            
+            # Envia autenticação imediatamente (essencial para o fallback do connect())
+            auth_payload = {
+                "user_id": str(self.current_user_id),
+                "user_role": self.current_user_role.upper()  # ex: "VET" ou "TUTOR"
+            }
+            ws.send(json.dumps(auth_payload))
+            logger.info(f"Autenticação enviada para {nome_contato}: {auth_payload}")
+
             self.connection_ready = True
-            
-            # Envia tudo que estava pendente
+
+            # Envia mensagens pendentes
             while self.pending_messages:
                 pendente = self.pending_messages.pop(0)
                 ws.send(json.dumps({"mensagem": pendente}))
-                logger.info("Enviando mensagem pendente: " + pendente)
+                logger.info(f"Mensagem pendente enviada: {pendente}")
 
         def on_error(ws, error):
             logger.error(f"Erro WebSocket: {error}")
+            self.connection_ready = False
+            # Opcional: mostrar mensagem na tela "Falha na conexão, tentando novamente..."
 
         def on_close(ws, close_code, close_msg):
-            logger.info(f"WebSocket fechado: {close_code} - {close_msg}")
+            logger.info(f"WebSocket fechado: código={close_code}, motivo={close_msg}")
+            self.connection_ready = False
+            self.ws = None  # Limpa para reconectar depois se necessário
 
         self.ws = websocket.WebSocketApp(
             ws_url,
