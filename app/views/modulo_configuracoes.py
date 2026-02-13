@@ -55,7 +55,7 @@ class ModuloConfiguracoes:
         ctk.CTkLabel(scroll, text="Editar Perfil Profissional", font=("Arial", 24, "bold"), text_color="#1E293B").pack(pady=(0, 30))
         
         # Card da Foto
-        foto_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
+        foto_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=50, border_width=1, border_color="#E2E8F0")
         foto_card.pack(fill="x", pady=(0, 20))
         
         foto_cont = ctk.CTkFrame(foto_card, fg_color="transparent")
@@ -74,9 +74,9 @@ class ModuloConfiguracoes:
             text="📷",
             width=35,
             height=35,
-            corner_radius=17,
+            corner_radius=19,
             fg_color="#14B8A6",
-            command=self.escolher_nova_foto  # 👈 agora funciona
+            command=self.escolher_nova_foto 
         ).place(relx=0.9, rely=0.9, anchor="center")
 
         # Carregar foto já existente do usuário
@@ -85,7 +85,7 @@ class ModuloConfiguracoes:
             key = perfil.get("imagem_perfil_veterinario")
 
             if key:
-                url = get_url_s3(key, expires_in=86400)  # 24 horas
+                url = get_url_s3(key, expires_in=86400)
                 if not url:
                     raise Exception("Falha ao gerar URL assinada")
 

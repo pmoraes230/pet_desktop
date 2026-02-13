@@ -127,55 +127,48 @@ class DashboardVeterinario(ctk.CTkFrame):
     #   Avatar com foto do S3 (mantido exatamente como estava)
     # ────────────────────────────────────────────────────────────────────────
     def _carregar_avatar(self):
-        # Carregar em thread separada para não bloquear UI
-        thread = threading.Thread(target=self._carregar_avatar_thread, daemon=True)
-        thread.start()
+        # Inicia carregamento assíncrono
+        self.avatar = None
+        threading.Thread(target=self._load_avatar_async, daemon=True).start()
+        self._criar_avatar_padrao()
+        self.avatar.pack(side="left")
 
-    def _carregar_avatar_thread(self):
+    def _load_avatar_async(self):
         try:
             perfil = self.foto_perfil.fetch_perfil_data()
             foto_key = perfil.get("imagem_perfil_veterinario")
-            avatar_size = (38, 38)
+            if not foto_key:
+                return
 
-            if foto_key:
-                try:
-                    url = get_url_s3(foto_key, expires_in=604800)  # 7 dias
-                    if not url:
-                        raise Exception("Falha ao gerar URL assinada")
+            url = get_url_s3(foto_key, expires_in=604800)
+            if not url:
+                return
 
-                    session = requests.Session()
-                    retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-                    session.mount('https://', HTTPAdapter(max_retries=retries))
+            session = requests.Session()
+            retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+            session.mount('https://', HTTPAdapter(max_retries=retries))
 
-                    # Aumentar timeout para 30 segundos
-                    response = session.get(url, timeout=30)
-                    response.raise_for_status()
+            response = session.get(url, timeout=12)
+            response.raise_for_status()
 
-                    pil_img = Image.open(BytesIO(response.content))
-                    pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
+            pil_img = Image.open(BytesIO(response.content))
+            pil_img = self.criar_imagem_redonda(pil_img, (38, 38))
 
-                    self.avatar_img = ctk.CTkImage(light_image=pil_img, size=avatar_size)
+            ctk_img = ctk.CTkImage(light_image=pil_img, size=(38, 38))
 
-                    if hasattr(self, 'avatar') and self.avatar is not None:
-                        self.avatar.destroy()
+            # Atualiza na thread principal
+            self.after(0, lambda: self._update_avatar_success(ctk_img))
 
-                    self.avatar = ctk.CTkButton(
-                        self.right_info, image=self.avatar_img, text="",
-                        width=38, height=38, corner_radius=19,
-                        fg_color="transparent", hover_color="#E5E7EB",
-                        command=self.toggle_menu
-                    )
-                    return
-                except Exception as e:
-                    print("Erro ao carregar avatar AWS:", e)
-            
-            # Se chegou aqui, usar avatar padrão
-            self.after(0, self._criar_avatar_padrao)
         except Exception as e:
-            print(f"Erro ao processar avatar: {e}")
-            self.after(0, self._criar_avatar_padrao)
+            print("Erro ao carregar avatar:", e)
 
-        self.avatar.pack(side="left")
+            self.avatar.pack(side="left")
+
+    def _update_avatar_success(self, ctk_img):
+        if self.avatar is None:
+            return
+        self.avatar.configure(image=ctk_img, text="")
+        self.avatar_img = ctk_img 
 
     def atualizar_avatar_topo(self, nova_key):
         """Método para atualizar avatar após upload (chame quando salvar nova foto)"""
@@ -212,15 +205,21 @@ class DashboardVeterinario(ctk.CTkFrame):
         return output
 
     def _criar_avatar_padrao(self):
-        initial = self.user_name[0].upper() if self.user_name else "U"
+        # Você pode usar um emoji ou baixar um ícone pequeno SVG/PNG transparente
+        # Mas a forma mais simples é emoji mesmo:
         self.avatar = ctk.CTkButton(
-            self.right_info, text=initial,
-            font=("Arial", 14, "bold"), width=38, height=38,
-            fg_color="#A855F7", text_color="white",
-            corner_radius=19, hover_color="#9333EA",
+            self.right_info,
+            text="👤",                      # ou "Person" emoji
+            font=("Arial", 24),             # emoji fica maior
+            fg_color="transparent",
+            text_color="#6B7280",           # cinza
+            hover_color="#E5E7EB",
+            width=38,
+            height=38,
+            corner_radius=19,
             command=self.toggle_menu
         )
-
+        self.avatar.pack(side="left", padx=8)
     # ────────────────────────────────────────────────────────────────────────
     #   Métodos auxiliares
     # ────────────────────────────────────────────────────────────────────────
