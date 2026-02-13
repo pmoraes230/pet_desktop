@@ -110,10 +110,27 @@ class ModuloConfiguracoes:
         grid = ctk.CTkFrame(dados, fg_color="transparent")
         grid.pack(fill="x", padx=30, pady=(0, 20)); grid.columnconfigure((0, 1), weight=1)
         
-        self.criar_campo_input(grid, "NOME COMPLETO", "Usuário Exemplo", 0, 0)
-        self.criar_campo_input(grid, "E-MAIL", "usuario@email.com", 0, 1)
-        self.criar_campo_input(grid, "CRMV", "12345-SP", 1, 0)
-        self.criar_campo_input(grid, "ESTADO (UF)", "São Paulo", 1, 1)
+        # Campos editáveis — manter referências para leitura/salvamento
+        self.entry_nome = self.criar_campo_input(grid, "NOME COMPLETO", "", 0, 0)
+        self.entry_email = self.criar_campo_input(grid, "E-MAIL", "", 0, 1)
+        self.entry_crmv = self.criar_campo_input(grid, "CRMV", "", 1, 0)
+        self.entry_uf = self.criar_campo_input(grid, "ESTADO (UF)", "", 1, 1)
+
+        # Preencher com dados do banco quando disponível
+        try:
+            perfil = self.foto_perfil.fetch_perfil_data() if self.foto_perfil else {}
+            if perfil:
+                self.entry_nome.delete(0, 'end'); self.entry_nome.insert(0, perfil.get('NOME', ''))
+                self.entry_email.delete(0, 'end'); self.entry_email.insert(0, perfil.get('EMAIL', ''))
+                self.entry_crmv.delete(0, 'end'); self.entry_crmv.insert(0, perfil.get('CRMV', ''))
+                self.entry_uf.delete(0, 'end'); self.entry_uf.insert(0, perfil.get('UF_CRMV', ''))
+        except Exception as e:
+            print('Erro ao preencher campos do perfil:', e)
+
+        # Botão salvar
+        btn_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        btn_frame.pack(fill="x", pady=(0, 10))
+        ctk.CTkButton(btn_frame, text="Salvar", fg_color="#14B8A6", command=self.salvar_perfil).pack(anchor="e", padx=30, pady=10)
 
     def escolher_nova_foto(self):
         file_path = filedialog.askopenfilename(
@@ -223,8 +240,46 @@ class ModuloConfiguracoes:
         f.grid(row=row, column=col, padx=15, pady=10, sticky="nsew")
         ctk.CTkLabel(f, text=label_text, font=("Arial", 10, "bold"), text_color="#94A3B8").pack(anchor="w", padx=5)
         e = ctk.CTkEntry(f, height=45, corner_radius=12, border_width=0, fg_color="#F8FAFC", text_color="#1E293B", font=("Arial", 13, "bold"))
-        e.insert(0, placeholder)
+        if placeholder:
+            e.insert(0, placeholder)
         e.pack(fill="x", pady=5)
+        return e
+
+
+    def salvar_perfil(self):
+        """Coleta os valores dos campos e atualiza o banco de dados."""
+        if not self.current_user_id:
+            print("Erro: usuário atual não definido")
+            return
+
+        data = {
+            'NOME': self.entry_nome.get().strip(),
+            'EMAIL': self.entry_email.get().strip(),
+            'CRMV': self.entry_crmv.get().strip(),
+            'UF_CRMV': self.entry_uf.get().strip()
+        }
+
+        def tarefa():
+            # usa o controller já disponível em self.foto_perfil
+            if not self.foto_perfil:
+                print('Erro: controlador de perfil não disponível')
+                return False
+
+            success = False
+            try:
+                success = self.foto_perfil.update_perfil(data)
+            except Exception as e:
+                print('Erro ao atualizar perfil:', e)
+                success = False
+
+            if success:
+                print('Perfil salvo com sucesso')
+            else:
+                print('Falha ao salvar perfil')
+
+            return success
+
+        run_with_loading(tarefa, message='Salvando perfil... Aguarde')
 
 
     def tela_configuracoes_senha(self):
