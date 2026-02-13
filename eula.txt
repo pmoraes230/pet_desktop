@@ -1,0 +1,6 @@
+Termos de Uso - Seu App Veterinário
+Ao instalar, você concorda com:
+- Conexões a servidores AWS S3 e DB para dados de pets.
+- Não compartilhar credenciais.
+- Responsabilidade por dados sensíveis.
+Aceite para continuar.

@@ -11,6 +11,15 @@ from app.core.theme import apply_theme
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green")
 
+def resource_path(relative_path):
+    """Retorna caminho absoluto correto no dev e no executável PyInstaller"""
+    try:
+        # PyInstaller cria pasta temporária e armazena em _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # Modo normal (python main.py)
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 class App(ctk.CTk):
     def __init__(self):
