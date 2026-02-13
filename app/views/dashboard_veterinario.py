@@ -79,13 +79,40 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent")
         self.right_info.pack(side="right", padx=20)
 
+        # Notificação: container com botão e badge (tamanho fixo para evitar recorte do badge)
+        self.notif_container = ctk.CTkFrame(self.right_info, fg_color="transparent", width=52, height=40)
+        self.notif_container.pack_propagate(False)
+        self.notif_container.pack(side="left", padx=15)
+
         self.btn_notif = ctk.CTkButton(
-            self.right_info, text="🔔", font=("Arial", 20),
+            self.notif_container, text="🔔", font=("Arial", 20),
             width=40, height=40, fg_color="transparent",
             text_color="black", hover_color="#F1F5F9",
             command=self.toggle_notifications
         )
-        self.btn_notif.pack(side="left", padx=15)
+        self.btn_notif.pack(side="left")
+
+        # Badge de não lidas
+        unread = 0
+        try:
+            if self.vet_controller:
+                unread = self.vet_controller.fetch_unread_count() or 0
+        except Exception:
+            unread = 0
+
+        self.notif_badge = ctk.CTkLabel(
+            self.notif_container,
+            text=str(unread) if unread > 0 else "",
+            fg_color="#EF4444",
+            text_color="white",
+            width=18,
+            height=18,
+            corner_radius=9,
+            font=("Arial", 10, "bold")
+        )
+        # Posicionar badge no canto superior direito do container (sem recorte)
+        self.notif_badge.place(relx=1.0, rely=0.0, anchor="ne")
+        self.notif_badge.lift()
 
         # Avatar com foto do S3 (funcionalidade preservada)
         self._carregar_avatar()
@@ -319,11 +346,36 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(t, text=info, font=("Arial", 11), text_color="#64748B").pack(anchor="w")
         ctk.CTkLabel(l, text=status, text_color=txt, fg_color=bg, corner_radius=8, width=100, font=("Arial", 11, "bold")).pack(side="right")
 
-    def criar_item_alerta(self, master, pet, msg):
+    def criar_item_alerta(self, master, title, msg, notif_id=None, lida=False):
         i = ctk.CTkFrame(master, fg_color="transparent")
-        i.pack(fill="x", padx=20, pady=10)
-        ctk.CTkLabel(i, text=pet, font=("Arial", 12, "bold"), text_color="black").pack(anchor="w")
-        ctk.CTkLabel(i, text=msg, font=("Arial", 11), text_color="#64748B", wraplength=220, justify="left").pack(anchor="w")
+        i.pack(fill="x", padx=20, pady=8)
+
+        title_lbl = ctk.CTkLabel(i, text=title, font=("Arial", 12, "bold"), text_color="black")
+        title_lbl.pack(anchor="w")
+        msg_lbl = ctk.CTkLabel(i, text=msg, font=("Arial", 11), text_color=("#94A3B8" if lida else "#64748B"), wraplength=220, justify="left")
+        msg_lbl.pack(anchor="w")
+
+        # Bind de click para marcar como lida e executar ação (se houver id)
+        def _on_click(event=None, nid=notif_id):
+            if nid and self.vet_controller:
+                try:
+                    self.vet_controller.mark_notification_read(nid)
+                    # atualizar visual (diminuir cor)
+                    msg_lbl.configure(text_color="#94A3B8")
+                    title_lbl.configure(text_color="#6B7280")
+                    # atualizar badge de não lidas
+                    try:
+                        unread_now = self.vet_controller.fetch_unread_count() or 0
+                        self.notif_badge.configure(text=str(unread_now) if unread_now > 0 else "")
+                    except Exception:
+                        pass
+                except Exception as e:
+                    print("Erro ao marcar notificação como lida:", e)
+
+        # associar bind tanto ao frame quanto aos labels
+        i.bind("<Button-1>", _on_click)
+        title_lbl.bind("<Button-1>", _on_click)
+        msg_lbl.bind("<Button-1>", _on_click)
 
     # ────────────────────────────────────────────────────────────────────────
     #   Menus dropdown
@@ -338,6 +390,42 @@ class DashboardVeterinario(ctk.CTkFrame):
             self.notif_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
             self.notif_dropdown.place(relx=0.95, y=75, anchor="ne")
             ctk.CTkLabel(self.notif_dropdown, text="Notificações", font=("Arial", 14, "bold"), text_color="black").pack(pady=10, padx=20)
+            # Buscar notificações do banco
+            notificacoes = []
+            try:
+                if self.vet_controller:
+                    notificacoes = self.vet_controller.fetch_alerts() or []
+            except Exception as e:
+                print("Erro ao buscar notificações para o dropdown:", e)
+
+            # Conteúdo com scroll
+            content_frame = ctk.CTkScrollableFrame(self.notif_dropdown, fg_color="transparent", height=240)
+            content_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+            if notificacoes:
+                for n in notificacoes:
+                    title = n.get('tipo') or (f'Tutor {n.get("tutor_id")}' if n.get('tutor_id') else 'Notificação')
+                    msg = n.get('mensagem') or str(n)
+                    # formatar data se disponível
+                    dt = n.get('data_criacao')
+                    try:
+                        if hasattr(dt, 'strftime'):
+                            time_str = dt.strftime('%d/%m %H:%M')
+                        else:
+                            time_str = str(dt) if dt else ''
+                    except Exception:
+                        time_str = ''
+                    if time_str:
+                        msg = f"{msg}\n{time_str}"
+                    self.criar_item_alerta(content_frame, title, msg, notif_id=n.get('id'), lida=bool(n.get('lida')))
+            else:
+                ctk.CTkLabel(content_frame, text="Nenhuma notificação.", font=("Arial", 12), text_color="#64748B").pack(pady=20)
+
+            # Não marcar todas como lidas automaticamente — marcar individualmente ao clicar
+            # Rodapé com ação
+            footer = ctk.CTkFrame(self.notif_dropdown, fg_color="transparent")
+            footer.pack(fill="x", padx=10, pady=(0, 10))
+            ctk.CTkButton(footer, text="Ver todas →", fg_color="transparent", text_color="#0EA5A4", hover_color="#F1F5F9", command=lambda: print('Ver todas as notificações'))
             self.notif_aberta = True
 
     def toggle_menu(self):
