@@ -69,3 +69,13 @@ class PetController:
         except Exception as e:
             print(f"Erro ao buscar vacinas: {str(e)}")
             return []
+
+    def adicionar_vacina(self, id_pet: int, nome_vacina: str, proxima_dose: str) -> bool:
+        """
+        Adiciona uma nova vacina para um pet
+        """
+        try:
+            return self.pet_model.adicionar_vacina(id_pet, nome_vacina, proxima_dose)
+        except Exception as e:
+            print(f"Erro ao adicionar vacina: {str(e)}")
+            return False

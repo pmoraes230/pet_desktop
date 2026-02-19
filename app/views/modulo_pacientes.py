@@ -547,13 +547,36 @@ class ModuloPacientes:
             self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
             self.btn_sobre.configure(fg_color="transparent", text_color="#64748B")
             
+            # Cabeçalho da seção de saúde com botão
+            header_saude = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+            header_saude.pack(fill="x", pady=(0, 20))
+            
+            ctk.CTkLabel(
+                header_saude,
+                text="Protocolo de Vacinação",
+                font=("Arial", 18, "bold"),
+                text_color="#1E293B"
+            ).pack(side="left")
+            
+            ctk.CTkButton(
+                header_saude,
+                text="+ NOVO REGISTRO",
+                fg_color="#14B8A6",
+                hover_color="#0D9488",
+                text_color="white",
+                font=("Arial", 11, "bold"),
+                height=35,
+                corner_radius=8,
+                command=self.abrir_modal_nova_vacina
+            ).pack(side="right")
+            
             # Busca vacinas do banco de dados
             vacinas = self.pet_controller.buscar_vacinas_por_pet(self.pet_atual_id)
             
             if not vacinas:
                 ctk.CTkLabel(
                     self.container_abas,
-                    text="Nenhuma vacina registrada",
+                    text="Sem registros vacinais encontrados.",
                     font=("Arial", 13),
                     text_color="#94A3B8"
                 ).pack(pady=20)
@@ -580,6 +603,147 @@ class ModuloPacientes:
                         text_color="#1E293B",
                         justify="left"
                     ).pack(anchor="w")
+
+    def abrir_modal_nova_vacina(self):
+        """Abre modal para adicionar nova vacina"""
+        self.overlay_vacina = ctk.CTkFrame(self.content.master, fg_color="#1A1A1A")
+        self.overlay_vacina.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+        # Modal
+        self.modal_vacina = ctk.CTkFrame(
+            self.overlay_vacina, 
+            width=420, 
+            height=480, 
+            corner_radius=20, 
+            border_width=2, 
+            border_color="#14B8A6", 
+            fg_color="white"
+        )
+        self.modal_vacina.place(relx=0.5, rely=0.5, anchor="center")
+        self.modal_vacina.pack_propagate(False)
+
+        # Ícone de seringa
+        ctk.CTkLabel(
+            self.modal_vacina, 
+            text="💉", 
+            font=("Arial", 40)
+        ).pack(pady=(20, 10))
+
+        # Título
+        ctk.CTkLabel(
+            self.modal_vacina, 
+            text="Novo Registro", 
+            font=("Arial", 22, "bold"), 
+            text_color="#14B8A6"
+        ).pack(pady=(0, 5))
+
+        # Subtítulo
+        ctk.CTkLabel(
+            self.modal_vacina, 
+            text="Insira os dados da aplicação abaixo.", 
+            font=("Arial", 12), 
+            text_color="#94A3B8"
+        ).pack(pady=(0, 20))
+
+        # Form
+        form = ctk.CTkFrame(self.modal_vacina, fg_color="transparent")
+        form.pack(fill="both", expand=True, padx=30)
+
+        # Campo nome da vacina
+        ctk.CTkLabel(form, text="Nome da Vacina", font=("Arial", 11, "bold")).pack(anchor="w", pady=(10, 0))
+        self.entry_nome_vacina = ctk.CTkEntry(form, height=40, corner_radius=10, border_color="#CBD5E1")
+        self.entry_nome_vacina.pack(fill="x", pady=(2, 15))
+
+        # Campo data de aplicação
+        ctk.CTkLabel(form, text="Data de Aplicação", font=("Arial", 11, "bold")).pack(anchor="w", pady=(0, 0))
+        self.entry_data_aplicacao = ctk.CTkEntry(
+            form, 
+            placeholder_text="dd/mm/aaaa", 
+            height=40, 
+            corner_radius=10, 
+            border_color="#CBD5E1"
+        )
+        self.entry_data_aplicacao.pack(fill="x", pady=(2, 15))
+
+        # Campo próxima dose
+        ctk.CTkLabel(form, text="Próxima Dose", font=("Arial", 11, "bold")).pack(anchor="w", pady=(0, 0))
+        self.entry_proxima_dose = ctk.CTkEntry(
+            form, 
+            placeholder_text="dd/mm/aaaa", 
+            height=40, 
+            corner_radius=10, 
+            border_color="#CBD5E1"
+        )
+        self.entry_proxima_dose.pack(fill="x", pady=(2, 20))
+
+        # Botões
+        btn_container = ctk.CTkFrame(self.modal_vacina, fg_color="transparent")
+        btn_container.pack(fill="x", pady=20, padx=30)
+
+        ctk.CTkButton(
+            btn_container, 
+            text="CANCELAR", 
+            fg_color="#E2E8F0", 
+            text_color="#1E293B",
+            font=("Arial", 12, "bold"),
+            width=150, 
+            height=40,
+            command=self.fechar_modal_vacina
+        ).pack(side="left", padx=5)
+
+        ctk.CTkButton(
+            btn_container, 
+            text="SALVAR REGISTRO", 
+            fg_color="#14B8A6", 
+            text_color="white",
+            font=("Arial", 12, "bold"),
+            width=150, 
+            height=40,
+            command=self.salvar_nova_vacina
+        ).pack(side="right", padx=5)
+
+    def fechar_modal_vacina(self):
+        """Fecha o modal de nova vacina"""
+        if hasattr(self, 'overlay_vacina') and self.overlay_vacina:
+            self.overlay_vacina.destroy()
+
+    def salvar_nova_vacina(self):
+        """Salva a nova vacina no banco de dados"""
+        from datetime import datetime
+        
+        nome_vacina = self.entry_nome_vacina.get().strip()
+        proxima_dose = self.entry_proxima_dose.get().strip()
+
+        if not nome_vacina:
+            messagebox.showwarning("Aviso", "Por favor, insira o nome da vacina")
+            return
+
+        if not proxima_dose:
+            messagebox.showwarning("Aviso", "Por favor, insira a data da próxima dose")
+            return
+
+        # Converte a data de DD/MM/YYYY para YYYY-MM-DD
+        try:
+            data_obj = datetime.strptime(proxima_dose, "%d/%m/%Y")
+            proxima_dose_formatada = data_obj.strftime("%Y-%m-%d")
+        except ValueError:
+            messagebox.showerror("Erro", "Data inválida! Use o formato DD/MM/YYYY")
+            return
+
+        # Tenta adicionar ao banco
+        sucesso = self.pet_controller.adicionar_vacina(
+            self.pet_atual_id, 
+            nome_vacina, 
+            proxima_dose_formatada
+        )
+
+        if sucesso:
+            messagebox.showinfo("Sucesso", "Vacina registrada com sucesso!")
+            self.fechar_modal_vacina()
+            # Atualiza a lista de vacinas
+            self.mudar_aba_pet("saude")
+        else:
+            messagebox.showerror("Erro", "Falha ao registrar a vacina")
 
     def _carregar_foto_card(self, label, imagem_key):
         """Carrega foto do S3 para exibir no card de pacientes"""

@@ -130,3 +130,31 @@ class PetAll:
             if 'conn' in locals():
                 conn.close()
             return []
+    @staticmethod
+    def adicionar_vacina(id_pet, nome_vacina, proxima_dose):
+        """Adiciona uma nova vacina para um pet"""
+        try:
+            from uuid import uuid4
+            conn = connectdb()
+            cursor = conn.cursor()
+            
+            # Gera um ID único
+            vacina_id = uuid4().hex
+            
+            cursor.execute("""
+                INSERT INTO vacina (id, ID_PET, NOME, PROXIMA_DOSE)
+                VALUES (%s, %s, %s, %s)
+            """, (vacina_id, id_pet, nome_vacina, proxima_dose))
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            print(f"Erro ao adicionar vacina: {e}")
+            import traceback
+            traceback.print_exc()
+            if 'conn' in locals():
+                conn.close()
+            return False
