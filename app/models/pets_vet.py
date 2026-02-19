@@ -57,3 +57,47 @@ class PetAll:
         except Exception as e:
             print(f"Erro ao atualizar imagem do pet: {e}")
             return False
+    @staticmethod
+    def buscar_tutor_por_pet_id(id_pet):
+        """Busca os dados do tutor de um pet"""
+        try:
+            conn = connectdb()
+            cursor = conn.cursor(dictionary=True)
+            
+            # Primeiro, busca o ID_TUTOR do pet
+            cursor.execute("""
+                SELECT ID_TUTOR FROM pet WHERE id = %s
+            """, (id_pet,))
+            
+            pet_result = cursor.fetchone()
+            
+            if not pet_result:
+                conn.close()
+                return {}
+            
+            id_tutor = pet_result.get('ID_TUTOR')
+            
+            if not id_tutor:
+                conn.close()
+                return {}
+            
+            # Busca os dados do tutor na tabela tutor
+            cursor.execute("""
+                SELECT * FROM tutor WHERE id = %s
+            """, (id_tutor,))
+            
+            tutor = cursor.fetchone()
+            conn.close()
+            
+            if tutor:
+                return tutor
+            else:
+                return {}
+                
+        except Exception as e:
+            print(f"Erro ao buscar tutor do pet: {e}")
+            import traceback
+            traceback.print_exc()
+            if 'conn' in locals():
+                conn.close()
+            return {}
