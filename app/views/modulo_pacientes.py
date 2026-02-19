@@ -547,8 +547,8 @@ class ModuloPacientes:
             self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
             self.btn_sobre.configure(fg_color="transparent", text_color="#64748B")
             
-            # Vacinas padrão (pode ser expandido com dados do banco)
-            vacinas = [("V10", "10/01/2026", "10/01/2027"), ("Raiva", "15/12/2025", "15/12/2026")]
+            # Busca vacinas do banco de dados
+            vacinas = self.pet_controller.buscar_vacinas_por_pet(self.pet_atual_id)
             
             if not vacinas:
                 ctk.CTkLabel(
@@ -558,7 +558,14 @@ class ModuloPacientes:
                     text_color="#94A3B8"
                 ).pack(pady=20)
             else:
-                for n, d, p in vacinas:
+                for vacina in vacinas:
+                    nome_vacina = vacina.get('NOME', 'Vacina desconhecida')
+                    proxima_dose = vacina.get('PROXIMA_DOSE', 'Data não informada')
+                    
+                    # Formata a data se for um objeto datetime
+                    if hasattr(proxima_dose, 'strftime'):
+                        proxima_dose = proxima_dose.strftime('%d/%m/%Y')
+                    
                     v_card = ctk.CTkFrame(self.container_abas, fg_color="white", 
                                          corner_radius=15, border_width=1, border_color="#F1F5F9")
                     v_card.pack(fill="x", pady=8)
@@ -568,7 +575,7 @@ class ModuloPacientes:
                     
                     ctk.CTkLabel(
                         info_frame, 
-                        text=f"{n}\nAplicada: {d}\nPróxima: {p}",
+                        text=f"{nome_vacina}\nPróxima dose: {proxima_dose}",
                         font=("Arial", 11, "bold"),
                         text_color="#1E293B",
                         justify="left"
