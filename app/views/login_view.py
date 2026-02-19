@@ -15,5 +15,7 @@ class LoginView(ctk.CTkFrame):
         self.card.grid_rowconfigure(0, weight=1)
 
         LeftPanel(self.card).grid(row=0, column=0, sticky="nsew")
+        
+        # O self.card aqui será o master do VetAuthForm
         self.form = VetAuthForm(self.card, on_login_success=on_login_success)
         self.form.grid(row=0, column=1, sticky="nsew")

@@ -55,14 +55,33 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.grid_rowconfigure(0, weight=0, minsize=70)
         self.grid_rowconfigure(1, weight=1)
 
+        # --- Carregar a Imagem do Logo ---
+        # Ajuste o 'size' para o tamanho que desejar (ex: 30x30 ou 40x40)
+        img_logo = ctk.CTkImage(
+            light_image=Image.open("app/assets/pet.png"), # Verifique se o caminho está correto
+            dark_image=Image.open("app/assets/pet.png"), 
+            size=(35, 35) 
+        )
+
         # Sidebar
         self.sidebar = ctk.CTkFrame(self, fg_color=colors.BRAND_DARK_TEAL_HOVER, width=260, corner_radius=0)
         self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
         logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        logo_f.pack(pady=20, padx=10, fill="x")
-        ctk.CTkLabel(logo_f, text="🐾 Coração em patas", font=("Arial", 15, "bold"), text_color="white").pack(side="left", padx=5)
+        logo_f.pack(pady=20, padx=15, fill="x")
+
+        # Label da Imagem
+        self.logo_img_label = ctk.CTkLabel(logo_f, image=img_logo, text="")
+        self.logo_img_label.pack(side="left", padx=(0, 10))
+
+        # Label do Texto
+        ctk.CTkLabel(
+            logo_f, 
+            text="Coração em patas", 
+            font=("Arial", 16, "bold"), 
+            text_color="white"
+        ).pack(side="left")
 
         # Topbar
         self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
