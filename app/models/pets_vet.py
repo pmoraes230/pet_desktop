@@ -101,3 +101,32 @@ class PetAll:
             if 'conn' in locals():
                 conn.close()
             return {}
+
+    @staticmethod
+    def buscar_vacinas_por_pet_id(id_pet):
+        """Busca as vacinas de um pet"""
+        try:
+            conn = connectdb()
+            cursor = conn.cursor(dictionary=True)
+            
+            # Busca todas as vacinas do pet
+            cursor.execute("""
+                SELECT id, NOME, PROXIMA_DOSE FROM vacina WHERE ID_PET = %s
+                ORDER BY NOME
+            """, (id_pet,))
+            
+            vacinas = cursor.fetchall()
+            conn.close()
+            
+            if vacinas:
+                return vacinas
+            else:
+                return []
+                
+        except Exception as e:
+            print(f"Erro ao buscar vacinas do pet: {e}")
+            import traceback
+            traceback.print_exc()
+            if 'conn' in locals():
+                conn.close()
+            return []

@@ -59,3 +59,13 @@ class PetController:
         except Exception as e:
             print(f"Erro ao buscar tutor: {str(e)}")
             return {}
+
+    def buscar_vacinas_por_pet(self, id_pet: int) -> list:
+        """
+        Busca as vacinas de um pet pelo ID do pet
+        """
+        try:
+            return self.pet_model.buscar_vacinas_por_pet_id(id_pet)
+        except Exception as e:
+            print(f"Erro ao buscar vacinas: {str(e)}")
+            return []
