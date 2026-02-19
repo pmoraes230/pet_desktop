@@ -97,7 +97,7 @@ def run_with_loading(func, message="Processando...", *args, **kwargs):
 # ============================================================
 # 2. SEU FORMULÁRIO DE LOGIN (VetAuthForm)
 # ============================================================
-CADASTRO_URL = "http://127.0.0.1:8000/login/?type=vet&mode=register"
+CADASTRO_URL = "https://coracaoempatas.up.railway.app/login/"
 
 class VetAuthForm(ctk.CTkFrame):
     def __init__(self, master, on_login_success=None, **kwargs):
