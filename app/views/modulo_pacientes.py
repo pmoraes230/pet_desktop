@@ -235,20 +235,36 @@ class ModuloPacientes:
         # Guardar id do pet para usar nas funções de atualizar foto
         self.pet_atual_id = id_pet
         
+        # Buscar dados completos do pet no banco
+        pet_dados = self.pet_controller.buscar_pet(id_pet)
+        
         for widget in self.content.winfo_children():
             widget.destroy()
 
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=30, pady=30)
+        scroll.pack(fill="both", expand=True, padx=20, pady=20)
 
         container = ctk.CTkFrame(scroll, fg_color="transparent")
         container.pack(fill="both", expand=True)
-        container.columnconfigure(0, weight=0)
-        container.columnconfigure(1, weight=1)
+        
+        # Layout responsivo
+        modo_vertical = self.content.winfo_width() < 1000 or self.content.winfo_width() == 1
+        if modo_vertical:
+            container.columnconfigure(0, weight=1)
+        else:
+            container.columnconfigure(0, weight=0)
+            container.columnconfigure(1, weight=1)
+        container.rowconfigure(0, weight=1)
+        container.rowconfigure(1, weight=1)
 
-        card_esq = ctk.CTkFrame(container, fg_color="white", corner_radius=40, 
-                               width=350, border_width=1, border_color="#F1F5F9")
-        card_esq.grid(row=0, column=0, sticky="nsew", padx=(0, 30))
+        if modo_vertical:
+            card_esq = ctk.CTkFrame(container, fg_color="white", corner_radius=40, 
+                                   border_width=1, border_color="#F1F5F9")
+            card_esq.grid(row=0, column=0, sticky="ew", padx=0, pady=(0, 15))
+        else:
+            card_esq = ctk.CTkFrame(container, fg_color="white", corner_radius=40, 
+                                   width=350, border_width=1, border_color="#F1F5F9")
+            card_esq.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
 
         # Container para imagem com botão de mudar
         img_container = ctk.CTkFrame(card_esq, fg_color="#F8FAFC", height=220, corner_radius=30)
@@ -285,36 +301,63 @@ class ModuloPacientes:
         )
         btn_mudar.place(relx=0.5, rely=0.9, anchor="center")
 
-        ctk.CTkLabel(card_esq, text=nome_pet, font=("Arial", 32, "bold"), text_color="#1E293B").pack()
-        ctk.CTkLabel(card_esq, text=raca_pet.upper(), font=("Arial", 12, "bold"), text_color="#14B8A6").pack(pady=(0, 20))
+        ctk.CTkLabel(card_esq, text=nome_pet, font=("Arial", 28, "bold"), text_color="#1E293B").pack(pady=(5, 0))
+        ctk.CTkLabel(card_esq, text=raca_pet.upper(), font=("Arial", 11, "bold"), text_color="#14B8A6").pack(pady=(2, 15))
         
-        ctk.CTkLabel(card_esq, text=f"ID: {id_pet}", font=("Arial", 11), text_color="#94A3B8").pack(pady=(0, 10))
+        ctk.CTkLabel(card_esq, text=f"ID: {id_pet}", font=("Arial", 10), text_color="#94A3B8").pack(pady=(0, 8))
 
+        # Tutor box
         tutor_box = ctk.CTkFrame(card_esq, fg_color="#F8FAFC", corner_radius=15)
-        tutor_box.pack(fill="x", padx=20, pady=10)
-        ctk.CTkLabel(tutor_box, text="TUTOR RESPONSÁVEL", font=("Arial", 10, "bold"), text_color="#94A3B8").pack(anchor="w", padx=15, pady=(10, 0))
-        ctk.CTkLabel(tutor_box, text="Ana Souza", font=("Arial", 14, "bold"), text_color="#1E293B").pack(anchor="w", padx=15, pady=(0, 10))
-
-        row_stats = ctk.CTkFrame(card_esq, fg_color="transparent")
-        row_stats.pack(fill="x", padx=20, pady=20)
+        tutor_box.pack(fill="x", padx=15, pady=8)
+        ctk.CTkLabel(tutor_box, text="TUTOR RESPONSÁVEL", font=("Arial", 9, "bold"), text_color="#94A3B8").pack(anchor="w", padx=12, pady=(8, 0))
         
-        p_box = ctk.CTkFrame(row_stats, fg_color="#F0FDFA", corner_radius=15, height=80)
-        p_box.pack(side="left", fill="both", expand=True, padx=(0, 5))
-        ctk.CTkLabel(p_box, text="PESO", font=("Arial", 10, "bold"), text_color="#134E4A").pack(pady=(10, 0))
-        ctk.CTkLabel(p_box, text="12 kg", font=("Arial", 18, "bold"), text_color="#134E4A").pack()
+        # Busca nome do tutor
+        tutor_dados = self.pet_controller.buscar_tutor_por_pet(id_pet)
+        # Tenta encontrar o campo de nome em diferentes formatos
+        nome_tutor = (tutor_dados.get('nome_tutor') or 
+                      tutor_dados.get('NOME') or 
+                      tutor_dados.get('nome') or 
+                      tutor_dados.get('Name') or 
+                      'Não informado') if tutor_dados else 'Não informado'
+        
+        ctk.CTkLabel(tutor_box, text=nome_tutor, font=("Arial", 13, "bold"), text_color="#1E293B").pack(anchor="w", padx=12, pady=(0, 8))
 
-        s_box = ctk.CTkFrame(row_stats, fg_color="#EFF6FF", corner_radius=15, height=80)
-        s_box.pack(side="left", fill="both", expand=True, padx=(5, 0))
-        ctk.CTkLabel(s_box, text="SEXO", font=("Arial", 10, "bold"), text_color="#1E3A8A").pack(pady=(10, 0))
-        ctk.CTkLabel(s_box, text="Macho", font=("Arial", 18, "bold"), text_color="#1E3A8A").pack()
+        # Peso e Sexo - Dados do banco
+        peso = pet_dados.get('PESO', '? kg') if pet_dados else '? kg'
+        sexo = pet_dados.get('SEXO', 'Não informado') if pet_dados else 'Não informado'
+        
+        if not isinstance(peso, str):
+            peso = f"{peso} kg"
+        elif peso and not peso.endswith('kg'):
+            peso = f"{peso} kg"
+        
+        row_stats = ctk.CTkFrame(card_esq, fg_color="transparent")
+        row_stats.pack(fill="x", padx=15, pady=15)
+        
+        p_box = ctk.CTkFrame(row_stats, fg_color="#F0FDFA", corner_radius=12, height=70)
+        p_box.pack(side="left", fill="both", expand=True, padx=(0, 4))
+        ctk.CTkLabel(p_box, text="PESO", font=("Arial", 9, "bold"), text_color="#134E4A").pack(pady=(8, 0))
+        ctk.CTkLabel(p_box, text=str(peso), font=("Arial", 16, "bold"), text_color="#134E4A").pack(pady=(0, 5))
+
+        s_box = ctk.CTkFrame(row_stats, fg_color="#EFF6FF", corner_radius=12, height=70)
+        s_box.pack(side="left", fill="both", expand=True, padx=(4, 0))
+        ctk.CTkLabel(s_box, text="SEXO", font=("Arial", 9, "bold"), text_color="#1E3A8A").pack(pady=(8, 0))
+        ctk.CTkLabel(s_box, text=str(sexo), font=("Arial", 16, "bold"), text_color="#1E3A8A").pack(pady=(0, 5))
 
         prox_c = ctk.CTkFrame(card_esq, fg_color="#14B8A6", corner_radius=30)
-        prox_c.pack(fill="x", padx=20, pady=20)
-        ctk.CTkLabel(prox_c, text="proxima consulta: 15 de Fev", font=("Arial", 18, "bold"), text_color="white").pack(anchor="w", padx=20)
+        prox_c.pack(fill="x", padx=15, pady=15)
+        ctk.CTkLabel(prox_c, text="próxima consulta: 15 de Fev", font=("Arial", 15, "bold"), text_color="white").pack(anchor="w", padx=15, pady=8)
 
+        # Coluna direita responsiva
         self.right_col = ctk.CTkFrame(container, fg_color="white", corner_radius=40, 
                                      border_width=1, border_color="#F1F5F9")
-        self.right_col.grid(row=0, column=1, sticky="nsew")
+        if modo_vertical:
+            self.right_col.grid(row=1, column=0, sticky="ew", padx=0)
+        else:
+            self.right_col.grid(row=0, column=1, sticky="nsew", padx=0)
+        
+        # Guardar dados do pet para uso em mudar_aba_pet
+        self.dados_pet_atual = pet_dados
 
         tab_header = ctk.CTkFrame(self.right_col, fg_color="#F1F5F9", corner_radius=25, height=50)
         tab_header.pack(pady=30, padx=30, anchor="w")
@@ -504,13 +547,32 @@ class ModuloPacientes:
             self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
             self.btn_sobre.configure(fg_color="transparent", text_color="#64748B")
             
+            # Vacinas padrão (pode ser expandido com dados do banco)
             vacinas = [("V10", "10/01/2026", "10/01/2027"), ("Raiva", "15/12/2025", "15/12/2026")]
-            for n, d, p in vacinas:
-                v_card = ctk.CTkFrame(self.container_abas, fg_color="white", 
-                                     corner_radius=25, border_width=1, border_color="#F1F5F9")
-                v_card.pack(fill="x", pady=10)
-                ctk.CTkLabel(v_card, text=f"{n}\nAplicada: {d}", font=("Arial", 13, "bold"),
-                             justify="left").pack(side="left", padx=20)
+            
+            if not vacinas:
+                ctk.CTkLabel(
+                    self.container_abas,
+                    text="Nenhuma vacina registrada",
+                    font=("Arial", 13),
+                    text_color="#94A3B8"
+                ).pack(pady=20)
+            else:
+                for n, d, p in vacinas:
+                    v_card = ctk.CTkFrame(self.container_abas, fg_color="white", 
+                                         corner_radius=15, border_width=1, border_color="#F1F5F9")
+                    v_card.pack(fill="x", pady=8)
+                    
+                    info_frame = ctk.CTkFrame(v_card, fg_color="transparent")
+                    info_frame.pack(side="left", fill="both", expand=True, padx=15, pady=12)
+                    
+                    ctk.CTkLabel(
+                        info_frame, 
+                        text=f"{n}\nAplicada: {d}\nPróxima: {p}",
+                        font=("Arial", 11, "bold"),
+                        text_color="#1E293B",
+                        justify="left"
+                    ).pack(anchor="w")
 
     def _carregar_foto_card(self, label, imagem_key):
         """Carrega foto do S3 para exibir no card de pacientes"""
