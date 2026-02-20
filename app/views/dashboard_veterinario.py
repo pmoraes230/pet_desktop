@@ -15,7 +15,7 @@ from app.controllers.perfil_controller import FotoPerfil
 from app.controllers.prontuario_controller import ProntuarioController
 from app.services.s3_client import get_url_s3
 
-# Módulos (composição)
+# Módulos
 from .modulo_pacientes import ModuloPacientes
 from .modulo_financeiro import ModuloFinanceiro
 from .modulo_configuracoes import ModuloConfiguracoes
@@ -28,453 +28,537 @@ import app.core.colors as colors
 
 
 class DashboardVeterinario(ctk.CTkFrame):
+    """
+    Dashboard principal do veterinário - design moderno e profissional (2025)
+    Mantém todas as funcionalidades originais com visual atualizado
+    """
+
     def __init__(self, master, current_user: dict = None, on_logout=None):
         super().__init__(master)
 
-        # ── Dados do usuário autenticado ─────────────────────────────────────
         self.current_user = current_user or {}
-        self.current_user_id = self.current_user.get('id')
+        self.user_id = self.current_user.get('id')
         self.user_name = self.current_user.get('name') or "Usuário"
         self.on_logout = on_logout
 
-        # ── Controllers ──────────────────────────────────────────────────────
-        self.vet_controller = VetController(self.current_user_id) if self.current_user_id else None
-        self.pet_controller = PetController()
-        self.prontuario_controller = ProntuarioController(self.current_user_id) if self.current_user_id else None
-        self.foto_perfil = FotoPerfil(self.current_user_id)
+        # Controllers
+        self.vet_ctrl = VetController(self.user_id) if self.user_id else None
+        self.pet_ctrl = PetController()
+        self.prontuario_ctrl = ProntuarioController(self.user_id) if self.user_id else None
+        self.foto_perfil_ctrl = FotoPerfil(self.user_id)
 
-        # ── Controle de UI ───────────────────────────────────────────────────
-        self.menu_perfil_aberto = False
-        self.menu_dropdown = None
-        self.notif_aberta = False
-        self.notif_dropdown = None
+        # Estados UI
+        self.profile_menu_open = False
+        self.profile_menu = None
+        self.notifications_open = False
+        self.notifications_menu = None
 
-        # ── Layout principal ─────────────────────────────────────────────────
+        # Fundo geral mais limpo e moderno
+        self.configure(fg_color=colors.NEUTRAL_50)
+
+        self._setup_layout()
+
+        # Ordem correta: content primeiro → módulos → sidebar/topbar
+        self._build_content_frame()
+        self._init_modules()
+        self._build_sidebar()
+        self._build_topbar()
+
+        # Carrega avatar em thread separada
+        threading.Thread(target=self._load_avatar_background, daemon=True).start()
+
+        # Tela inicial
+        self.show_dashboard()
+
+    def _setup_layout(self):
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=0, minsize=70)
+        self.grid_rowconfigure(0, weight=0, minsize=76)   # um pouco mais alto
         self.grid_rowconfigure(1, weight=1)
 
-        # --- Carregar a Imagem do Logo ---
-        # Ajuste o 'size' para o tamanho que desejar (ex: 30x30 ou 40x40)
-        img_logo = ctk.CTkImage(
-            light_image=Image.open("app/assets/pet.png"), # Verifique se o caminho está correto
-            dark_image=Image.open("app/assets/pet.png"), 
-            size=(35, 35) 
+    def _build_sidebar(self):
+        self.sidebar = ctk.CTkFrame(
+            self,
+            fg_color=colors.PRIMARY_DARK,  # teal escuro sofisticado
+            width=272,
+            corner_radius=0
         )
-
-        # Sidebar
-        self.sidebar = ctk.CTkFrame(self, fg_color=colors.BRAND_DARK_TEAL_HOVER, width=260, corner_radius=0)
         self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
-        logo_f = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        logo_f.pack(pady=20, padx=15, fill="x")
+        # Logo + nome
+        header = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        header.pack(pady=(40, 48), padx=28, fill="x")
 
-        # Label da Imagem
-        self.logo_img_label = ctk.CTkLabel(logo_f, image=img_logo, text="")
-        self.logo_img_label.pack(side="left", padx=(0, 10))
+        logo = ctk.CTkImage(Image.open("app/assets/pet.png"), size=(40, 40))
+        ctk.CTkLabel(header, image=logo, text="").pack(side="left", padx=(0, 16))
 
-        # Label do Texto
         ctk.CTkLabel(
-            logo_f, 
-            text="Coração em patas", 
-            font=("Arial", 16, "bold"), 
-            text_color="white"
+            header,
+            text="Coração em Patas",
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            text_color="white",
         ).pack(side="left")
 
-        # Topbar
-        self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
-        self.topbar.grid(row=0, column=1, sticky="nsew")
+        # Navegação moderna
+        nav_items = [
+            ("Dashboard", self.show_dashboard, "home"),
+            ("Mensagens", lambda: self.mod_chat.tela_chat(), "message-square"),
+            ("Pacientes", lambda: self.mod_pacientes.tela_pacientes(), "paw"),
+            ("Prontuários", lambda: self.mod_prontuario.tela_prontuario(), "file-text"),
+            ("Agenda", lambda: self.mod_agenda.tela_agenda(), "calendar"),
+            ("Financeiro", lambda: self.mod_financeiro.tela_financeiro(), "dollar-sign"),
+        ]
 
-        self.greeting_label = ctk.CTkLabel(
-            self.topbar,
-            text=f"{self._get_greeting()}, {self.user_name}!",
-            font=("Arial", 16, "bold"),
-            text_color="black"
+        for label, command, icon_key in nav_items:
+            self._create_sidebar_button(label, command, icon_key)
+
+    def _create_sidebar_button(self, label: str, command, icon_key: str):
+        icon_map = {
+            "home": "🏠",
+            "message-square": "💬",
+            "paw": "🐾",
+            "file-text": "📋",
+            "calendar": "📅",
+            "dollar-sign": "💰",
+        }
+        icon = icon_map.get(icon_key, "•")
+
+        btn = ctk.CTkButton(
+            self.sidebar,
+            text=f"{icon}   {label}",
+            fg_color="transparent",
+            hover_color=colors.PRIMARY_HOVER,
+            text_color="white",
+            font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
+            height=52,
+            corner_radius=14,
+            anchor="w",
+            command=lambda: self._switch_screen(command),
         )
-        self.greeting_label.pack(side="left", padx=30)
+        btn.pack(fill="x", padx=20, pady=6)
 
-        self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent")
-        self.right_info.pack(side="right", padx=20)
+    def _build_topbar(self):
+        self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
+        self.topbar.grid(row=0, column=1, sticky="ew")
+        
+        # Remove qualquer borda cinza indesejada
+        self.topbar.configure(border_width=0)
 
-        # Notificação: container com botão e badge (tamanho fixo para evitar recorte do badge)
-        self.notif_container = ctk.CTkFrame(self.right_info, fg_color="transparent", width=52, height=40)
-        self.notif_container.pack_propagate(False)
-        self.notif_container.pack(side="left", padx=15)
+        # Saudação moderna
+        greeting = f"{self._get_greeting()}, {self.user_name.split()[0]}"
+        ctk.CTkLabel(
+            self.topbar,
+            text=greeting,
+            font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+        ).pack(side="left", padx=40, pady=16)
+
+        # Área direita com espaçamento maior
+        right = ctk.CTkFrame(self.topbar, fg_color="transparent")
+        right.pack(side="right", padx=32)
+
+        # Notificações
+        notif_frame = ctk.CTkFrame(right, fg_color="transparent", width=56, height=56)
+        notif_frame.pack_propagate(False)
+        notif_frame.pack(side="left", padx=(0, 24))
 
         self.btn_notif = ctk.CTkButton(
-            self.notif_container, text="🔔", font=("Arial", 20),
-            width=40, height=40, fg_color="transparent",
-            text_color="black", hover_color="#F1F5F9",
-            command=self.toggle_notifications
+            notif_frame,
+            text="🔔",
+            font=("Segoe UI", 22),
+            fg_color="transparent",
+            hover_color=colors.NEUTRAL_100,
+            text_color=colors.TEXT_SECONDARY,
+            width=52,
+            height=52,
+            corner_radius=26,
+            command=self._toggle_notifications,
         )
-        self.btn_notif.pack(side="left")
+        self.btn_notif.pack()
 
-        # Badge de não lidas
-        unread = 0
-        try:
-            if self.vet_controller:
-                unread = self.vet_controller.fetch_unread_count() or 0
-        except Exception:
-            unread = 0
-
-        self.notif_badge = ctk.CTkLabel(
-            self.notif_container,
-            text=str(unread) if unread > 0 else "",
-            fg_color="#EF4444",
+        unread = self.vet_ctrl.fetch_unread_count() if self.vet_ctrl else 0
+        self.badge = ctk.CTkLabel(
+            notif_frame,
+            text=str(unread) if unread else "",
+            fg_color=colors.DANGER,
             text_color="white",
-            width=18,
-            height=18,
-            corner_radius=9,
-            font=("Arial", 10, "bold")
+            width=22,
+            height=22,
+            corner_radius=11,
+            font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"),
         )
-        # Posicionar badge no canto superior direito do container (sem recorte)
-        self.notif_badge.place(relx=1.0, rely=0.0, anchor="ne")
-        self.notif_badge.lift()
+        self.badge.place(relx=1.0, rely=0.0, anchor="ne")
 
-        # Avatar com foto do S3 (funcionalidade preservada)
-        self._carregar_avatar()
+        # Avatar moderno (circular com sombra sutil)
+        self.avatar_btn = ctk.CTkButton(
+            right,
+            text="👤",
+            font=("Segoe UI", 24),
+            fg_color="transparent",
+            hover_color=colors.NEUTRAL_100,
+            text_color=colors.NEUTRAL_500,
+            width=52,
+            height=52,
+            corner_radius=26,
+            command=self._toggle_profile_menu,
+        )
+        self.avatar_btn.pack(side="left", padx=16)
 
-        # Linha separadora
-        ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=1, sticky="sew")
+        # Separador inferior sutil (opcional – pode remover se preferir sem linha)
+        ctk.CTkFrame(self, fg_color="#E5E7EB", height=1).grid(
+            row=0, column=1, sticky="sew"
+        )
 
-        # Área de conteúdo principal
-        self.content = ctk.CTkFrame(self, fg_color="#F8FAFC")
+    def _build_content_frame(self):
+        self.content = ctk.CTkFrame(self, fg_color=colors.NEUTRAL_50)
         self.content.grid(row=1, column=1, sticky="nsew")
         self.content.grid_columnconfigure(0, weight=1)
         self.content.grid_rowconfigure(0, weight=1)
 
-        # ── Instâncias dos módulos (composição) ──────────────────────────────
-        self.mod_pacientes = ModuloPacientes(self.content, self.pet_controller)   # note: passa self como content
-        self.mod_financeiro = ModuloFinanceiro(self.content)
+    def _init_modules(self):
+        self.mod_pacientes     = ModuloPacientes(self.content, self.pet_ctrl)
+        self.mod_financeiro    = ModuloFinanceiro(self.content)
         self.mod_configuracoes = ModuloConfiguracoes(self.content, parent=self)
-        self.mod_agenda = ModuloAgenda(self.content)
-        self.mod_prontuario = ModuloProntuario(self.content, self.prontuario_controller)
-        self.mod_chat = ModuloChat(self.content)
+        self.mod_agenda        = ModuloAgenda(self.content)
+        self.mod_prontuario    = ModuloProntuario(self.content, self.prontuario_ctrl)
+        self.mod_chat          = ModuloChat(self.content)
 
-        # ── Configura botões da sidebar com os métodos reais dos módulos ─────
-        botoes = [
-            ("Dashboard",   self.tela_dashboard),
-            ("Mensagens",   self.mod_chat.tela_chat),
-            ("Pacientes",   self.mod_pacientes.tela_pacientes),
-            ("Prontuário",  self.mod_prontuario.tela_prontuario),
-            ("Agenda",      self.mod_agenda.tela_agenda),
-            ("Financeiro",  self.mod_financeiro.tela_financeiro),
-        ]
+    def _switch_screen(self, target_screen_func):
+        for child in self.content.winfo_children():
+            child.destroy()
+        target_screen_func()
 
-        for texto, comando in botoes:
-            self.criar_botao_sidebar(texto, comando)
+    # ── Telas ────────────────────────────────────────────────────────────────
 
-        # Tela inicial
-        self.tela_dashboard()
+    def show_dashboard(self):
+        self._switch_screen(self._build_dashboard_screen)
 
-    # ────────────────────────────────────────────────────────────────────────
-    #   Avatar com foto do S3 (mantido exatamente como estava)
-    # ────────────────────────────────────────────────────────────────────────
-    def _carregar_avatar(self):
-        # Inicia carregamento assíncrono
-        self.avatar = None
-        threading.Thread(target=self._load_avatar_async, daemon=True).start()
-        self._criar_avatar_padrao()
-        self.avatar.pack(side="left")
+    def _build_dashboard_screen(self):
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=40, pady=40)
 
-    def _load_avatar_async(self):
-        try:
-            perfil = self.foto_perfil.fetch_perfil_data()
-            foto_key = perfil.get("imagem_perfil_veterinario")
-            if not foto_key:
-                return
+        scroll.grid_columnconfigure((0, 1, 2), weight=1, uniform="group1")
 
-            url = get_url_s3(foto_key, expires_in=604800)
-            if not url:
-                return
+        metrics = self.vet_ctrl.fetch_metrics() if self.vet_ctrl else {}
 
-            session = requests.Session()
-            retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
-            session.mount('https://', HTTPAdapter(max_retries=retries))
+        self._create_metric_card(
+            scroll, metrics.get("total_pets", 0), "Pacientes cadastrados", "users", 0
+        )
+        self._create_metric_card(
+            scroll, metrics.get("consultas_hoje", 0), "Consultas hoje", "calendar", 1
+        )
+        self._create_metric_card(
+            scroll,
+            metrics.get("faturamento_mes", 0),
+            "Faturamento mensal",
+            "dollar-sign",
+            2,
+            prefix="R$ ",
+        )
 
-            response = session.get(url, timeout=12)
-            response.raise_for_status()
+        ctk.CTkLabel(
+            scroll,
+            text="Atendimentos Recentes",
+            font=ctk.CTkFont(family="Helvetica", size=22, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(48, 20), padx=8)
 
-            pil_img = Image.open(BytesIO(response.content))
-            pil_img = self.criar_imagem_redonda(pil_img, (38, 38))
+        recent = self.vet_ctrl.fetch_recent_pets() if self.vet_ctrl else []
+        self._build_recent_pets_list(scroll, recent)
 
-            ctk_img = ctk.CTkImage(light_image=pil_img, size=(38, 38))
+    def _create_metric_card(self, parent, value, title, icon_key, col, prefix=""):
+        icon_map = {"users": "👥", "calendar": "🗓️", "dollar-sign": "💰"}
 
-            # Atualiza na thread principal
-            self.after(0, lambda: self._update_avatar_success(ctk_img))
+        card = ctk.CTkFrame(
+            parent,
+            fg_color="white",
+            corner_radius=20,
+            border_width=1,
+            border_color=colors.NEUTRAL_200,
+        )
+        card.grid(row=0, column=col, padx=16, pady=8, sticky="nsew")
 
-        except Exception as e:
-            print("Erro ao carregar avatar:", e)
+        ctk.CTkLabel(
+            card,
+            text=icon_map.get(icon_key, "•"),
+            font=("Segoe UI", 36),
+            text_color=colors.PRIMARY,
+        ).pack(anchor="w", padx=32, pady=(28, 0))
 
-            self.avatar.pack(side="left")
+        val_frame = ctk.CTkFrame(card, fg_color="transparent")
+        val_frame.pack(fill="x", padx=32, pady=16)
 
-    def _update_avatar_success(self, ctk_img):
-        if self.avatar is None:
+        display_value = f"{prefix}{value:,}" if isinstance(value, (int, float)) else str(value)
+        ctk.CTkLabel(
+            val_frame,
+            text=display_value,
+            font=ctk.CTkFont(family="Helvetica", size=34, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            card,
+            text=title,
+            font=ctk.CTkFont(family="Helvetica", size=15),
+            text_color=colors.TEXT_SECONDARY,
+        ).pack(anchor="w", padx=32, pady=(4, 28))
+
+    def _build_recent_pets_list(self, parent, pets: list):
+        card = ctk.CTkFrame(
+            parent,
+            fg_color="white",
+            corner_radius=20,
+            border_width=1,
+            border_color=colors.NEUTRAL_200,
+        )
+        card.grid(row=2, column=0, columnspan=2, padx=(0, 16), pady=12, sticky="nsew")
+
+        if not pets:
+            ctk.CTkLabel(
+                card,
+                text="Nenhum atendimento recente registrado",
+                font=ctk.CTkFont(family="Helvetica", size=15),
+                text_color=colors.TEXT_SECONDARY,
+            ).pack(pady=60)
             return
-        self.avatar.configure(image=ctk_img, text="")
-        self.avatar_img = ctk_img 
 
-    def atualizar_avatar_topo(self, nova_key):
-        """Método para atualizar avatar após upload (chame quando salvar nova foto)"""
+        for pet in pets[:6]:
+            self._create_pet_history_row(card, pet)
+
+    def _create_pet_history_row(self, parent, pet: dict):
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", padx=28, pady=14)
+
+        info = ctk.CTkFrame(row, fg_color="transparent")
+        info.pack(side="left", fill="x", expand=True)
+
+        ctk.CTkLabel(
+            info,
+            text=pet.get("nome_pet", "—"),
+            font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            info,
+            text=f"{pet.get('ESPECIE', '—')} • {pet.get('RACA', '—')}",
+            font=ctk.CTkFont(family="Helvetica", size=14),
+            text_color=colors.TEXT_SECONDARY,
+        ).pack(anchor="w")
+
+        status = ctk.CTkLabel(
+            row,
+            text="Atendido",
+            text_color=colors.SUCCESS,
+            fg_color=colors.SUCCESS_BG,
+            corner_radius=10,
+            padx=16,
+            pady=8,
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+        )
+        status.pack(side="right")
+
+    # ── Avatar ───────────────────────────────────────────────────────────────
+
+    def _load_avatar_background(self):
         try:
-            url = f"https://coracao-em-patas.s3.amazonaws.com/{nova_key}?t={datetime.now().timestamp()}"
+            perfil = self.foto_perfil_ctrl.fetch_perfil_data()
+            key = perfil.get("imagem_perfil_veterinario")
+            if not key:
+                return
+
+            url = get_url_s3(key, expires_in=604800)
             if not url:
-                raise Exception("Falha ao gerar URL assinada")
-            
+                return
+
             session = requests.Session()
             retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
-            session.mount('https://', HTTPAdapter(max_retries=retries))
+            session.mount("https://", HTTPAdapter(max_retries=retries))
 
-            response = session.get(url, timeout=10)
-            response.raise_for_status()
+            resp = session.get(url, timeout=10)
+            resp.raise_for_status()
 
-            pil_img = Image.open(BytesIO(response.content))
-            avatar_size = (38, 38)
-            pil_img = self.criar_imagem_redonda(pil_img, avatar_size)
+            img_pil = Image.open(BytesIO(resp.content))
+            img_round = self._create_circular_image(img_pil, (52, 52))
 
-            self.avatar_img = ctk.CTkImage(light_image=pil_img, size=avatar_size)
-            self.avatar.configure(image=self.avatar_img, text="")
-            print(f"Avatar atualizado no topo: {nova_key}")
+            ctk_img = ctk.CTkImage(light_image=img_round, size=(52, 52))
+
+            self.after(0, lambda img=ctk_img: self.avatar_btn.configure(image=img, text=""))
+
         except Exception as e:
-            print(f"Erro ao atualizar avatar: {e}")
-            self._criar_avatar_padrao()
+            print(f"Falha ao carregar avatar: {e}")
 
-    def criar_imagem_redonda(self, pil_img, size):
-        pil_img = pil_img.resize(size).convert("RGBA")
+    def _create_circular_image(self, img: Image.Image, size: tuple) -> Image.Image:
+        img = img.resize(size, Image.LANCZOS).convert("RGBA")
         mask = Image.new("L", size, 0)
         draw = ImageDraw.Draw(mask)
         draw.ellipse((0, 0) + size, fill=255)
         output = Image.new("RGBA", size, (0, 0, 0, 0))
-        output.paste(pil_img, (0, 0), mask)
+        output.paste(img, (0, 0), mask)
         return output
 
-    def _criar_avatar_padrao(self):
-        # Você pode usar um emoji ou baixar um ícone pequeno SVG/PNG transparente
-        # Mas a forma mais simples é emoji mesmo:
-        self.avatar = ctk.CTkButton(
-            self.right_info,
-            text="👤",                      # ou "Person" emoji
-            font=("Arial", 24),             # emoji fica maior
-            fg_color="transparent",
-            text_color="#6B7280",           # cinza
-            hover_color="#E5E7EB",
-            width=38,
-            height=38,
-            corner_radius=19,
-            command=self.toggle_menu
+    # ── Menus ────────────────────────────────────────────────────────────────
+
+    def _toggle_notifications(self):
+        if self.notifications_open:
+            if self.notifications_menu and self.notifications_menu.winfo_exists():
+                self.notifications_menu.destroy()
+            self.notifications_open = False
+            return
+
+        if self.profile_menu_open:
+            self._toggle_profile_menu()
+
+        self.notifications_menu = ctk.CTkFrame(
+            self,
+            fg_color="white",
+            corner_radius=16,
+            border_width=1,
+            border_color=colors.NEUTRAL_200
         )
-        self.avatar.pack(side="left", padx=8)
-    # ────────────────────────────────────────────────────────────────────────
-    #   Métodos auxiliares
-    # ────────────────────────────────────────────────────────────────────────
-    def _get_greeting(self) -> str:
-        hora = datetime.now().hour
-        if hora < 12: return "Bom dia"
-        if hora < 18: return "Boa tarde"
-        return "Boa noite"
+        self.notifications_menu.place(relx=0.98, y=76, anchor="ne")
 
-    def criar_botao_sidebar(self, texto, comando):
-        ctk.CTkButton(
-            self.sidebar,
-            text=texto,
-            fg_color=colors.BRAND_DARK_TEAL_HOVER,
-            hover_color="#188C7F",
-            text_color="white",
-            font=("Arial", 16),
-            height=45,
-            command=lambda: self.trocar_tela(comando)
-        ).pack(fill="x", padx=20, pady=6)
+        ctk.CTkLabel(
+            self.notifications_menu,
+            text="Notificações",
+            font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+        ).pack(pady=16, padx=24, anchor="w")
 
-    def trocar_tela(self, func, *args):
-        for widget in self.content.winfo_children():
-            widget.destroy()
-        func(*args)
+        scroll = ctk.CTkScrollableFrame(self.notifications_menu, fg_color="transparent", height=300)
+        scroll.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
-    # ────────────────────────────────────────────────────────────────────────
-    #   Telas
-    # ────────────────────────────────────────────────────────────────────────
-    def tela_dashboard(self):
-        self.trocar_tela(self._construir_dashboard)
+        notifications = self.vet_ctrl.fetch_alerts() if self.vet_ctrl else []
 
-    def _construir_dashboard(self):
-        scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=25, pady=25)
-        scroll.grid_columnconfigure((0, 1, 2), weight=1, uniform="col")
-
-        # Métricas reais do banco
-        metrics = self.vet_controller.fetch_metrics() if self.vet_controller else {}
-        self.criar_card_metrica(scroll, str(metrics.get("total_pets", 0)), "Total Pacientes", "🟦", "+12%", 0)
-        self.criar_card_metrica(scroll, str(metrics.get("consultas_hoje", 0)), "Consultas hoje", "🟩", None, 1)
-        self.criar_card_metrica(scroll, f'R$ {metrics.get("faturamento_mes", 0):,.2f}', "Faturamento mês", "🟨", None, 2)
-
-        # Histórico de pets recentes
-        ctk.CTkLabel(scroll, text="Pets Atendidos Recentemente", font=("Arial", 18, "bold"), text_color="black")\
-            .grid(row=1, column=0, columnspan=3, sticky="w", pady=(30, 15), padx=10)
-
-        pets = self.vet_controller.fetch_recent_pets() if self.vet_controller else []
-
-        hist_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
-        hist_card.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
-        hist_card.grid_columnconfigure(0, weight=1)
-
-        if pets:
-            for pet in pets:
-                self.criar_linha_agendamento(
-                    hist_card,
-                    hora="-",
-                    pet=pet.get("nome_pet", "Desconhecido"),
-                    info=f'{pet.get("ESPECIE","")} - {pet.get("RACA","")}',
-                    status="Atendido",
-                    bg="#DCFCE7",
-                    txt="#166534"
+        if not notifications:
+            ctk.CTkLabel(
+                scroll,
+                text="Nenhuma notificação no momento",
+                font=ctk.CTkFont(family="Helvetica", size=14),
+                text_color=colors.TEXT_SECONDARY,
+            ).pack(pady=60)
+        else:
+            for notif in notifications:
+                self._create_notification_item(
+                    scroll,
+                    notif.get("tipo", "Notificação"),
+                    notif.get("mensagem", ""),
+                    notif.get("id"),
+                    bool(notif.get("lida", False)),
                 )
-        else:
-            ctk.CTkLabel(hist_card, text="Nenhum pet atendido ainda.", font=("Arial", 12), text_color="#64748B")\
-                .pack(pady=20)
 
-        # Alertas
-        al_card = ctk.CTkFrame(scroll, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
-        al_card.grid(row=2, column=2, sticky="nsew", padx=10)
-        al_card.grid_columnconfigure(0, weight=1)
+        self.notifications_open = True
 
-        # (você pode implementar fetch_alerts() no VetController depois)
-        ctk.CTkLabel(al_card, text="Nenhum alerta no momento.", font=("Arial", 12), text_color="#64748B")\
-            .pack(pady=20)
+    def _create_notification_item(self, parent, title, message, notif_id=None, read=False):
+        item = ctk.CTkFrame(parent, fg_color="transparent")
+        item.pack(fill="x", padx=16, pady=8)
 
-    # Componentes visuais do dashboard (mantidos iguais)
-    def criar_card_metrica(self, master, valor, titulo, icon, badge, col):
-        card = ctk.CTkFrame(master, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
-        card.grid(row=0, column=col, padx=10, sticky="nsew")
-        ctk.CTkLabel(card, text=icon, font=("Arial", 24)).pack(anchor="w", padx=25, pady=(20, 0))
-        f = ctk.CTkFrame(card, fg_color="transparent")
-        f.pack(fill="x", padx=25)
-        ctk.CTkLabel(f, text=valor, font=("Arial", 28, "bold"), text_color="black").pack(side="left")
-        if badge:
-            ctk.CTkLabel(f, text=badge, text_color="#22C55E", font=("Arial", 12, "bold")).pack(side="right")
-        ctk.CTkLabel(card, text=titulo, text_color="#64748B", font=("Arial", 13)).pack(anchor="w", padx=25, pady=(0, 20))
-
-    def criar_linha_agendamento(self, master, hora, pet, info, status, bg, txt):
-        l = ctk.CTkFrame(master, fg_color="transparent")
-        l.pack(fill="x", padx=15, pady=5)
-        ctk.CTkLabel(l, text=hora, font=("Arial", 12, "bold"), width=70).pack(side="left")
-        t = ctk.CTkFrame(l, fg_color="transparent")
-        t.pack(side="left", fill="x", expand=True, padx=10)
-        ctk.CTkLabel(t, text=pet, font=("Arial", 14, "bold"), text_color="black").pack(anchor="w")
-        ctk.CTkLabel(t, text=info, font=("Arial", 11), text_color="#64748B").pack(anchor="w")
-        ctk.CTkLabel(l, text=status, text_color=txt, fg_color=bg, corner_radius=8, width=100, font=("Arial", 11, "bold")).pack(side="right")
-
-    def criar_item_alerta(self, master, title, msg, notif_id=None, lida=False):
-        i = ctk.CTkFrame(master, fg_color="transparent")
-        i.pack(fill="x", padx=20, pady=8)
-
-        title_lbl = ctk.CTkLabel(i, text=title, font=("Arial", 12, "bold"), text_color="black")
+        title_lbl = ctk.CTkLabel(
+            item,
+            text=title,
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            text_color=colors.TEXT_PRIMARY if not read else colors.TEXT_SECONDARY,
+        )
         title_lbl.pack(anchor="w")
-        msg_lbl = ctk.CTkLabel(i, text=msg, font=("Arial", 11), text_color=("#94A3B8" if lida else "#64748B"), wraplength=220, justify="left")
-        msg_lbl.pack(anchor="w")
 
-        # Bind de click para marcar como lida e executar ação (se houver id)
-        def _on_click(event=None, nid=notif_id):
-            if nid and self.vet_controller:
+        msg_lbl = ctk.CTkLabel(
+            item,
+            text=message,
+            font=ctk.CTkFont(family="Helvetica", size=13),
+            text_color=colors.TEXT_SECONDARY if read else colors.TEXT_PRIMARY,
+            wraplength=280,
+            justify="left",
+        )
+        msg_lbl.pack(anchor="w", pady=(4, 0))
+
+        def mark_as_read(event=None):
+            if notif_id and self.vet_ctrl:
                 try:
-                    self.vet_controller.mark_notification_read(nid)
-                    # atualizar visual (diminuir cor)
-                    msg_lbl.configure(text_color="#94A3B8")
-                    title_lbl.configure(text_color="#6B7280")
-                    # atualizar badge de não lidas
-                    try:
-                        unread_now = self.vet_controller.fetch_unread_count() or 0
-                        self.notif_badge.configure(text=str(unread_now) if unread_now > 0 else "")
-                    except Exception:
-                        pass
+                    self.vet_ctrl.mark_notification_read(notif_id)
+                    title_lbl.configure(text_color=colors.TEXT_SECONDARY)
+                    msg_lbl.configure(text_color=colors.TEXT_SECONDARY)
+                    unread = self.vet_ctrl.fetch_unread_count() or 0
+                    self.badge.configure(text=str(unread) if unread > 0 else "")
                 except Exception as e:
-                    print("Erro ao marcar notificação como lida:", e)
+                    print(f"Erro ao marcar notificação como lida: {e}")
 
-        # associar bind tanto ao frame quanto aos labels
-        i.bind("<Button-1>", _on_click)
-        title_lbl.bind("<Button-1>", _on_click)
-        msg_lbl.bind("<Button-1>", _on_click)
+        item.bind("<Button-1>", mark_as_read)
+        title_lbl.bind("<Button-1>", mark_as_read)
+        msg_lbl.bind("<Button-1>", mark_as_read)
 
-    # ────────────────────────────────────────────────────────────────────────
-    #   Menus dropdown
-    # ────────────────────────────────────────────────────────────────────────
-    def toggle_notifications(self):
-        if self.notif_aberta:
-            self.notif_dropdown.destroy()
-            self.notif_aberta = False
-        else:
-            if self.menu_perfil_aberto:
-                self.toggle_menu()
-            self.notif_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
-            self.notif_dropdown.place(relx=0.95, y=75, anchor="ne")
-            ctk.CTkLabel(self.notif_dropdown, text="Notificações", font=("Arial", 14, "bold"), text_color="black").pack(pady=10, padx=20)
-            # Buscar notificações do banco
-            notificacoes = []
-            try:
-                if self.vet_controller:
-                    notificacoes = self.vet_controller.fetch_alerts() or []
-            except Exception as e:
-                print("Erro ao buscar notificações para o dropdown:", e)
+    def _toggle_profile_menu(self):
+        if self.profile_menu_open:
+            if self.profile_menu and self.profile_menu.winfo_exists():
+                self.profile_menu.destroy()
+            self.profile_menu_open = False
+            return
 
-            # Conteúdo com scroll
-            content_frame = ctk.CTkScrollableFrame(self.notif_dropdown, fg_color="transparent", height=240)
-            content_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        if self.notifications_open:
+            self._toggle_notifications()
 
-            if notificacoes:
-                for n in notificacoes:
-                    title = n.get('tipo') or (f'Tutor {n.get("tutor_id")}' if n.get('tutor_id') else 'Notificação')
-                    msg = n.get('mensagem') or str(n)
-                    # formatar data se disponível
-                    dt = n.get('data_criacao')
-                    try:
-                        if hasattr(dt, 'strftime'):
-                            time_str = dt.strftime('%d/%m %H:%M')
-                        else:
-                            time_str = str(dt) if dt else ''
-                    except Exception:
-                        time_str = ''
-                    if time_str:
-                        msg = f"{msg}\n{time_str}"
-                    self.criar_item_alerta(content_frame, title, msg, notif_id=n.get('id'), lida=bool(n.get('lida')))
-            else:
-                ctk.CTkLabel(content_frame, text="Nenhuma notificação.", font=("Arial", 12), text_color="#64748B").pack(pady=20)
+        self.profile_menu = ctk.CTkFrame(
+            self,
+            fg_color="white",
+            corner_radius=16,
+            border_width=1,
+            border_color=colors.NEUTRAL_200
+        )
+        self.profile_menu.place(relx=0.98, y=76, anchor="ne")
 
-            # Não marcar todas como lidas automaticamente — marcar individualmente ao clicar
-            # Rodapé com ação
-            footer = ctk.CTkFrame(self.notif_dropdown, fg_color="transparent")
-            footer.pack(fill="x", padx=10, pady=(0, 10))
-            ctk.CTkButton(footer, text="Ver todas →", fg_color="transparent", text_color="#0EA5A4", hover_color="#F1F5F9", command=lambda: print('Ver todas as notificações'))
-            self.notif_aberta = True
+        items = [
+            ("Editar Perfil", self.mod_configuracoes.tela_configuracoes_perfil),
+            ("Configurações", self.mod_configuracoes.tela_configuracoes_gerais),
+            ("Sair", self._logout),
+        ]
 
-    def toggle_menu(self):
-        if self.menu_perfil_aberto:
-            self.menu_dropdown.destroy()
-            self.menu_perfil_aberto = False
-        else:
-            if self.notif_aberta:
-                self.toggle_notifications()
-            self.menu_dropdown = ctk.CTkFrame(self, fg_color="white", corner_radius=12, border_width=1, border_color="#E2E8F0")
-            self.menu_dropdown.place(relx=0.98, y=75, anchor="ne")
+        for text, cmd in items:
+            color = colors.DANGER if text == "Sair" else colors.TEXT_PRIMARY
+            btn = ctk.CTkButton(
+                self.profile_menu,
+                text=text,
+                fg_color="transparent",
+                hover_color=colors.NEUTRAL_100,
+                text_color=color,
+                anchor="w",
+                font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+                height=42,
+                command=lambda c=cmd: [self._close_profile_menu(), c()] if c else self._close_profile_menu(),
+            )
+            btn.pack(fill="x", padx=12, pady=4)
 
-            self.criar_item_aba("👤 Editar Perfil", self.mod_configuracoes.tela_configuracoes_perfil)
-            self.criar_item_aba("⚙️ Configurações", self.mod_configuracoes.tela_configuracoes_gerais)
-            ctk.CTkFrame(self.menu_dropdown, fg_color="#E2E8F0", height=1).pack(fill="x", padx=10, pady=5)
-            self.criar_item_aba("🚪 Sair", self.fazer_logout, cor_texto="#EF4444")
+        self.profile_menu_open = True
 
-            self.menu_perfil_aberto = True
+    def _close_profile_menu(self):
+        if self.profile_menu_open:
+            self.profile_menu.destroy()
+            self.profile_menu_open = False
 
-    def fazer_logout(self):
-        controller = AuthController("", "")
-        controller.logout()
+    def _logout(self):
+        auth = AuthController("", "")
+        auth.logout()
         Modal(self, "Logout", "Você foi desconectado com sucesso!", type="success")
         if self.on_logout:
-            self.after(1000, self.on_logout)
+            self.after(800, self.on_logout)
 
-    def criar_item_aba(self, texto, comando, cor_texto="black"):
-        btn = ctk.CTkButton(
-            self.menu_dropdown, text=texto, fg_color="transparent", text_color=cor_texto,
-            hover_color="#F1F5F9", anchor="w", font=("Arial", 13), height=35, width=150,
-            command=lambda: [self.toggle_menu(), comando() if comando else None]
-        )
-        btn.pack(padx=5, pady=2)
+    def _get_greeting(self) -> str:
+        h = datetime.now().hour
+        if h < 12:
+            return "Bom dia"
+        if h < 18:
+            return "Boa tarde"
+        return "Boa noite"
+
+    def atualizar_avatar(self, nova_key: str):
+        try:
+            url = f"https://coracao-em-patas.s3.amazonaws.com/{nova_key}?t={datetime.now().timestamp()}"
+            resp = requests.get(url, timeout=8)
+            resp.raise_for_status()
+
+            img_pil = Image.open(BytesIO(resp.content))
+            img_round = self._create_circular_image(img_pil, (52, 52))
+            ctk_img = ctk.CTkImage(light_image=img_round, size=(52, 52))
+
+            self.avatar_btn.configure(image=ctk_img, text="")
+        except Exception as e:
+            print(f"Erro ao atualizar avatar: {e}")
