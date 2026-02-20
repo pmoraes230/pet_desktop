@@ -649,16 +649,14 @@ class ModuloPacientes:
 
         # Modal
         self.modal_vacina = ctk.CTkFrame(
-            self.overlay_vacina, 
-            width=420, 
-            height=480, 
-            corner_radius=20, 
-            border_width=2, 
-            border_color="#14B8A6", 
-            fg_color="white"
+        self.overlay_vacina, 
+        width=420,
+        corner_radius=20, 
+        border_width=2, 
+        border_color="#14B8A6", 
+        fg_color="white"
         )
         self.modal_vacina.place(relx=0.5, rely=0.5, anchor="center")
-        self.modal_vacina.pack_propagate(False)
 
         # Ícone de seringa
         ctk.CTkLabel(
@@ -718,27 +716,32 @@ class ModuloPacientes:
         btn_container = ctk.CTkFrame(self.modal_vacina, fg_color="transparent")
         btn_container.pack(fill="x", pady=20, padx=30)
 
-        ctk.CTkButton(
+        btn_container.columnconfigure((0, 1), weight=1)
+
+        btn_cancelar = ctk.CTkButton(
             btn_container, 
             text="CANCELAR", 
             fg_color="#E2E8F0", 
             text_color="#1E293B",
-            font=("Arial", 12, "bold"),
-            width=150, 
-            height=40,
+            font=("Arial", 13, "bold"),
+            height=50,
+            corner_radius=10,
             command=self.fechar_modal_vacina
-        ).pack(side="left", padx=5)
+        )
+        btn_cancelar.grid(row=0, column=0, padx=6, sticky="ew")
 
-        ctk.CTkButton(
+        btn_salvar = ctk.CTkButton(
             btn_container, 
             text="SALVAR REGISTRO", 
             fg_color="#14B8A6", 
             text_color="white",
-            font=("Arial", 12, "bold"),
-            width=150, 
-            height=40,
+            font=("Arial", 13, "bold"),
+            height=50,
+            corner_radius=10,
             command=self.salvar_nova_vacina
-        ).pack(side="right", padx=5)
+        )
+        btn_salvar.grid(row=0, column=1, padx=6, sticky="ew")
+
 
     def fechar_modal_vacina(self):
         """Fecha o modal de nova vacina"""
