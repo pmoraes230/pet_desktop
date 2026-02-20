@@ -364,17 +364,53 @@ class ModuloPacientes:
 
         self.btn_sobre = ctk.CTkButton(
             tab_header, text="SOBRE", width=120, corner_radius=25,
-            fg_color="#14B8A6", text_color="white",
+            fg_color="#14B8A6", text_color="white", hover_color="#A855F7",
             command=lambda: self.mudar_aba_pet("sobre")
         )
         self.btn_sobre.pack(side="left", padx=2, pady=2)
 
         self.btn_saude = ctk.CTkButton(
             tab_header, text="SAÚDE", width=120, corner_radius=25,
-            fg_color="transparent", text_color="#64748B",
+            fg_color="transparent", text_color="white", hover_color="#A855F7",
             command=lambda: self.mudar_aba_pet("saude")
         )
         self.btn_saude.pack(side="left", padx=2, pady=2)
+
+        # Hover handlers: custom text color changes (CTkButton doesn't support hover_text_color)
+        def _enter_sobre(event=None):
+            try:
+                self.btn_sobre.configure(fg_color="#A855F7", text_color="white")
+                self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
+            except Exception:
+                pass
+
+        def _leave_sobre(event=None):
+            if getattr(self, 'active_aba', 'sobre') == 'sobre':
+                self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
+                self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
+            else:
+                self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
+                self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
+
+        def _enter_saude(event=None):
+            try:
+                self.btn_saude.configure(fg_color="#A855F7", text_color="white")
+                self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
+            except Exception:
+                pass
+
+        def _leave_saude(event=None):
+            if getattr(self, 'active_aba', 'sobre') == 'saude':
+                self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
+                self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
+            else:
+                self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
+                self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
+
+        self.btn_sobre.bind("<Enter>", _enter_sobre)
+        self.btn_sobre.bind("<Leave>", _leave_sobre)
+        self.btn_saude.bind("<Enter>", _enter_saude)
+        self.btn_saude.bind("<Leave>", _leave_saude)
 
         self.container_abas = ctk.CTkFrame(self.right_col, fg_color="transparent")
         self.container_abas.pack(fill="both", expand=True, padx=40)
@@ -490,12 +526,14 @@ class ModuloPacientes:
             messagebox.showerror("Erro", f"Erro ao processar foto: {str(e)}")
 
     def mudar_aba_pet(self, aba):
+        # guarda aba ativa para restaurar estados após hover
+        self.active_aba = aba
         for w in self.container_abas.winfo_children():
             w.destroy()
 
         if aba == "sobre":
             self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
-            self.btn_saude.configure(fg_color="transparent", text_color="#64748B")
+            self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
 
             # Título
             ctk.CTkLabel(
@@ -545,7 +583,7 @@ class ModuloPacientes:
 
         else:
             self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
-            self.btn_sobre.configure(fg_color="transparent", text_color="#64748B")
+            self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
             
             # Cabeçalho da seção de saúde com botão
             header_saude = ctk.CTkFrame(self.container_abas, fg_color="transparent")
