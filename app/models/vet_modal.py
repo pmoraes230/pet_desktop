@@ -47,3 +47,20 @@ class VetModal:
         finally:
             if conn:
                 conn.close()
+
+    def update_vet_info(self, nome: str, email: str, crmv: str, uf_crmv: str) -> bool:
+        """Atualizar as infomações do veterinário"""
+        try:
+            conn = connectdb()
+            cursor = conn.cursor()
+            query = """
+                UPDATE veterinario SET
+                NOME = %s, EMAIL = %s, CRMV = %s, UF_CRMV = %s
+                WHERE id = %s
+            """
+            cursor.execute(query, (nome, email, crmv, uf_crmv, self.vet_id))
+            cursor
+            
+        except Exception as e:
+            print(f"Erro ao conectar ao banco de dados: {str(e)}")
+            return False

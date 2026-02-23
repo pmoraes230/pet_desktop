@@ -1,16 +1,11 @@
-from msvcrt import locking
 import customtkinter as ctk
-import boto3
-import os
 from tkinter import filedialog
 from io import BytesIO
-
-from app.core import app
 from app.utils.loading_overlay import run_with_loading
-from ..services.s3_client import get_url_s3, upload_foto_s3
-from ..config.database import connectdb
+from ..services.s3_client import get_url_s3
 from app.models.mudar_foto import salvar_nova_foto
 from tkinter import filedialog
+from ..controllers.veterinario_controller import vetController
 import requests
 
 from PIL import Image, ImageDraw
@@ -29,12 +24,25 @@ def criar_imagem_redonda(pil_img, size):
 
 class ModuloConfiguracoes:
     def __init__(self, content_frame=None, parent=None):
-        # content_frame: frame onde as telas serão renderizadas (ex.: Dashboard.content)
-        # parent: referência ao dashboard (opcional) para acessar métodos como atualizar_avatar_topo
         self.content = content_frame
         self.parent = parent
+        
         self.current_user_id = None
-        self.foto_perfil = None
+
+        # Vamos buscar o ID do usuário preferencialmente do parent (dashboard)
+        if self.parent:
+            self.current_user_id = getattr(self.parent, 'current_user_id', None)
+        
+        # Instância do controller (sempre a mesma durante a vida da tela)
+        self.vet_ctrl = vetController(self.current_user_id) if self.current_user_id else None
+        
+        # Cache dos dados (evita múltiplas chamadas ao banco)
+        self.perfil_data = None
+        self.foto_key = None          # só a key no S3 (ex: "vets/123/perfil.jpg")
+        self.preview_img = None       # para manter referência à imagem CTk
+
+        # Carrega dados uma única vez no init (ou quando mudar de usuário)
+        self._carregar_dados_perfil()
 
     # --- TELA: EDITAR PERFIL ---
     def tela_configuracoes_perfil(self):
@@ -80,27 +88,22 @@ class ModuloConfiguracoes:
         ).place(relx=0.9, rely=0.9, anchor="center")
 
         # Carregar foto já existente do usuário
-        try:
-            perfil = self.foto_perfil.fetch_perfil_data() if self.foto_perfil else {}
-            key = perfil.get("imagem_perfil_veterinario")
+        if self.foto_key:
+            try:
+                url = get_url_s3(self.foto_key, expires_in=86400)
+                if url:
+                    response = requests.get(url, timeout=8)
+                    response.raise_for_status()
 
-            if key:
-                url = get_url_s3(key, expires_in=86400)
-                if not url:
-                    raise Exception("Falha ao gerar URL assinada")
+                    img = Image.open(BytesIO(response.content))
+                    img_round = criar_imagem_redonda(img, (110, 110))
 
-                response = requests.get(url, timeout=10)
-                response.raise_for_status()
+                    self.preview_img = ctk.CTkImage(light_image=img_round, size=(110, 110))
+                    self.avatar_label.configure(image=self.preview_img, text="")
+                    self.avatar_label.image = self.preview_img 
 
-                img = Image.open(BytesIO(response.content))
-                img = criar_imagem_redonda(img, (110, 110))
-
-                self.preview_img = ctk.CTkImage(light_image=img, size=(110, 110))
-                self.avatar_label.configure(image=self.preview_img, text="")
-                self.avatar_label.image = self.preview_img
-
-        except Exception as e:
-            print("Erro ao carregar foto existente:", e)
+            except Exception as e:
+                print(f"Erro ao carregar imagem do S3: {e}")
         
         # Card dos Dados
         dados = ctk.CTkFrame(scroll, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
@@ -118,12 +121,21 @@ class ModuloConfiguracoes:
 
         # Preencher com dados do banco quando disponível
         try:
-            perfil = self.foto_perfil.fetch_perfil_data() if self.foto_perfil else {}
-            if perfil:
-                self.entry_nome.delete(0, 'end'); self.entry_nome.insert(0, perfil.get('NOME', ''))
-                self.entry_email.delete(0, 'end'); self.entry_email.insert(0, perfil.get('EMAIL', ''))
-                self.entry_crmv.delete(0, 'end'); self.entry_crmv.insert(0, perfil.get('CRMV', ''))
-                self.entry_uf.delete(0, 'end'); self.entry_uf.insert(0, perfil.get('UF_CRMV', ''))
+            perfil = self.foto_perfil or (self.foto_perfil.fetch_perfil_data() if self.foto_perfil else {})
+
+            data_perfil = self.update_perfil
+            if self.perfil_data:
+                self.entry_nome.delete(0, "end")
+                self.entry_nome.insert(0, self.perfil_data.get("NOME", ""))
+
+                self.entry_email.delete(0, "end")
+                self.entry_email.insert(0, self.perfil_data.get("EMAIL", ""))
+
+                self.entry_crmv.delete(0, "end")
+                self.entry_crmv.insert(0, self.perfil_data.get("CRMV", ""))
+
+                self.entry_uf.delete(0, "end")
+                self.entry_uf.insert(0, self.perfil_data.get("UF_CRMV", ""))
         except Exception as e:
             print('Erro ao preencher campos do perfil:', e)
 
@@ -247,39 +259,47 @@ class ModuloConfiguracoes:
 
 
     def salvar_perfil(self):
-        """Coleta os valores dos campos e atualiza o banco de dados."""
-        if not self.current_user_id:
-            print("Erro: usuário atual não definido")
+        if not self.current_user_id or not self.vet_ctrl:
+            print("Erro: ID do usuário ou controller não disponível")
             return
 
-        data = {
-            'NOME': self.entry_nome.get().strip(),
-            'EMAIL': self.entry_email.get().strip(),
-            'CRMV': self.entry_crmv.get().strip(),
-            'UF_CRMV': self.entry_uf.get().strip()
+        dados_novos = {
+            "NOME":     self.entry_nome.get().strip(),
+            "EMAIL":    self.entry_email.get().strip(),
+            "CRMV":     self.entry_crmv.get().strip(),
+            "UF_CRMV":  self.entry_uf.get().strip().upper(),
         }
 
-        def tarefa():
-            # usa o controller já disponível em self.foto_perfil
-            if not self.foto_perfil:
-                print('Erro: controlador de perfil não disponível')
+        # Validação mínima (opcional, mas recomendado)
+        if not dados_novos["NOME"] or len(dados_novos["NOME"]) < 3:
+            # aqui você pode mostrar um toast / label de erro
+            print("Nome muito curto")
+            return
+
+        def tarefa_salvar():
+            try:
+                sucesso = self.vet_ctrl.update_perfil_data(
+                    nome    = dados_novos["NOME"],
+                    email   = dados_novos["EMAIL"],
+                    crmv    = dados_novos["CRMV"],
+                    uf_crmv = dados_novos["UF_CRMV"]
+                )
+                
+                if sucesso:
+                    # Atualiza cache local
+                    self.perfil_data.update(dados_novos)
+                    print("Perfil atualizado com sucesso")
+                    # Opcional: mostrar mensagem de sucesso na tela
+                else:
+                    print("Falha ao atualizar perfil")
+                    
+                return sucesso
+                
+            except Exception as e:
+                print(f"Erro ao salvar perfil: {e}")
                 return False
 
-            success = False
-            try:
-                success = self.foto_perfil.update_perfil(data)
-            except Exception as e:
-                print('Erro ao atualizar perfil:', e)
-                success = False
-
-            if success:
-                print('Perfil salvo com sucesso')
-            else:
-                print('Falha ao salvar perfil')
-
-            return success
-
-        run_with_loading(tarefa, message='Salvando perfil... Aguarde')
+        run_with_loading(tarefa_salvar, message="Salvando alterações...")
 
 
     def tela_configuracoes_senha(self):
@@ -300,4 +320,17 @@ class ModuloConfiguracoes:
         ctk.CTkButton(frm, text="Salvar", fg_color="#14B8A6").pack(pady=10)
 
 
-    
+    def _carregar_dados_perfil(self):
+        if not self.vet_ctrl:
+            print("Erro: vetController não inicializado (ID do usuário ausente)")
+            return
+        
+        try:
+            dados = self.vet_ctrl.fetch_perfil_data()
+            if dados:
+                self.perfil_data = dados
+                self.foto_key = dados.get('imagem_perfil_veterinario')
+            else:
+                print("Nenhum dado de perfil retornado pelo controller")
+        except Exception as e:
+            print(f"Erro ao carregar dados do perfil: {e}")
