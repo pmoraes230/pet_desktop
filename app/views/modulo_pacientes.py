@@ -6,9 +6,12 @@ from io import BytesIO
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np # opcional para gerar dados do gráfico
 from app.controllers.pet_controller import PetController
 from app.services.s3_client import upload_foto_pet_s3, get_url_s3
+import uuid
 
 class ModuloPacientes:
     def __init__(self, content_frame, pet_controller: PetController):
@@ -359,64 +362,91 @@ class ModuloPacientes:
         # Guardar dados do pet para uso em mudar_aba_pet
         self.dados_pet_atual = pet_dados
 
+        # --- Trecho corrigido do Header das Abas ---
         tab_header = ctk.CTkFrame(self.right_col, fg_color="#F1F5F9", corner_radius=25, height=50)
         tab_header.pack(pady=30, padx=30, anchor="w")
 
-        self.btn_sobre = ctk.CTkButton(
-            tab_header, text="SOBRE", width=120, corner_radius=25,
-            fg_color="#14B8A6", text_color="white", hover_color="#A855F7",
-            command=lambda: self.mudar_aba_pet("sobre")
-        )
-        self.btn_sobre.pack(side="left", padx=2, pady=2)
+        self.abas_botoes = {}
+        abas = [
+            ("SOBRE", "sobre"),
+            ("SAÚDE", "saude"),
+            ("MEDICAMENTOS", "medicamentos"),
+            ("EMOCIONAL", "emocional")
+        ]
 
-        self.btn_saude = ctk.CTkButton(
-            tab_header, text="SAÚDE", width=120, corner_radius=25,
-            fg_color="transparent", text_color="white", hover_color="#A855F7",
-            command=lambda: self.mudar_aba_pet("saude")
-        )
-        self.btn_saude.pack(side="left", padx=2, pady=2)
-
-        # Hover handlers: custom text color changes (CTkButton doesn't support hover_text_color)
-        def _enter_sobre(event=None):
-            try:
-                self.btn_sobre.configure(fg_color="#A855F7", text_color="white")
-                self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
-            except Exception:
-                pass
-
-        def _leave_sobre(event=None):
-            if getattr(self, 'active_aba', 'sobre') == 'sobre':
-                self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
-                self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
-            else:
-                self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
-                self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
-
-        def _enter_saude(event=None):
-            try:
-                self.btn_saude.configure(fg_color="#A855F7", text_color="white")
-                self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
-            except Exception:
-                pass
-
-        def _leave_saude(event=None):
-            if getattr(self, 'active_aba', 'sobre') == 'saude':
-                self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
-                self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
-            else:
-                self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
-                self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
-
-        self.btn_sobre.bind("<Enter>", _enter_sobre)
-        self.btn_sobre.bind("<Leave>", _leave_sobre)
-        self.btn_saude.bind("<Enter>", _enter_saude)
-        self.btn_saude.bind("<Leave>", _leave_saude)
+        for nome, chave in abas:
+            btn = ctk.CTkButton(
+                tab_header, text=nome, width=110, corner_radius=25,
+                fg_color="transparent", text_color="#1E293B", font=("Arial", 11, "bold"),
+                command=lambda c=chave: self.mudar_aba_pet(c)
+            )
+            btn.pack(side="left", padx=2, pady=2)
+            self.abas_botoes[chave] = btn
 
         self.container_abas = ctk.CTkFrame(self.right_col, fg_color="transparent")
         self.container_abas.pack(fill="both", expand=True, padx=40)
 
         self.mudar_aba_pet("sobre")
 
+    # --- MÉTODOS DE RENDERIZAÇÃO DAS ABAS ---
+
+    # --- ABA: SOBRE ---
+    def _renderizar_aba_sobre(self):
+        ctk.CTkLabel(self.container_abas, text="Sobre o pet:", font=("Arial", 18, "bold"), text_color="#1E293B").pack(anchor="w", pady=(10, 5))
+        
+        # Pega a descrição da coluna DESCRICAO do seu banco
+        desc_texto = self.dados_pet_atual.get('DESCRICAO') or "Sem descrição registrada."
+        ctk.CTkLabel(self.container_abas, text=desc_texto, font=("Arial", 14), text_color="#334155", wraplength=600, justify="left").pack(anchor="w", pady=(0, 20))
+
+        ctk.CTkLabel(self.container_abas, text="Personalidade", font=("Arial", 16, "bold"), text_color="#1E293B").pack(anchor="w", pady=(0, 10))
+        
+        # Pega as tags da coluna PERSONALIDADE
+        tags_raw = self.dados_pet_atual.get('PERSONALIDADE') or "Dócil, Agitado"
+        tags = [t.strip() for t in tags_raw.split(',')]
+        
+        tags_frame = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+        tags_frame.pack(anchor="w")
+
+        for t in tags:
+            tag = ctk.CTkFrame(tags_frame, fg_color="#FEF3C7", corner_radius=20)
+            tag.pack(side="left", padx=5)
+            ctk.CTkLabel(tag, text=t, font=("Arial", 12, "bold"), text_color="#92400E").pack(padx=15, pady=5)
+
+    # --- ABA: SAÚDE (Vacinas) ---
+    def _renderizar_aba_saude(self):
+        header = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 20))
+        ctk.CTkLabel(header, text="Protocolo de Vacinação", font=("Arial", 18, "bold")).pack(side="left")
+        ctk.CTkButton(header, text="+ NOVO REGISTRO", fg_color="#14B8A6", font=("Arial", 11, "bold"), height=35, corner_radius=8, command=self.abrir_modal_nova_vacina).pack(side="right")
+        
+        vacinas = self.pet_controller.buscar_vacinas_por_pet(self.pet_atual_id)
+        if not vacinas:
+            ctk.CTkLabel(self.container_abas, text="Sem vacinas.", text_color="#94A3B8").pack(pady=20)
+        else:
+            for v in vacinas:
+                card = ctk.CTkFrame(self.container_abas, fg_color="white", corner_radius=15, border_width=1, border_color="#F1F5F9")
+                card.pack(fill="x", pady=8)
+                txt = f"{v.get('NOME')}\nPróxima dose: {v.get('PROXIMA_DOSE')}"
+                ctk.CTkLabel(card, text=txt, font=("Arial", 11, "bold"), justify="left").pack(anchor="w", padx=15, pady=12)
+
+    
+        meds = self.pet_controller.buscar_medicamentos_por_pet(self.pet_atual_id)
+        
+        if not meds:
+            empty = ctk.CTkFrame(self.container_abas, fg_color="transparent", border_width=1, border_color="#F1F5F9", corner_radius=15, height=80)
+            empty.pack(fill="x", pady=10)
+            ctk.CTkLabel(empty, text="Nenhum medicamento registrado.", font=("Arial", 12, "italic"), text_color="#94A3B8").place(relx=0.5, rely=0.5, anchor="center")
+        else:
+            for m in meds:
+                card = ctk.CTkFrame(self.container_abas, fg_color="white", corner_radius=12, border_width=1, border_color="#F1F5F9")
+                card.pack(fill="x", pady=5)
+                # Ajuste os nomes das chaves ('NOME', 'DOSAGEM') conforme seu banco
+                txt = f"💊 {m.get('NOME', 'Sem nome')} - {m.get('DOSAGEM', '')} ({m.get('HORARIO', m.get('FREQUENCIA', ''))})"
+                ctk.CTkLabel(card, text=txt, font=("Arial", 12, "bold")).pack(side="left", padx=15, pady=10)
+
+    
+        
+    # ... (Mantenha aqui as funções _renderizar_aba_medicamentos e _renderizar_aba_emocional que te mandei antes)
     def _carregar_foto_pet(self, id_pet, emoji_padrao):
         """Carrega a foto do pet do S3 se existir"""
         try:
@@ -526,121 +556,280 @@ class ModuloPacientes:
             messagebox.showerror("Erro", f"Erro ao processar foto: {str(e)}")
 
     def mudar_aba_pet(self, aba):
-        # guarda aba ativa para restaurar estados após hover
         self.active_aba = aba
+        
+        # Atualiza a cor dos botões para saber qual está ativa
+        for chave, btn in self.abas_botoes.items():
+            if chave == aba:
+                btn.configure(fg_color="#14B8A6", text_color="white")
+            else:
+                btn.configure(fg_color="transparent", text_color="#1E293B")
+
+        # Limpa o container para desenhar a nova aba
         for w in self.container_abas.winfo_children():
             w.destroy()
 
+        # Chama a função de renderização correspondente
         if aba == "sobre":
-            self.btn_sobre.configure(fg_color="#14B8A6", text_color="white")
-            self.btn_saude.configure(fg_color="transparent", text_color="#1E293B")
+            self._renderizar_aba_sobre()
+        elif aba == "saude":
+            self._renderizar_aba_saude()
+        elif aba == "medicamentos":
+            self._renderizar_aba_medicamentos()
+        elif aba == "emocional":
+            self._renderizar_aba_emocional()
+            
+    def _renderizar_aba_medicamentos(self):
+        header = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 20))
+        
+        ctk.CTkLabel(
+            header,
+            text="Medicamentos em Uso",
+            font=("Arial", 18, "bold")
+        ).pack(side="left")
+        
+        ctk.CTkButton(
+            header,
+            text="+ NOVO MEDICAMENTO",
+            fg_color="#14B8A6",
+            font=("Arial", 11, "bold"),
+            height=35,
+            corner_radius=8,
+            command=self.abrir_modal_novo_medicamento
+        ).pack(side="right")
 
-            # Título
-            ctk.CTkLabel(
-                self.container_abas,
-                text="Sobre o pet:",
-                font=("Arial", 18, "bold"),
-                text_color="#1E293B"
-            ).pack(anchor="w", pady=(10, 5))
+        list_frame = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+        list_frame.pack(fill="both", expand=True)
 
-            # Texto descritivo
-            desc = ctk.CTkLabel(
-                self.container_abas,
-                text="Pet dócil, porém agitado. Gosta de brincar e é muito apegado ao tutor.",
-                font=("Arial", 14),
-                text_color="#334155",
-                wraplength=600,
-                justify="left"
+        # 🔥 AQUI ESTÁ O QUE FALTAVA
+        medicamentos = self.pet_controller.buscar_medicamentos_por_pet(self.pet_atual_id)
+
+        if not medicamentos:
+            empty_card = ctk.CTkFrame(
+                list_frame,
+                fg_color="transparent",
+                border_width=1,
+                border_color="#F1F5F9",
+                corner_radius=15,
+                height=100
             )
-            desc.pack(anchor="w", pady=(0, 20))
+            empty_card.pack(fill="x", pady=10)
 
-            # Título personalidade
             ctk.CTkLabel(
-                self.container_abas,
-                text="Personalidade",
-                font=("Arial", 16, "bold"),
-                text_color="#1E293B"
-            ).pack(anchor="w", pady=(0, 10))
-
-            # Container das tags
-            tags_frame = ctk.CTkFrame(self.container_abas, fg_color="transparent")
-            tags_frame.pack(anchor="w")
-
-            def criar_tag(master, texto):
-                tag = ctk.CTkFrame(master, fg_color="#FEF3C7", corner_radius=20, height=35)
-                tag.pack(side="left", padx=5)
-                ctk.CTkLabel(
-                    tag,
-                    text=texto,
-                    font=("Arial", 12, "bold"),
-                    text_color="#92400E"
-                ).pack(padx=15, pady=5)
-
-            # Exemplo de tags
-            criar_tag(tags_frame, "Brincalhão")
-            criar_tag(tags_frame, "Protetor")
-            criar_tag(tags_frame, "Guloso")
+                empty_card,
+                text="Nenhum medicamento registrado.",
+                font=("Arial", 12, "italic"),
+                text_color="#94A3B8"
+            ).place(relx=0.5, rely=0.5, anchor="center")
 
         else:
-            self.btn_saude.configure(fg_color="#14B8A6", text_color="white")
-            self.btn_sobre.configure(fg_color="transparent", text_color="#1E293B")
-            
-            # Cabeçalho da seção de saúde com botão
-            header_saude = ctk.CTkFrame(self.container_abas, fg_color="transparent")
-            header_saude.pack(fill="x", pady=(0, 20))
-            
-            ctk.CTkLabel(
-                header_saude,
-                text="Protocolo de Vacinação",
-                font=("Arial", 18, "bold"),
-                text_color="#1E293B"
-            ).pack(side="left")
-            
-            ctk.CTkButton(
-                header_saude,
-                text="+ NOVO REGISTRO",
-                fg_color="#14B8A6",
-                hover_color="#0D9488",
-                text_color="white",
-                font=("Arial", 11, "bold"),
-                height=35,
-                corner_radius=8,
-                command=self.abrir_modal_nova_vacina
-            ).pack(side="right")
-            
-            # Busca vacinas do banco de dados
-            vacinas = self.pet_controller.buscar_vacinas_por_pet(self.pet_atual_id)
-            
-            if not vacinas:
+            for med in medicamentos:
+                card = ctk.CTkFrame(
+                    list_frame,
+                    fg_color="white",
+                    corner_radius=12,
+                    border_width=1,
+                    border_color="#F1F5F9"
+                )
+                card.pack(fill="x", pady=8)
+
+                nome = med.get("NOME", "")
+                horario = med.get("HORARIO", "")
+                inicio = med.get("DATA_INICIO", "")
+                fim = med.get("DATA_FIM", "")
+                obs = med.get("OBSERVACOES", "")
+
+                texto = f"💊 {nome}\n⏰ {horario} | 📅 {inicio} até {fim}\n📝 {obs}"
+
                 ctk.CTkLabel(
-                    self.container_abas,
-                    text="Sem registros vacinais encontrados.",
-                    font=("Arial", 13),
-                    text_color="#94A3B8"
-                ).pack(pady=20)
-            else:
-                for vacina in vacinas:
-                    nome_vacina = vacina.get('NOME', 'Vacina desconhecida')
-                    proxima_dose = vacina.get('PROXIMA_DOSE', 'Data não informada')
-                    
-                    # Formata a data se for um objeto datetime
-                    if hasattr(proxima_dose, 'strftime'):
-                        proxima_dose = proxima_dose.strftime('%d/%m/%Y')
-                    
-                    v_card = ctk.CTkFrame(self.container_abas, fg_color="white", 
-                                         corner_radius=15, border_width=1, border_color="#F1F5F9")
-                    v_card.pack(fill="x", pady=8)
-                    
-                    info_frame = ctk.CTkFrame(v_card, fg_color="transparent")
-                    info_frame.pack(side="left", fill="both", expand=True, padx=15, pady=12)
-                    
-                    ctk.CTkLabel(
-                        info_frame, 
-                        text=f"{nome_vacina}\nPróxima dose: {proxima_dose}",
-                        font=("Arial", 11, "bold"),
-                        text_color="#1E293B",
-                        justify="left"
-                    ).pack(anchor="w")
+                    card,
+                    text=texto,
+                    justify="left",
+                    font=("Arial", 12)
+                ).pack(anchor="w", padx=15, pady=12)
+
+    def _renderizar_aba_emocional(self):
+        # 1. Busca os dados reais do banco através do controller
+        historico = self.pet_controller.buscar_historico_emocional(self.pet_atual_id)
+        
+        # Se não houver dados, cria um estado vazio para não quebrar o gráfico
+        if not historico:
+            from datetime import datetime
+            datas = [
+                datetime.strptime(h.get('DATA'), "%Y-%m-%d").strftime("%d/%m")
+                for h in historico
+            ]
+            niveis = [0]
+            status_humor = "Não registrado"
+            emoji_humor = "❓"
+            nota_tutor = "Nenhuma nota registrada."
+        else:
+            # Prepara os dados para o Matplotlib
+            datas = [h.get('data', '') for h in historico]
+            niveis = [h.get('nivel', 0) for h in historico]
+            
+            # Pega o registro mais recente para os cards laterais
+            ultimo = historico[-1]
+            nota_tutor = ultimo.get('nota', 'Sem observações')
+            nivel_atual = ultimo.get('nivel', 0)
+            
+            # Lógica de humor baseada no nível (exemplo: 1-Triste, 2-Estável, 3-Feliz)
+            mapping = {3: ("Muito Feliz", "😊"), 2: ("Estável", "😐"), 1: ("Amuado", "😔")}
+            status_humor, emoji_humor = mapping.get(nivel_atual, ("Indefinido", "😶"))
+
+        # --- LAYOUT DO GRÁFICO ---
+        main_row = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+        main_row.pack(fill="both", expand=True)
+
+        chart_container = ctk.CTkFrame(main_row, fg_color="white", corner_radius=20, border_width=1, border_color="#F1F5F9")
+        chart_container.pack(side="left", fill="both", expand=True, padx=(0, 20))
+
+        ctk.CTkLabel(chart_container, text="Bem-estar do Pet", font=("Arial", 16, "bold")).pack(anchor="w", padx=20, pady=(20, 0))
+        ctk.CTkLabel(chart_container, text="TENDÊNCIA SEMANAL", font=("Arial", 10, "bold"), text_color="#94A3B8").pack(anchor="w", padx=20)
+
+        # Matplotlib usando as listas 'datas' e 'niveis' vindas do banco
+        fig, ax = plt.subplots(figsize=(5, 3), dpi=100)
+        fig.patch.set_facecolor('white')
+        
+        ax.plot(datas, niveis, color="#14B8A6", marker='o', linewidth=3, markersize=8)
+        ax.fill_between(datas, niveis, color="#14B8A6", alpha=0.1)
+        
+        ax.set_ylim(0, 4) # Escala de 0 a 3 (ou 4 para dar margem)
+        ax.set_yticks([1, 2, 3])
+        ax.set_yticklabels(["😔", "😐", "😊"])
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.grid(axis='y', linestyle='--', alpha=0.3)
+        plt.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=chart_container)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+
+        # --- CARDS LATERAIS ---
+        right_panel = ctk.CTkFrame(main_row, fg_color="transparent", width=250)
+        right_panel.pack(side="left", fill="y")
+
+        humor_card = ctk.CTkFrame(right_panel, fg_color="#14B8A6", corner_radius=20)
+        humor_card.pack(fill="x", pady=(0, 20))
+        ctk.CTkLabel(humor_card, text="HUMOR REGISTRADO", font=("Arial", 9, "bold"), text_color="white").pack(pady=(15, 5))
+        ctk.CTkLabel(humor_card, text=emoji_humor, font=("Arial", 40)).pack()
+        ctk.CTkLabel(humor_card, text=status_humor, font=("Arial", 16, "bold"), text_color="white").pack(pady=(5, 15))
+
+        nota_card = ctk.CTkFrame(right_panel, fg_color="#F8FAFC", corner_radius=15)
+        nota_card.pack(fill="x")
+        ctk.CTkLabel(nota_card, text="💬 NOTA DO TUTOR", font=("Arial", 9, "bold"), text_color="#94A3B8").pack(anchor="w", padx=15, pady=(10, 0))
+        ctk.CTkLabel(nota_card, text=f'"{nota_tutor}"', font=("Arial", 12, "italic"), text_color="#64748B", wraplength=200).pack(anchor="w", padx=15, pady=(5, 15))
+        
+    def abrir_modal_novo_medicamento(self):
+        self.overlay_med = ctk.CTkFrame(self.content.master, fg_color="#000000")
+        self.overlay_med.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+        modal = ctk.CTkFrame(
+            self.overlay_med,
+            width=500,
+            height=600,
+            corner_radius=30,
+            fg_color="#F8FAFC"
+        )
+        modal.place(relx=0.5, rely=0.5, anchor="center")
+        modal.pack_propagate(False)
+
+        ctk.CTkLabel(
+            modal,
+            text="Novo Medicamento",
+            font=("Arial", 24, "bold"),
+            text_color="#1E293B"
+        ).pack(pady=(30, 20))
+
+        def criar_input(placeholder):
+            entry = ctk.CTkEntry(
+                modal,
+                placeholder_text=placeholder,
+                height=50,
+                corner_radius=20,
+                border_width=0,
+                fg_color="#E2E8F0",
+                text_color="#1E293B"
+            )
+            entry.pack(fill="x", padx=50, pady=10)
+            return entry
+
+        self.ent_med_nome = criar_input("Nome do Medicamento")
+        self.ent_med_dose = criar_input("Dosagem (ex: 50mg)")
+        self.ent_med_freq = criar_input("Frequência (ex: 2x ao dia)")
+
+        self.ent_med_inicio = criar_input("Data de Início (dd/mm/aaaa)")
+        self.ent_med_fim = criar_input("Data de Término (dd/mm/aaaa)")
+
+        btn_box = ctk.CTkFrame(modal, fg_color="transparent")
+        btn_box.pack(fill="x", padx=50, pady=30)
+
+        ctk.CTkButton(
+            btn_box,
+            text="Cancelar",
+            fg_color="#E2E8F0",
+            text_color="#1E293B",
+            height=50,
+            corner_radius=20,
+            command=lambda: self.overlay_med.destroy()
+        ).pack(side="left", expand=True, padx=10)
+
+        ctk.CTkButton(
+            btn_box,
+            text="Adicionar à Lista",
+            fg_color="#14B8A6",
+            hover_color="#0D9488",
+            height=50,
+            corner_radius=20,
+            font=("Arial", 13, "bold"),
+            command=self.salvar_novo_medicamento
+        ).pack(side="right", expand=True, padx=10)
+
+
+    
+
+    def salvar_novo_medicamento(self):
+        nome = self.ent_med_nome.get().strip()
+        dose = self.ent_med_dose.get().strip()
+        freq = self.ent_med_freq.get().strip()
+        inicio = self.ent_med_inicio.get().strip()   # ← AGORA EXISTE
+        fim = self.ent_med_fim.get().strip()         # ← AGORA EXISTE
+
+        if not nome:
+            messagebox.showwarning("Aviso", "Digite o nome do medicamento")
+            return
+
+        def converter_data(data):
+            if not data:
+                return None
+            try:
+                return datetime.strptime(data, "%d/%m/%Y").strftime("%Y-%m-%d")
+            except ValueError:
+                return "ERRO"
+
+        inicio_formatado = converter_data(inicio)
+        fim_formatado = converter_data(fim)
+
+        if inicio_formatado == "ERRO" or fim_formatado == "ERRO":
+            messagebox.showerror("Erro", "Use o formato DD/MM/AAAA para as datas")
+            return
+
+        sucesso = self.pet_controller.adicionar_medicamento(
+            self.pet_atual_id,
+            nome,
+            dose,
+            freq,
+            inicio_formatado,
+            fim_formatado
+        )
+
+        if sucesso:
+            messagebox.showinfo("Sucesso", "Medicamento adicionado!")
+            self.overlay_med.destroy()
+            self.mudar_aba_pet("medicamentos")
+        else:
+            messagebox.showerror("Erro", "Não foi possível salvar.")
 
     def abrir_modal_nova_vacina(self):
         """Abre modal para adicionar nova vacina"""
