@@ -39,7 +39,7 @@ class vetController:
 
         # 2. Tenta atualizar no banco (chama a model)
         try:
-            atualizado = self.update_vet_info(nome, email, crmv, uf_crmv)
+            atualizado = VetModal.update_vet_info((nome, email, crmv, uf_crmv))
             
             if atualizado:
                 response["success"] = True

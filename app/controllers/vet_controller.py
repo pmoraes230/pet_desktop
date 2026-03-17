@@ -12,7 +12,7 @@ class VetController:
             SELECT p.NOME AS nome_pet, p.ESPECIE AS especie, p.RACA AS raca
             FROM pet p
             INNER JOIN consulta c ON p.ID = c.ID_PET
-            WHERE c.ID_VETERINARIO = %s
+            WHERE c.veterinario_id = %s
             ORDER BY c.DATA_CONSULTA DESC
             LIMIT 5
         """
@@ -104,7 +104,7 @@ class VetController:
             SELECT COUNT(DISTINCT p.ID)
             FROM pet p
             INNER JOIN consulta c ON p.ID = c.ID_PET
-            WHERE c.ID_VETERINARIO = %s
+            WHERE c.veterinario_id = %s
         """, (self.vet_id,))
         total_pets = cursor.fetchone()[0] or 0
 
@@ -112,7 +112,7 @@ class VetController:
         cursor.execute("""
             SELECT COUNT(*) 
             FROM consulta 
-            WHERE ID_VETERINARIO = %s AND DATE(DATA_CONSULTA) = CURDATE()
+            WHERE veterinario_id = %s AND DATE(DATA_CONSULTA) = CURDATE()
         """, (self.vet_id,))
         consultas_hoje = cursor.fetchone()[0] or 0
 
@@ -120,7 +120,7 @@ class VetController:
         cursor.execute("""
             SELECT SUM(VALOR_CONSULTA) 
             FROM consulta 
-            WHERE ID_VETERINARIO = %s AND MONTH(DATA_CONSULTA) = MONTH(CURDATE())
+            WHERE veterinario_id = %s AND MONTH(DATA_CONSULTA) = MONTH(CURDATE())
         """, (self.vet_id,))
         faturamento_mes = cursor.fetchone()[0] or 0.0
 

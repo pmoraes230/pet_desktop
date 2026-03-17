@@ -217,12 +217,12 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.content.grid_rowconfigure(0, weight=1)
 
     def _init_modules(self):
-        self.mod_pacientes     = ModuloPacientes(self.content, self.pet_ctrl)
-        self.mod_financeiro    = ModuloFinanceiro(self.content)
-        self.mod_configuracoes = ModuloConfiguracoes(self.content, parent=self)
-        self.mod_agenda        = ModuloAgenda(self.content)
-        self.mod_prontuario    = ModuloProntuario(self.content, self.prontuario_ctrl)
-        self.mod_chat          = ModuloChat(self.content)
+        self.mod_pacientes = ModuloPacientes(self.content, self.pet_ctrl)
+        self.mod_financeiro = ModuloFinanceiro(self.content)
+        self.mod_configuracoes = ModuloConfiguracoes(self.content, parent=self, on_avatar_updated=self.atualizar_avatar)
+        self.mod_agenda = ModuloAgenda(self.content)
+        self.mod_prontuario = ModuloProntuario(self.content, self.prontuario_ctrl)
+        self.mod_chat = ModuloChat(self.content)
 
     def _switch_screen(self, target_screen_func):
         for child in self.content.winfo_children():
