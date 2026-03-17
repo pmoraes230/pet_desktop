@@ -23,27 +23,35 @@ def criar_imagem_redonda(pil_img, size):
     return output
 
 class ModuloConfiguracoes:
-    def __init__(self, content_frame=None, parent=None):
+    def __init__(self, content_frame=None, parent=None, on_avatar_updated=None):
         self.content = content_frame
         self.parent = parent
-        
-        self.current_user_id = None
+        self.on_avatar_updated = on_avatar_updated 
 
-        # Vamos buscar o ID do usuário preferencialmente do parent (dashboard)
-        if self.parent:
-            self.current_user_id = getattr(self.parent, 'current_user_id', None)
-        
-        # Instância do controller (sempre a mesma durante a vida da tela)
+        # ✅ pegar ID corretamente
+        self.current_user_id = self._get_user_id()
+
+        print("USER:", getattr(self.parent, "current_user", None))
+        print("ID CAPTURADO:", self.current_user_id)
+
+        # ✅ criar controller
         self.vet_ctrl = vetController(self.current_user_id) if self.current_user_id else None
-        
-        # Cache dos dados (evita múltiplas chamadas ao banco)
-        self.perfil_data = None
-        self.foto_key = None          # só a key no S3 (ex: "vets/123/perfil.jpg")
-        self.preview_img = None       # para manter referência à imagem CTk
 
-        # Carrega dados uma única vez no init (ou quando mudar de usuário)
+        # Cache
+        self.perfil_data = None
+        self.foto_key = None
+        self.preview_img = None
+
+        # carregar dados
         self._carregar_dados_perfil()
 
+    def _get_user_id(self):
+        if self.parent and hasattr(self.parent, "current_user"):
+            user = self.parent.current_user
+            if isinstance(user, dict):
+                return user.get("id") or user.get("ID") or user.get("veterinario_id")
+        return None
+    
     # --- TELA: EDITAR PERFIL ---
     def tela_configuracoes_perfil(self):
         if not self.content:
@@ -121,15 +129,12 @@ class ModuloConfiguracoes:
 
         # Preencher com dados do banco quando disponível
         try:
-            perfil = self.foto_perfil or (self.foto_perfil.fetch_perfil_data() if self.foto_perfil else {})
-
-            data_perfil = self.update_perfil
             if self.perfil_data:
                 self.entry_nome.delete(0, "end")
-                self.entry_nome.insert(0, self.perfil_data.get("NOME", ""))
+                self.entry_nome.insert(0, self.perfil_data.get("nome", ""))
 
                 self.entry_email.delete(0, "end")
-                self.entry_email.insert(0, self.perfil_data.get("EMAIL", ""))
+                self.entry_email.insert(0, self.perfil_data.get("email", ""))
 
                 self.entry_crmv.delete(0, "end")
                 self.entry_crmv.insert(0, self.perfil_data.get("CRMV", ""))
@@ -143,6 +148,21 @@ class ModuloConfiguracoes:
         btn_frame = ctk.CTkFrame(scroll, fg_color="transparent")
         btn_frame.pack(fill="x", pady=(0, 10))
         ctk.CTkButton(btn_frame, text="Salvar", fg_color="#14B8A6", command=self.salvar_perfil).pack(anchor="e", padx=30, pady=10)
+
+    def atualizar_avatar_topo(self, foto_key):
+        try:
+            url = get_url_s3(foto_key)
+            response = requests.get(url)
+            img = Image.open(BytesIO(response.content))
+
+            img = img.resize((40, 40))
+            img_ctk = ctk.CTkImage(light_image=img, size=(40, 40))
+
+            self.avatar_topo.configure(image=img_ctk, text="")
+            self.avatar_topo.image = img_ctk
+
+        except Exception as e:
+            print("Erro ao atualizar avatar do topo:", e)
 
     def escolher_nova_foto(self):
         file_path = filedialog.askopenfilename(
@@ -161,8 +181,8 @@ class ModuloConfiguracoes:
 
             self.atualizar_preview_foto(file_path)
             
-            if self.parent and hasattr(self.parent, "atualizar_avatar_topo"):
-                self.parent.atualizar_avatar_topo(key)
+            if self.on_avatar_updated:
+                self.on_avatar_updated(key)
                 print("Foto atualizada com sucesso!")
             else:
                 print("Aviso: parent não tem método atualizar_avatar_topo")

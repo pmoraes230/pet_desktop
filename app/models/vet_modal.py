@@ -11,9 +11,16 @@ class VetModal:
             conn = connectdb()
             cursor = conn.cursor(dictionary=True)
             query = """
-                SELECT id, nome, email, CRMV, UF_CRMV, TELEFONE, imagem_perfil_veterinario
-                FROM veterinario 
-                WHERE id = %s
+                SELECT v.id, 
+                v.nome, 
+                v.email, 
+                v.CRMV, 
+                e.sigla AS UF_CRMV,
+                v.TELEFONE,
+                v.imagem_perfil_veterinario
+                FROM veterinario v
+                JOIN pet_app_estado e ON v.UF_CRMV = e.id
+                WHERE v.id = %s
             """
             cursor.execute(query, (self.vet_id,))
             result = cursor.fetchone()
