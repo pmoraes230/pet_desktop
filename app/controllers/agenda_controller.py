@@ -1,5 +1,5 @@
 from ..config.database import connectdb, closedb
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
 
 class AgendaController:
@@ -16,7 +16,7 @@ class AgendaController:
             
             query = """
                 SELECT c.id, c.HORARIO_CONSULTA, c.TIPO_DE_CONSULTA, 
-                       c.ID_VETERINARIO, c.ID_PET, c.OBSERVACOES, c.DATA_CONSULTA
+                       c.ID_PET, c.OBSERVACOES, c.DATA_CONSULTA
                 FROM consulta c
                 WHERE DATE(c.DATA_CONSULTA) = %s
                 ORDER BY c.HORARIO_CONSULTA ASC
@@ -38,7 +38,7 @@ class AgendaController:
             
             query = """
                 SELECT c.id, c.HORARIO_CONSULTA, c.TIPO_DE_CONSULTA, 
-                       c.ID_VETERINARIO, c.ID_PET, c.DATA_CONSULTA
+                       c.ID_PET, c.DATA_CONSULTA
                 FROM consulta c
                 WHERE MONTH(c.DATA_CONSULTA) = %s AND YEAR(c.DATA_CONSULTA) = %s
                 ORDER BY c.DATA_CONSULTA ASC
@@ -60,3 +60,24 @@ class AgendaController:
             data = consulta['DATA_CONSULTA']
             dias.add(data.day)
         return dias
+
+    def dias_com_consultas_na_semana(self, data_inicial_semana):
+        """Retorna um conjunto de datas (date) com consultas na semana informada."""
+        try:
+            if not data_inicial_semana:
+                return set()
+
+            mes = data_inicial_semana.month
+            ano = data_inicial_semana.year
+            consultas = self.buscar_consultas_do_mes(mes, ano)
+
+            dias_semana = set()
+            for consulta in consultas:
+                data_consulta = consulta['DATA_CONSULTA']
+                if data_inicial_semana.date() <= data_consulta.date() < (data_inicial_semana + timedelta(days=7)).date():
+                    dias_semana.add(data_consulta.date())
+
+            return dias_semana
+        except Exception as e:
+            print(f"Erro ao buscar dias com consultas na semana: {e}")
+            return set()
