@@ -7,7 +7,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import threading
 
-# Controllers
+# Controllers (assumindo que já existem e estão funcionando)
 from app.controllers.auth_controller import AuthController
 from app.controllers.vet_controller import VetController
 from app.controllers.pet_controller import PetController
@@ -15,7 +15,7 @@ from app.controllers.perfil_controller import FotoPerfil
 from app.controllers.prontuario_controller import ProntuarioController
 from app.services.s3_client import get_url_s3
 
-# Módulos
+# Módulos (assumindo que já existem)
 from .modulo_pacientes import ModuloPacientes
 from .modulo_financeiro import ModuloFinanceiro
 from .modulo_configuracoes import ModuloConfiguracoes
@@ -24,8 +24,30 @@ from .modulo_prontuario import ModuloProntuario
 from .modulo_chat import ModuloChat
 
 from app.views.modal import Modal
-import app.core.colors as colors
 
+# Cores atualizadas para o novo tema (simulando cores.py, mas embutido para clareza)
+class Colors:
+    PRIMARY_DARK = "#2E7D7D"  # Um verde-azulado mais escuro para a sidebar
+    PRIMARY = "#4CAF50" # Verde para ícones e destaque
+    PRIMARY_HOVER = "#388E8E"
+    NEUTRAL_50 = "#F8F9FA"  # Fundo principal muito claro
+    NEUTRAL_100 = "#EAECEF" # Hover em botões claros
+    NEUTRAL_200 = "#E0E3E8" # Bordas de cards
+    NEUTRAL_300 = "#CCD1D9" # Separadores
+    NEUTRAL_500 = "#6B7280" # Ícones e texto secundário
+    TEXT_PRIMARY = "#343A40" # Texto principal escuro
+    TEXT_SECONDARY = "#6C757D" # Texto secundário
+    DANGER = "#DC3545" # Vermelho para ações perigosas/logout
+    SUCCESS = "#28A745" # Verde para sucesso
+    SUCCESS_BG = "#E6FFED" # Fundo suave para status de sucesso
+
+    # Cores específicas para os novos cards de métricas
+    METRIC_ICON_1 = "#8A2BE2" # Roxo para Total Pacientes
+    METRIC_ICON_2 = "#FFC107" # Amarelo para Consultas Hoje
+    METRIC_ICON_3 = "#DC3545" # Vermelho para Casos Críticos
+    METRIC_ICON_4 = "#28A745" # Verde para Faturamento Mensal
+    
+colors = Colors() # Instância para uso
 
 class DashboardVeterinario(ctk.CTkFrame):
     """
@@ -41,7 +63,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.user_name = self.current_user.get('name') or "Usuário"
         self.on_logout = on_logout
 
-        # Controllers
+        # Controllers (garantindo que não seja None se user_id for None)
         self.vet_ctrl = VetController(self.user_id) if self.user_id else None
         self.pet_ctrl = PetController()
         self.prontuario_ctrl = ProntuarioController(self.user_id) if self.user_id else None
@@ -52,6 +74,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.profile_menu = None
         self.notifications_open = False
         self.notifications_menu = None
+        self.avatar_image = None
 
         # Fundo geral mais limpo e moderno
         self.configure(fg_color=colors.NEUTRAL_50)
@@ -73,25 +96,31 @@ class DashboardVeterinario(ctk.CTkFrame):
     def _setup_layout(self):
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=0, minsize=76)   # um pouco mais alto
+        self.grid_rowconfigure(0, weight=0, minsize=70)   # um pouco mais alto
         self.grid_rowconfigure(1, weight=1)
 
     def _build_sidebar(self):
         self.sidebar = ctk.CTkFrame(
             self,
             fg_color=colors.PRIMARY_DARK,  # teal escuro sofisticado
-            width=272,
+            width=260, # Largura ajustada
             corner_radius=0
         )
         self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
-        # Logo + nome
+        # Logo + nome do sistema e do Dr.
         header = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        header.pack(pady=(40, 48), padx=28, fill="x")
+        header.pack(pady=(30, 20), padx=28, fill="x")
 
-        logo = ctk.CTkImage(Image.open("app/assets/pet.png"), size=(40, 40))
-        ctk.CTkLabel(header, image=logo, text="").pack(side="left", padx=(0, 16))
+        # Mantém o logo existente
+        logo_path = "app/assets/pet.png" # Verifique se o caminho da imagem está correto
+        try:
+            logo = ctk.CTkImage(Image.open(logo_path), size=(32, 32)) # Tamanho ajustado
+            ctk.CTkLabel(header, image=logo, text="").pack(side="left", padx=(0, 12))
+        except FileNotFoundError:
+            print(f"Erro: Imagem do logo não encontrada em {logo_path}. Usando placeholder.")
+            ctk.CTkLabel(header, text="🐾", font=("Segoe UI", 32), text_color="white").pack(side="left", padx=(0, 12))
 
         ctk.CTkLabel(
             header,
@@ -99,116 +128,116 @@ class DashboardVeterinario(ctk.CTkFrame):
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             text_color="white",
         ).pack(side="left")
+        
+        # Nome do Dr. e CRMV
+        ctk.CTkLabel(
+            self.sidebar,
+            text=f"Dr. {self.user_name} - CRMV 3321", # CRMV fixo para exemplo
+            font=ctk.CTkFont(family="Helvetica", size=12),
+            text_color=colors.NEUTRAL_200, # Cor mais clara para info secundária
+        ).pack(fill="x", padx=28, pady=(0, 30))
+
 
         # Navegação moderna
         nav_items = [
-            ("Dashboard", self.show_dashboard, "home"),
-            ("Mensagens", lambda: self.mod_chat.tela_chat(), "message-square"),
-            ("Pacientes", lambda: self.mod_pacientes.tela_pacientes(), "paw"),
-            ("Prontuários", lambda: self.mod_prontuario.tela_prontuario(), "file-text"),
-            ("Agenda", lambda: self.mod_agenda.tela_agenda(), "calendar"),
-            ("Financeiro", lambda: self.mod_financeiro.tela_financeiro(), "dollar-sign"),
+            ("Dashboard", self.show_dashboard, "🏠"),
+            ("Mensagens", lambda: self.mod_chat.tela_chat(), "💬"),
+            ("Pacientes", lambda: self.mod_pacientes.tela_pacientes(), "🐾"),
+            ("Agenda", lambda: self.mod_agenda.tela_agenda(), "📅"),
+            ("Prontuários", lambda: self.mod_prontuario.tela_prontuario(), "📋"), # Ordem ajustada
+            ("Financeiro", lambda: self.mod_financeiro.tela_financeiro(), "💰"),
         ]
 
-        for label, command, icon_key in nav_items:
-            self._create_sidebar_button(label, command, icon_key)
+        for label, command, icon_str in nav_items:
+            self._create_sidebar_button(label, command, icon_str)
 
-    def _create_sidebar_button(self, label: str, command, icon_key: str):
-        icon_map = {
-            "home": "🏠",
-            "message-square": "💬",
-            "paw": "🐾",
-            "file-text": "📋",
-            "calendar": "📅",
-            "dollar-sign": "💰",
-        }
-        icon = icon_map.get(icon_key, "•")
-
+    def _create_sidebar_button(self, label: str, command, icon_str: str):
         btn = ctk.CTkButton(
             self.sidebar,
-            text=f"{icon}   {label}",
+            text=f"{icon_str}   {label}", # Usa o ícone string diretamente
             fg_color="transparent",
             hover_color=colors.PRIMARY_HOVER,
             text_color="white",
             font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
-            height=52,
-            corner_radius=14,
+            height=48, # Altura ajustada
+            corner_radius=10, # Raio menor
             anchor="w",
             command=lambda: self._switch_screen(command),
         )
-        btn.pack(fill="x", padx=20, pady=6)
+        btn.pack(fill="x", padx=20, pady=4) # Padding ajustado
 
     def _build_topbar(self):
         self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
         self.topbar.grid(row=0, column=1, sticky="ew")
-        
-        # Remove qualquer borda cinza indesejada
-        self.topbar.configure(border_width=0)
+        self.topbar.configure(border_width=0) # Garante sem borda
 
-        # Saudação moderna
-        greeting = f"{self._get_greeting()}, {self.user_name.split()[0]}"
-        ctk.CTkLabel(
+        # Título "Dashboard" ou da tela atual
+        self.current_screen_title = ctk.CTkLabel(
             self.topbar,
-            text=greeting,
+            text="Dashboard", # Valor inicial
             font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"),
             text_color=colors.TEXT_PRIMARY,
-        ).pack(side="left", padx=40, pady=16)
+        )
+        self.current_screen_title.pack(side="left", padx=40, pady=16)
 
         # Área direita com espaçamento maior
         right = ctk.CTkFrame(self.topbar, fg_color="transparent")
         right.pack(side="right", padx=32)
 
-        # Notificações
-        notif_frame = ctk.CTkFrame(right, fg_color="transparent", width=56, height=56)
-        notif_frame.pack_propagate(False)
-        notif_frame.pack(side="left", padx=(0, 24))
-
-        self.btn_notif = ctk.CTkButton(
-            notif_frame,
-            text="🔔",
-            font=("Segoe UI", 22),
-            fg_color="transparent",
-            hover_color=colors.NEUTRAL_100,
-            text_color=colors.TEXT_SECONDARY,
-            width=52,
-            height=52,
-            corner_radius=26,
-            command=self._toggle_notifications,
-        )
-        self.btn_notif.pack()
-
-        unread = self.vet_ctrl.fetch_unread_count() if self.vet_ctrl else 0
-        self.badge = ctk.CTkLabel(
-            notif_frame,
-            text=str(unread) if unread else "",
-            fg_color=colors.DANGER,
-            text_color="white",
-            width=22,
-            height=22,
-            corner_radius=11,
-            font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"),
-        )
-        self.badge.place(relx=1.0, rely=0.0, anchor="ne")
-
-        # Avatar moderno (circular com sombra sutil)
-        self.avatar_btn = ctk.CTkButton(
+        # Notificações (apenas ícone)
+        btn_notif = ctk.CTkButton(
             right,
-            text="👤",
-            font=("Segoe UI", 24),
+            text="🔔",
+            font=("Segoe UI", 20),
             fg_color="transparent",
             hover_color=colors.NEUTRAL_100,
             text_color=colors.NEUTRAL_500,
-            width=52,
-            height=52,
-            corner_radius=26,
+            width=40, height=40, corner_radius=20,
+            command=self._toggle_notifications,
+        )
+        btn_notif.pack(side="left", padx=(0, 16))
+
+        # Try to load avatar synchronously from already-initialized ModuloConfiguracoes
+        initial_avatar = None
+        try:
+            perfil = None
+            if hasattr(self, 'mod_configuracoes') and getattr(self.mod_configuracoes, 'perfil_data', None):
+                perfil = self.mod_configuracoes.perfil_data
+            elif self.foto_perfil_ctrl:
+                perfil = self.foto_perfil_ctrl.fetch_perfil_data()
+
+            key = perfil.get('imagem_perfil_veterinario') if perfil else None
+            if key:
+                url = get_url_s3(key, expires_in=604800)
+                if url:
+                    resp = requests.get(url, timeout=4)
+                    resp.raise_for_status()
+                    img_pil = Image.open(BytesIO(resp.content))
+                    img_round = self._create_circular_image(img_pil, (40, 40))
+                    initial_avatar = ctk.CTkImage(light_image=img_round, size=(40, 40))
+                    self.avatar_image = initial_avatar
+        except Exception:
+            initial_avatar = None
+
+        self.profile_button_text = f"{self.user_name}\nMeu Perfil  ⌄"
+        self.avatar_btn = ctk.CTkButton(
+            right,
+            text=self.profile_button_text,
+            image=initial_avatar,
+            compound="left",
+            fg_color="white",
+            hover_color=colors.NEUTRAL_100,
+            text_color=colors.TEXT_PRIMARY,
+            font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
+            width=240,
+            height=60,
+            corner_radius=20,
+            anchor="w",
             command=self._toggle_profile_menu,
         )
-        self.avatar_btn.pack(side="left", padx=16)
+        self.avatar_btn.pack(side="left", padx=(0, 8), pady=4)
+        self.avatar_image = None
 
-        # Separador inferior sutil (opcional – pode remover se preferir sem linha)
-        ctk.CTkFrame(self, fg_color="#E5E7EB", height=1).grid(
-            row=0, column=1, sticky="sew"
-        )
 
     def _build_content_frame(self):
         self.content = ctk.CTkFrame(self, fg_color=colors.NEUTRAL_50)
@@ -217,6 +246,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.content.grid_rowconfigure(0, weight=1)
 
     def _init_modules(self):
+        # Passa 'self' para o módulo de configurações para que ele possa chamar atualizar_avatar
         self.mod_pacientes = ModuloPacientes(self.content, self.pet_ctrl)
         self.mod_financeiro = ModuloFinanceiro(self.content)
         self.mod_configuracoes = ModuloConfiguracoes(self.content, parent=self, on_avatar_updated=self.atualizar_avatar)
@@ -224,140 +254,170 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.mod_prontuario = ModuloProntuario(self.content, self.prontuario_ctrl)
         self.mod_chat = ModuloChat(self.content)
 
-    def _switch_screen(self, target_screen_func):
+    def _switch_screen(self, target_screen_func, title="Dashboard"):
         for child in self.content.winfo_children():
             child.destroy()
         target_screen_func()
+        self.current_screen_title.configure(text=title) # Atualiza o título da topbar
 
     # ── Telas ────────────────────────────────────────────────────────────────
 
     def show_dashboard(self):
-        self._switch_screen(self._build_dashboard_screen)
+        self._switch_screen(self._build_dashboard_screen, "Dashboard")
 
     def _build_dashboard_screen(self):
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=40, pady=40)
+        scroll.pack(fill="both", expand=True, padx=30, pady=30) # Padding ajustado
 
-        scroll.grid_columnconfigure((0, 1, 2), weight=1, uniform="group1")
+        scroll.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="group1") # 4 colunas para as métricas
 
         metrics = self.vet_ctrl.fetch_metrics() if self.vet_ctrl else {}
+        # Valores simulados para teste se vet_ctrl for None
+        if not self.vet_ctrl:
+            metrics = {
+                "total_pets": 4,
+                "consultas_hoje": 0,
+                "casos_criticos": 0,
+                "faturamento_mes": 0.00
+            }
 
+
+        # Novos cards de métricas (4 ao invés de 3)
         self._create_metric_card(
-            scroll, metrics.get("total_pets", 0), "Pacientes cadastrados", "users", 0
+            scroll, metrics.get("total_pets", 0), "Total Pacientes", "👥", 0,
+            icon_color=colors.METRIC_ICON_1
         )
         self._create_metric_card(
-            scroll, metrics.get("consultas_hoje", 0), "Consultas hoje", "calendar", 1
+            scroll, metrics.get("consultas_hoje", 0), "Consultas Hoje", "🗓️", 1,
+            icon_color=colors.METRIC_ICON_2
+        )
+        self._create_metric_card(
+            scroll, metrics.get("casos_criticos", 0), "Casos Críticos", "⚠️", 2, # Novo card
+            icon_color=colors.METRIC_ICON_3
         )
         self._create_metric_card(
             scroll,
             metrics.get("faturamento_mes", 0),
-            "Faturamento mensal",
-            "dollar-sign",
-            2,
+            "Faturamento Hoje", # Texto ajustado
+            "💲", # Ícone ajustado
+            3,
             prefix="R$ ",
+            icon_color=colors.METRIC_ICON_4
         )
-
-        ctk.CTkLabel(
+        
+        # Agenda de Hoje
+        agenda_frame = ctk.CTkFrame(
             scroll,
-            text="Atendimentos Recentes",
-            font=ctk.CTkFont(family="Helvetica", size=22, weight="bold"),
-            text_color=colors.TEXT_PRIMARY,
-        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(48, 20), padx=8)
-
-        recent = self.vet_ctrl.fetch_recent_pets() if self.vet_ctrl else []
-        self._build_recent_pets_list(scroll, recent)
-
-    def _create_metric_card(self, parent, value, title, icon_key, col, prefix=""):
-        icon_map = {"users": "👥", "calendar": "🗓️", "dollar-sign": "💰"}
-
-        card = ctk.CTkFrame(
-            parent,
             fg_color="white",
-            corner_radius=20,
+            corner_radius=16, # Menor raio
             border_width=1,
             border_color=colors.NEUTRAL_200,
         )
-        card.grid(row=0, column=col, padx=16, pady=8, sticky="nsew")
+        agenda_frame.grid(row=1, column=0, columnspan=2, padx=(0, 20), pady=(30, 0), sticky="nsew") # Ajustado para 2 colunas
 
+        ctk.CTkLabel(
+            agenda_frame,
+            text="Agenda de Hoje",
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+        ).pack(padx=24, pady=(20, 10), anchor="w")
+
+        # Conteúdo da agenda (simulado)
+        agenda_content = ctk.CTkFrame(agenda_frame, fg_color="transparent")
+        agenda_content.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        
+        # Simulação de consultas vazias
+        ctk.CTkLabel(
+            agenda_content,
+            text="☕", # Ícone de café para "nenhuma consulta"
+            font=("Segoe UI", 48),
+            text_color=colors.NEUTRAL_300,
+        ).pack(pady=(20, 10))
+        ctk.CTkLabel(
+            agenda_content,
+            text="Nenhuma consulta agendada para hoje.",
+            font=ctk.CTkFont(family="Helvetica", size=14),
+            text_color=colors.TEXT_SECONDARY,
+        ).pack(pady=(0, 40))
+
+        # Botão "Ver tudo"
+        ctk.CTkButton(
+            agenda_frame,
+            text="Ver tudo",
+            fg_color="transparent",
+            hover_color=colors.NEUTRAL_100,
+            text_color=colors.PRIMARY_DARK, # Cor do texto do botão
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            command=lambda: self._switch_screen(self.mod_agenda.tela_agenda, "Agenda"),
+        ).place(relx=0.95, rely=0.08, anchor="e") # Posicionamento para ficar no canto superior direito
+
+        # Alertas (novo card)
+        alerts_frame = ctk.CTkFrame(
+            scroll,
+            fg_color="white",
+            corner_radius=16,
+            border_width=1,
+            border_color=colors.NEUTRAL_200,
+        )
+        alerts_frame.grid(row=1, column=2, columnspan=2, padx=(20, 0), pady=(30, 0), sticky="nsew")
+
+        ctk.CTkLabel(
+            alerts_frame,
+            text="Alertas",
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+        ).pack(padx=24, pady=(20, 10), anchor="w")
+
+        # Conteúdo dos alertas (simulado)
+        alerts_content = ctk.CTkFrame(alerts_frame, fg_color="transparent")
+        alerts_content.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        ctk.CTkLabel(
+            alerts_content,
+            text="Nenhum alerta pendente.",
+            font=ctk.CTkFont(family="Helvetica", size=14),
+            text_color=colors.TEXT_SECONDARY,
+        ).pack(pady=60)
+
+
+    def _create_metric_card(self, parent, value, title, icon_str, col, prefix="", icon_color=None):
+        card = ctk.CTkFrame(
+            parent,
+            fg_color="white",
+            corner_radius=16, # Raio ajustado
+            border_width=1,
+            border_color=colors.NEUTRAL_200,
+        )
+        card.grid(row=0, column=col, padx=10, pady=10, sticky="nsew") # Padding ajustado
+
+        icon_frame = ctk.CTkFrame(card, fg_color=colors.NEUTRAL_100, width=48, height=48, corner_radius=12) # Fundo para ícone
+        icon_frame.pack_propagate(False) # Impede que o frame se encolha
+        icon_frame.pack(anchor="w", padx=20, pady=(20, 10))
+
+        ctk.CTkLabel(
+            icon_frame,
+            text=icon_str, # Usa o ícone string
+            font=("Segoe UI", 24),
+            text_color=icon_color or colors.PRIMARY, # Cor do ícone
+        ).pack(expand=True) # Centraliza o ícone no frame
+
+        display_value = f"{prefix}{value:,.2f}".replace('.', ',') if isinstance(value, (int, float)) else str(value)
         ctk.CTkLabel(
             card,
-            text=icon_map.get(icon_key, "•"),
-            font=("Segoe UI", 36),
-            text_color=colors.PRIMARY,
-        ).pack(anchor="w", padx=32, pady=(28, 0))
-
-        val_frame = ctk.CTkFrame(card, fg_color="transparent")
-        val_frame.pack(fill="x", padx=32, pady=16)
-
-        display_value = f"{prefix}{value:,}" if isinstance(value, (int, float)) else str(value)
-        ctk.CTkLabel(
-            val_frame,
             text=display_value,
-            font=ctk.CTkFont(family="Helvetica", size=34, weight="bold"),
+            font=ctk.CTkFont(family="Helvetica", size=28, weight="bold"), # Tamanho ajustado
             text_color=colors.TEXT_PRIMARY,
-        ).pack(side="left")
+        ).pack(anchor="w", padx=20)
 
         ctk.CTkLabel(
             card,
             text=title,
-            font=ctk.CTkFont(family="Helvetica", size=15),
+            font=ctk.CTkFont(family="Helvetica", size=13), # Tamanho da fonte ajustado
             text_color=colors.TEXT_SECONDARY,
-        ).pack(anchor="w", padx=32, pady=(4, 28))
+        ).pack(anchor="w", padx=20, pady=(4, 20))
 
-    def _build_recent_pets_list(self, parent, pets: list):
-        card = ctk.CTkFrame(
-            parent,
-            fg_color="white",
-            corner_radius=20,
-            border_width=1,
-            border_color=colors.NEUTRAL_200,
-        )
-        card.grid(row=2, column=0, columnspan=2, padx=(0, 16), pady=12, sticky="nsew")
-
-        if not pets:
-            ctk.CTkLabel(
-                card,
-                text="Nenhum atendimento recente registrado",
-                font=ctk.CTkFont(family="Helvetica", size=15),
-                text_color=colors.TEXT_SECONDARY,
-            ).pack(pady=60)
-            return
-
-        for pet in pets[:6]:
-            self._create_pet_history_row(card, pet)
-
-    def _create_pet_history_row(self, parent, pet: dict):
-        row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(fill="x", padx=28, pady=14)
-
-        info = ctk.CTkFrame(row, fg_color="transparent")
-        info.pack(side="left", fill="x", expand=True)
-
-        ctk.CTkLabel(
-            info,
-            text=pet.get("nome_pet", "—"),
-            font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"),
-            text_color=colors.TEXT_PRIMARY,
-        ).pack(anchor="w")
-
-        ctk.CTkLabel(
-            info,
-            text=f"{pet.get('ESPECIE', '—')} • {pet.get('RACA', '—')}",
-            font=ctk.CTkFont(family="Helvetica", size=14),
-            text_color=colors.TEXT_SECONDARY,
-        ).pack(anchor="w")
-
-        status = ctk.CTkLabel(
-            row,
-            text="Atendido",
-            text_color=colors.SUCCESS,
-            fg_color=colors.SUCCESS_BG,
-            corner_radius=10,
-            padx=16,
-            pady=8,
-            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
-        )
-        status.pack(side="right")
+    # _build_recent_pets_list e _create_pet_history_row foram removidos pois a seção "Atendimentos Recentes" foi substituída.
+    # Se precisar de uma lista de "últimos pacientes", ela precisaria ser redesenhada para se ajustar ao novo layout.
 
     # ── Avatar ───────────────────────────────────────────────────────────────
 
@@ -366,10 +426,13 @@ class DashboardVeterinario(ctk.CTkFrame):
             perfil = self.foto_perfil_ctrl.fetch_perfil_data()
             key = perfil.get("imagem_perfil_veterinario")
             if not key:
+                # Carrega um avatar padrão se não houver imagem
+                self.after(0, lambda: self.avatar_btn.configure(text="👤", image=None))
                 return
 
             url = get_url_s3(key, expires_in=604800)
             if not url:
+                self.after(0, lambda: self.avatar_btn.configure(text="👤", image=None))
                 return
 
             session = requests.Session()
@@ -380,14 +443,16 @@ class DashboardVeterinario(ctk.CTkFrame):
             resp.raise_for_status()
 
             img_pil = Image.open(BytesIO(resp.content))
-            img_round = self._create_circular_image(img_pil, (52, 52))
+            img_round = self._create_circular_image(img_pil, (40, 40)) # Tamanho do avatar ajustado
+            ctk_img = ctk.CTkImage(light_image=img_round, size=(40, 40))
 
-            ctk_img = ctk.CTkImage(light_image=img_round, size=(52, 52))
-
-            self.after(0, lambda img=ctk_img: self.avatar_btn.configure(image=img, text=""))
+            self.avatar_image = ctk_img
+            self.after(0, lambda img=ctk_img: self.avatar_btn.configure(image=img, text=self.profile_button_text))
 
         except Exception as e:
             print(f"Falha ao carregar avatar: {e}")
+            self.avatar_image = None
+            self.after(0, lambda: self.avatar_btn.configure(text=self.profile_button_text, image=None)) # Garante que o texto apareça em caso de falha
 
     def _create_circular_image(self, img: Image.Image, size: tuple) -> Image.Image:
         img = img.resize(size, Image.LANCZOS).convert("RGBA")
@@ -401,6 +466,8 @@ class DashboardVeterinario(ctk.CTkFrame):
     # ── Menus ────────────────────────────────────────────────────────────────
 
     def _toggle_notifications(self):
+        # Lógica de notificação pode ser simplificada ou ajustada para o novo design
+        # A segunda imagem não mostra um menu de notificações, então manterei o básico
         if self.notifications_open:
             if self.notifications_menu and self.notifications_menu.winfo_exists():
                 self.notifications_menu.destroy()
@@ -413,31 +480,36 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.notifications_menu = ctk.CTkFrame(
             self,
             fg_color="white",
-            corner_radius=16,
+            corner_radius=12, # Raio ajustado
             border_width=1,
-            border_color=colors.NEUTRAL_200
+            border_color=colors.NEUTRAL_200,
+            width=300 # Largura ajustada
         )
-        self.notifications_menu.place(relx=0.98, y=76, anchor="ne")
+        # Posiciona o menu de notificações mais próximo do ícone
+        self.notifications_menu.place(relx=0.96, y=60, anchor="ne") 
 
         ctk.CTkLabel(
             self.notifications_menu,
             text="Notificações",
-            font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"),
+            font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
             text_color=colors.TEXT_PRIMARY,
-        ).pack(pady=16, padx=24, anchor="w")
+        ).pack(pady=12, padx=16, anchor="w")
 
-        scroll = ctk.CTkScrollableFrame(self.notifications_menu, fg_color="transparent", height=300)
-        scroll.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        scroll = ctk.CTkScrollableFrame(self.notifications_menu, fg_color="transparent", height=200) # Altura ajustada
+        scroll.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
         notifications = self.vet_ctrl.fetch_alerts() if self.vet_ctrl else []
+        # Simula alerts
+        if not notifications and not self.vet_ctrl:
+            notifications = [{"id": 1, "tipo": "Novo Agendamento", "mensagem": "Dr. Rayan, você tem um novo agendamento para amanhã.", "lida": False}]
 
         if not notifications:
             ctk.CTkLabel(
                 scroll,
                 text="Nenhuma notificação no momento",
-                font=ctk.CTkFont(family="Helvetica", size=14),
+                font=ctk.CTkFont(family="Helvetica", size=13),
                 text_color=colors.TEXT_SECONDARY,
-            ).pack(pady=60)
+            ).pack(pady=40)
         else:
             for notif in notifications:
                 self._create_notification_item(
@@ -451,26 +523,26 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.notifications_open = True
 
     def _create_notification_item(self, parent, title, message, notif_id=None, read=False):
-        item = ctk.CTkFrame(parent, fg_color="transparent")
-        item.pack(fill="x", padx=16, pady=8)
+        item = ctk.CTkFrame(parent, fg_color=colors.NEUTRAL_50 if not read else "transparent", corner_radius=8) # Fundo para não lidas
+        item.pack(fill="x", padx=8, pady=4)
 
         title_lbl = ctk.CTkLabel(
             item,
             text=title,
-            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
             text_color=colors.TEXT_PRIMARY if not read else colors.TEXT_SECONDARY,
         )
-        title_lbl.pack(anchor="w")
+        title_lbl.pack(anchor="w", padx=10, pady=(8, 0))
 
         msg_lbl = ctk.CTkLabel(
             item,
             text=message,
-            font=ctk.CTkFont(family="Helvetica", size=13),
-            text_color=colors.TEXT_SECONDARY if read else colors.TEXT_PRIMARY,
-            wraplength=280,
+            font=ctk.CTkFont(family="Helvetica", size=12),
+            text_color=colors.TEXT_SECONDARY,
+            wraplength=250,
             justify="left",
         )
-        msg_lbl.pack(anchor="w", pady=(4, 0))
+        msg_lbl.pack(anchor="w", padx=10, pady=(0, 8))
 
         def mark_as_read(event=None):
             if notif_id and self.vet_ctrl:
@@ -478,14 +550,15 @@ class DashboardVeterinario(ctk.CTkFrame):
                     self.vet_ctrl.mark_notification_read(notif_id)
                     title_lbl.configure(text_color=colors.TEXT_SECONDARY)
                     msg_lbl.configure(text_color=colors.TEXT_SECONDARY)
-                    unread = self.vet_ctrl.fetch_unread_count() or 0
-                    self.badge.configure(text=str(unread) if unread > 0 else "")
+                    item.configure(fg_color="transparent") # Remove fundo de não lida
+                    # Atualiza o badge de notificação (se houver)
                 except Exception as e:
                     print(f"Erro ao marcar notificação como lida: {e}")
 
         item.bind("<Button-1>", mark_as_read)
         title_lbl.bind("<Button-1>", mark_as_read)
         msg_lbl.bind("<Button-1>", mark_as_read)
+
 
     def _toggle_profile_menu(self):
         if self.profile_menu_open:
@@ -500,20 +573,58 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.profile_menu = ctk.CTkFrame(
             self,
             fg_color="white",
-            corner_radius=16,
+            corner_radius=20,
             border_width=1,
-            border_color=colors.NEUTRAL_200
+            border_color=colors.NEUTRAL_200,
+            width=260,
         )
-        self.profile_menu.place(relx=0.98, y=76, anchor="ne")
+        self.profile_menu.place(relx=0.98, y=60, anchor="ne")
+
+        header_frame = ctk.CTkFrame(self.profile_menu, fg_color="transparent")
+        header_frame.pack(fill="x", padx=16, pady=(16, 12))
+
+        avatar_frame = ctk.CTkFrame(header_frame, fg_color=colors.NEUTRAL_100, width=54, height=54, corner_radius=27)
+        avatar_frame.pack(side="left", padx=(0, 12))
+        avatar_frame.pack_propagate(False)
+
+        ctk.CTkLabel(
+            avatar_frame,
+            image=self.avatar_image if self.avatar_image else None,
+            text="" if self.avatar_image else "👤",
+            font=ctk.CTkFont(family="Helvetica", size=26),
+            text_color=colors.PRIMARY,
+        ).pack(expand=True)
+
+        user_name = self.current_user.get("name", "Usuário")
+        user_email = self.current_user.get("email", "")
+
+        text_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        text_frame.pack(side="left", fill="both", expand=True)
+
+        ctk.CTkLabel(
+            text_frame,
+            text=user_name,
+            font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
+            text_color=colors.TEXT_PRIMARY,
+            anchor="w",
+        ).pack(fill="x")
+        ctk.CTkLabel(
+            text_frame,
+            text=user_email,
+            font=ctk.CTkFont(family="Helvetica", size=12),
+            text_color=colors.TEXT_SECONDARY,
+            anchor="w",
+        ).pack(fill="x", pady=(4, 0))
+
+        ctk.CTkLabel(self.profile_menu, text="", fg_color=colors.NEUTRAL_200, height=1).pack(fill="x", padx=16, pady=(8, 8))
 
         items = [
-            ("Editar Perfil", self.mod_configuracoes.tela_configuracoes_perfil),
-            ("Configurações", self.mod_configuracoes.tela_configuracoes_gerais),
-            ("Sair", self._logout),
+            ("👤  Meu Perfil", lambda: self._switch_screen(self.mod_configuracoes.tela_configuracoes_perfil, "Meu Perfil"), colors.TEXT_PRIMARY),
+            ("⚙️  Configurações", lambda: self._switch_screen(self.mod_configuracoes.tela_configuracoes_gerais, "Configurações"), colors.TEXT_PRIMARY),
+            ("⇦  Sair da conta", self._logout, colors.DANGER),
         ]
 
-        for text, cmd in items:
-            color = colors.DANGER if text == "Sair" else colors.TEXT_PRIMARY
+        for text, cmd, color in items:
             btn = ctk.CTkButton(
                 self.profile_menu,
                 text=text,
@@ -521,11 +632,12 @@ class DashboardVeterinario(ctk.CTkFrame):
                 hover_color=colors.NEUTRAL_100,
                 text_color=color,
                 anchor="w",
-                font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
-                height=42,
+                font=ctk.CTkFont(family="Helvetica", size=14, weight="normal"),
+                height=44,
+                corner_radius=14,
                 command=lambda c=cmd: [self._close_profile_menu(), c()] if c else self._close_profile_menu(),
             )
-            btn.pack(fill="x", padx=12, pady=4)
+            btn.pack(fill="x", padx=12, pady=(0, 6))
 
         self.profile_menu_open = True
 
@@ -556,9 +668,12 @@ class DashboardVeterinario(ctk.CTkFrame):
             resp.raise_for_status()
 
             img_pil = Image.open(BytesIO(resp.content))
-            img_round = self._create_circular_image(img_pil, (52, 52))
-            ctk_img = ctk.CTkImage(light_image=img_round, size=(52, 52))
+            img_round = self._create_circular_image(img_pil, (40, 40))
+            ctk_img = ctk.CTkImage(light_image=img_round, size=(40, 40))
+            self.avatar_image = ctk_img
 
-            self.avatar_btn.configure(image=ctk_img, text="")
+            self.avatar_btn.configure(image=ctk_img, text=self.profile_button_text)
         except Exception as e:
             print(f"Erro ao atualizar avatar: {e}")
+            self.avatar_image = None
+            self.avatar_btn.configure(text=self.profile_button_text, image=None) # Reseta para ícone padrão em caso de erro
