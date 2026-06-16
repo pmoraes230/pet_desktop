@@ -152,6 +152,14 @@ class ModuloPacientes:
         pets = self.pet_controller.listar_pets()
         # Simula pets para teste se o controller retornar vazio
         if not pets:
+            ctk.CTkLabel(
+                grid,
+                text="Nenhum paciente aceito por este veterinario.",
+                font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"),
+                text_color=colors.TEXT_SECONDARY,
+            ).grid(row=0, column=0, columnspan=3, pady=50)
+            return
+            """
              # DADOS ATUALIZADOS PARA COMBINAR COM A SEGUNDA IMAGEM
              pets = [
                 {'id': 1, 'NOME': 'Churrasco', 'ESPECIE': 'cachorro', 'RACA': 'Vira lata', 'DATA_NASCIMENTO': '2020-03-15', 'SEXO': 'Macho', 'PESO': 25.0, 'IMAGEM': 'https://s3.amazonaws.com/coracao-em-patas/imagens/pets/churrasco.jpg', 'DESCRICAO': 'Muito dócil e adora brincar.', 'PERSONALIDADE': 'Brincalhão, Dócil'},
@@ -161,6 +169,8 @@ class ModuloPacientes:
                 {'id': 5, 'NOME': 'Zeus', 'ESPECIE': 'cachorro', 'RACA': 'Pastor Alemão', 'DATA_NASCIMENTO': '2020-01-10', 'SEXO': 'Macho', 'PESO': 35.0, 'IMAGEM': 'https://s3.amazonaws.com/coracao-em-patas/imagens/pets/zeus.jpg', 'DESCRICAO': 'Energético e adora correr.', 'PERSONALIDADE': 'Energético, Ativo'}
             ]
 
+
+            """
 
         for i, pet in enumerate(pets):
             id_pet = pet.get('id')

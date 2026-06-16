@@ -74,7 +74,7 @@ class ModalAgendamento:
         create_label(container, "Qual pet?").pack(anchor="w", pady=(0, 8))
         
         # Carregar pets do banco
-        self.pets = self.controller.listar_pets()
+        self.pets = self.controller.listar_pets(self.id_veterinario)
         pet_names = [p['nome'] for p in self.pets] if self.pets else ["Nenhum pet disponível"]
         
         self.combo_pet = ctk.CTkComboBox(
@@ -168,7 +168,7 @@ class ModalAgendamento:
         """Valida e salva o agendamento no banco"""
         
         # Validações
-        if self.combo_pet.get() in ["Selecione um pet...", ""]:
+        if self.combo_pet.get() in ["Selecione um pet...", "Nenhum pet disponível", ""]:
             self.mostrar_erro("Selecione um pet")
             return
         

@@ -8,8 +8,11 @@ class PetAll:
     # =========================
 
     @staticmethod
-    def listar_pets():
+    def listar_pets(vet_id=None):
         try:
+            if vet_id:
+                return PetAll.listar_pets_aceitos_do_vet(vet_id)
+
             conn = connectdb()
             cursor = conn.cursor(dictionary=True)
 
@@ -30,6 +33,37 @@ class PetAll:
             if 'conn' in locals():
                 conn.close()
             return []
+
+    @staticmethod
+    def listar_pets_aceitos_do_vet(vet_id):
+        last_error = None
+        for vet_column in ("ID_VETERINARIO", "veterinario_id"):
+            try:
+                conn = connectdb()
+                cursor = conn.cursor(dictionary=True)
+
+                cursor.execute(f"""
+                    SELECT DISTINCT p.id, p.NOME, p.ESPECIE, p.RACA, p.DATA_NASCIMENTO,
+                           p.SEXO, p.PESO, p.CASTRADO, p.PERSONALIDADE,
+                           p.IMAGEM, p.ID_TUTOR
+                    FROM pet p
+                    INNER JOIN consulta c ON p.id = c.ID_PET
+                    WHERE c.{vet_column} = %s
+                      AND LOWER(COALESCE(c.STATUS, '')) IN ('confirmado', 'concluido', 'concluído')
+                    ORDER BY p.NOME
+                """, (vet_id,))
+
+                pets = cursor.fetchall()
+                conn.close()
+                return pets if pets else []
+
+            except Exception as e:
+                last_error = e
+                if 'conn' in locals():
+                    conn.close()
+
+        print(f"Erro ao listar pets aceitos do vet: {last_error}")
+        return []
 
     @staticmethod
     def buscar_pet(id_pet):

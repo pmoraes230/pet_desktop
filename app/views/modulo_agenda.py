@@ -1,93 +1,53 @@
-import customtkinter as ctk
-from datetime import datetime, timedelta
 import calendar
-from tkinter import messagebox # Para o placeholder do modal de liberar horários
-# from ..controllers.agenda_controller import AgendaController # Removido para simplificar para um mock
-# from ..utils.agenda_utils import AgendaUtils # Removido para simplificar para um mock
-# from .modal_agendamento import ModalAgendamento # Removido para simplificar para um mock
+from datetime import datetime, timedelta
+from tkinter import messagebox
 
-# Reuso da classe Colors do exemplo anterior, com adições para este módulo
+import customtkinter as ctk
+
+from ..controllers.agenda_controller import AgendaController
+from .modal_agendamento import ModalAgendamento
+
+
 class Colors:
-    PRIMARY_DARK = "#2E7D7D"  # Um verde-azulado mais escuro para a sidebar
-    PRIMARY = "#4CAF50" # Verde para ícones e destaque (não tão usado aqui)
-    PRIMARY_HOVER = "#388E8E"
-    NEUTRAL_50 = "#F8F9FA"  # Fundo principal muito claro
-    NEUTRAL_100 = "#EAECEF" # Hover em botões claros
-    NEUTRAL_200 = "#E0E3E8" # Bordas de cards (usado para cards de compromisso)
-    NEUTRAL_300 = "#CCD1D9" # Separadores (usado para o ícone de vazio)
-    NEUTRAL_500 = "#6B7280" # Ícones e texto secundário (nomes dos dias, etc)
-    TEXT_PRIMARY = "#343A40" # Texto principal escuro (texto dos cards de compromisso)
-    TEXT_SECONDARY = "#6C757D" # Texto secundário (subtítulos, descrições)
-    DANGER = "#DC3545" # Vermelho para ações perigosas/logout
-    SUCCESS = "#28A745" # Verde para sucesso
-    SUCCESS_BG = "#E6FFED" # Fundo suave para status de sucesso
+    ACCENT_GREEN = "#26C2B9"
+    ACCENT_GREEN_HOVER = "#1EB0A8"
+    BORDER = "#E5E7EB"
+    CARD = "#FFFFFF"
+    DANGER_BG = "#FEE2E2"
+    DANGER_TEXT = "#B91C1C"
+    GRAY_LIGHT = "#F3F4F6"
+    MUTED = "#6B7280"
+    PURPLE = "#7C3AED"
+    PURPLE_HOVER = "#6D28D9"
+    SUCCESS_BG = "#DCFCE7"
+    SUCCESS_TEXT = "#166534"
+    TEXT = "#1F2937"
+    WARNING_BG = "#FEF3C7"
+    WARNING_TEXT = "#92400E"
 
-    # Cores adicionais para este módulo (foco na segunda imagem)
-    ACCENT_GREEN = "#00CEC9" # Verde-água vibrante para destaque (dia selecionado, botões)
-    ACCENT_GREEN_HOVER = "#00B0AC"
-    GRAY_LIGHT = "#F1F5F9" # Fundo de campos de busca/abas e dias não selecionados do calendário
-    TEXT_DARK = "#1E293B" # Títulos e textos importantes (Agenda de Consultas, Compromissos da Semana)
-    STATUS_HEALTHY_BG = "#E6FFEE" # Fundo para status saudável
-    STATUS_HEALTHY_TEXT = "#10B981" # Texto para status saudável
-    STATUS_WARNING_BG = "#FFFBEB" # Fundo para status de alerta
-    STATUS_WARNING_TEXT = "#F59E0B" # Texto para status de alerta
-    PURPLE_ACCENT = "#9B59B6" # Roxo para o botão "Liberar Horários"
-    PURPLE_ACCENT_HOVER = "#8E44AD"
-    CALENDAR_DAY_BG = "#F1F5F9" # Fundo dos dias normais no calendário (agora é Gray_light)
-    CALENDAR_DAY_TEXT_NORMAL = "#34495E" # Texto dos dias normais (agora é TEXT_PRIMARY para o dia)
-    CALENDAR_DAY_TEXT_DISABLED = "#BDC3C7" # Texto de dias de outros meses (se houver)
-    SHADOW_COLOR = "#D1D5DB" # Cor para simular sombra sutil
 
 colors = Colors()
 
-# Mocks para AgendaController, AgendaUtils e ModalAgendamento para que o código possa ser executado
-class MockAgendaController:
-    def buscar_consultas_do_dia(self, day, month, year):
-        # Simula algumas consultas para o dia 10 de Junho de 2026
-        if day == 10 and month == 6 and year == 2026:
-            return [
-                {'HORARIO_CONSULTA': '10:00', 'TIPO_DE_CONSULTA': 'Consulta de Rotina', 'ID_PET': 123, 'ID_VETERINARIO': 1},
-                {'HORARIO_CONSULTA': '14:30', 'TIPO_DE_CONSULTA': 'Vacinação', 'ID_PET': 456, 'ID_VETERINARIO': 1},
-            ]
-        return []
-    def dias_com_consultas_na_semana(self, start_date):
-        # Simula que o dia 10 tem consulta
-        return {datetime(2026, 6, 10).date()}
-
-class MockAgendaUtils:
-    def eh_hoje(self, day, month, year):
-        hoje = datetime.now()
-        # Simula que "hoje" é o dia 8 de Junho de 2026 para fins de teste
-        return day == 8 and month == 6 and year == 2026 # Força o "hoje" ser o dia 8
-
-class MockModalAgendamento:
-    def __init__(self, master, callback_refresh):
-        self.master = master
-        self.callback_refresh = callback_refresh
-        messagebox.showinfo("Agendamento", "Modal de agendamento aberto!")
-        self.callback_refresh() # Simula o refresh
 
 class ModuloAgenda:
-    def __init__(self, content_frame):
+    def __init__(self, content_frame, id_veterinario=None):
         self.content = content_frame
-        
-        # Define o mês e ano iniciais para o exemplo (Junho 2026)
-        self.mes_atual = 6
-        self.ano_atual = 2026
-        self.dia_selecionado = 10 # Define o dia 10 como selecionado por padrão
-        
-        self.semana_atual_start_date = self._obter_semana_atual_start_date()
-        self.consultas_selecionadas = []
-        self.controller = MockAgendaController() # Usando o mock
-        self.utils = MockAgendaUtils() # Usando o mock
-        # self.modal_agendamento_class = MockModalAgendamento # Usando o mock
-        self.dias_buttons = {}
+        self.id_veterinario = id_veterinario
+        self.controller = AgendaController(id_veterinario)
+        self.modal_horarios = None
+        self.calendario_modal = None
 
-    def _obter_semana_atual_start_date(self):
-        """Retorna o primeiro dia da semana (segunda-feira) para a semana do dia selecionado"""
-        hoje = datetime(self.ano_atual, self.mes_atual, self.dia_selecionado)
-        primeira_semana = hoje - timedelta(days=hoje.weekday())
-        return primeira_semana
+        hoje = datetime.now()
+        self.mes_atual = hoje.month
+        self.ano_atual = hoje.year
+        self.dia_selecionado = hoje.day
+        self.semana_atual_start_date = self._obter_semana_atual_start_date(hoje)
+        self.consultas_selecionadas = []
+
+    def _obter_semana_atual_start_date(self, data_base=None):
+        data_base = data_base or datetime(self.ano_atual, self.mes_atual, self.dia_selecionado)
+        dias_desde_domingo = (data_base.weekday() + 1) % 7
+        return data_base - timedelta(days=dias_desde_domingo)
 
     def tela_agenda(self):
         for widget in self.content.winfo_children():
@@ -95,372 +55,800 @@ class ModuloAgenda:
 
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=40, pady=30)
-        
-        # Header com título, subtítulo e botões
-        header_area = ctk.CTkFrame(scroll, fg_color="transparent")
-        header_area.pack(fill="x", pady=(0, 20))
-        
+
+        self._criar_header(scroll)
+        self._criar_navegacao_semanal(scroll)
+        self._criar_calendario(scroll)
+
+        titulo_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+        titulo_frame.pack(fill="x", pady=(30, 10))
+        ctk.CTkLabel(
+            titulo_frame,
+            text="Compromissos da Semana",
+            font=ctk.CTkFont(family="Helvetica", size=22, weight="bold"),
+            text_color=colors.TEXT,
+        ).pack(anchor="w")
+
+        self.lista_consultas = ctk.CTkFrame(scroll, fg_color="transparent")
+        self.lista_consultas.pack(fill="both", expand=True, pady=(0, 20))
+
+        self._carregar_consultas_da_semana()
+
+    def _criar_header(self, parent):
+        header_area = ctk.CTkFrame(parent, fg_color="transparent")
+        header_area.pack(fill="x", pady=(0, 24))
+
         header_left = ctk.CTkFrame(header_area, fg_color="transparent")
         header_left.pack(side="left", fill="x", expand=True)
-        
+
         ctk.CTkLabel(
-            header_left, 
-            text="Agenda de Consultas", 
-            font=ctk.CTkFont(family="Helvetica", size=28, weight="bold"),
-            text_color=colors.TEXT_DARK
+            header_left,
+            text="Agenda de Consultas",
+            font=ctk.CTkFont(family="Helvetica", size=30, weight="bold"),
+            text_color=colors.TEXT,
         ).pack(anchor="w")
 
         ctk.CTkLabel(
-            header_left, 
-            text="Gerencie seus horários e procedimentos", 
-            font=ctk.CTkFont(family="Helvetica", size=14), 
-            text_color=colors.TEXT_SECONDARY
-        ).pack(anchor="w", pady=(0, 10))
-        
-        # Botões da direita
+            header_left,
+            text="Gerencie seus horarios e procedimentos",
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            text_color=colors.MUTED,
+        ).pack(anchor="w", pady=(3, 0))
+
         buttons_right_frame = ctk.CTkFrame(header_area, fg_color="transparent")
         buttons_right_frame.pack(side="right")
 
-        btn_liberar_horarios = ctk.CTkButton(
+        ctk.CTkButton(
             buttons_right_frame,
-            text="Liberar Horários",
-            fg_color=colors.PURPLE_ACCENT,
-            hover_color=colors.PURPLE_ACCENT_HOVER,
+            text="Liberar Horarios",
+            fg_color=colors.PURPLE,
+            hover_color=colors.PURPLE_HOVER,
             text_color="white",
             font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
-            corner_radius=10,
-            width=150, height=45,
-            command=self.abrir_modal_liberar_horarios
-        )
-        btn_liberar_horarios.pack(side="left", padx=(0, 15))
+            corner_radius=16,
+            width=160,
+            height=48,
+            command=self.abrir_modal_liberar_horarios,
+        ).pack(side="left", padx=(0, 12))
 
-        btn_marcar_retorno = ctk.CTkButton(
+        ctk.CTkButton(
+            buttons_right_frame,
+            text="Calendario",
+            fg_color=colors.GRAY_LIGHT,
+            hover_color="#E5E7EB",
+            text_color=colors.TEXT,
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            corner_radius=16,
+            width=130,
+            height=48,
+            command=self.abrir_calendario_completo,
+        ).pack(side="left", padx=(0, 12))
+
+        ctk.CTkButton(
             buttons_right_frame,
             text="+ Marcar retorno",
             fg_color=colors.ACCENT_GREEN,
             hover_color=colors.ACCENT_GREEN_HOVER,
             text_color="white",
             font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
-            corner_radius=10,
-            width=150, height=45,
-            command=self.abrir_modal_agendamento
-        )
-        btn_marcar_retorno.pack(side="left")
-        
-        # Navegação de mês/semana
-        self._criar_navegacao_semanal(scroll)
-        
-        # Frame dos dias da semana (calendário)
-        self._criar_calendario(scroll)
-        
-        # Título "Compromissos da Semana"
-        compromissos_titulo_frame = ctk.CTkFrame(scroll, fg_color="transparent")
-        compromissos_titulo_frame.pack(fill="x", pady=(30, 10))
-        ctk.CTkLabel(
-            compromissos_titulo_frame, 
-            text="Compromissos da Semana",
-            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
-            text_color=colors.TEXT_DARK
-        ).pack(anchor="w")
-        
-        # Frame de consultas (Compromissos)
-        # Ajuste: A imagem de referência tem um quadro pontilhado ou tracejado quando vazio.
-        # Para simular isso, faremos um frame com border_width, border_color e border_spacing=0
-        # e um dash_pattern. CustomTkinter não suporta dash_pattern diretamente,
-        # então vamos usar um frame simples com a cor de borda.
-        self.lista_consultas = ctk.CTkFrame(scroll, fg_color="white", 
-                                            corner_radius=20, border_width=1, border_color=colors.NEUTRAL_200) # Bordas mais sutis
-        self.lista_consultas.pack(fill="both", expand=True, pady=(0, 20))
-        
-        # Carrega as consultas para o dia selecionado por padrão
-        self.consultas_selecionadas = self.controller.buscar_consultas_do_dia(
-            self.dia_selecionado, self.mes_atual, self.ano_atual
-        )
-        self._preencher_consultas()
-
+            corner_radius=16,
+            width=160,
+            height=48,
+            command=self.abrir_modal_agendamento,
+        ).pack(side="left")
 
     def _criar_navegacao_semanal(self, parent):
-        """Cria a barra de navegação semanal com mês e botões de seta."""
-        nav_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        nav_frame.pack(fill="x", pady=(0, 20))
-        
-        # Rótulo do Mês/Ano (Junho 2026)
-        mes_nome = calendar.month_name[self.mes_atual]
-        self.label_mes = ctk.CTkLabel(
-            nav_frame, 
-            text=f"{mes_nome} {self.ano_atual}", 
-            font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"),
-            text_color=colors.TEXT_DARK
+        nav_frame = ctk.CTkFrame(
+            parent,
+            fg_color=colors.CARD,
+            corner_radius=28,
+            border_width=1,
+            border_color=colors.BORDER,
         )
-        self.label_mes.pack(side="left", padx=(0, 20))
-        
-        # Botões de navegação da semana
-        nav_buttons_frame = ctk.CTkFrame(nav_frame, fg_color="transparent")
-        nav_buttons_frame.pack(side="left", padx=(0,0)) # Adiciona um frame para os botões de nav
+        nav_frame.pack(fill="x", pady=(0, 10))
 
-        btn_prev = ctk.CTkButton(
-            nav_buttons_frame, text="<", width=30, height=30, 
-            command=self._semana_anterior, 
-            font=ctk.CTkFont(family="Helvetica", size=16),
-            fg_color="transparent", 
-            text_color=colors.NEUTRAL_500,
-            hover_color=colors.NEUTRAL_100,
-            corner_radius=8
-        )
-        btn_prev.pack(side="left", padx=(0, 5))
-        
-        btn_next = ctk.CTkButton(
-            nav_buttons_frame, text=">", width=30, height=30, 
-            command=self._semana_proxima, 
-            font=ctk.CTkFont(family="Helvetica", size=16),
-            fg_color="transparent", 
-            text_color=colors.NEUTRAL_500,
-            hover_color=colors.NEUTRAL_100,
-            corner_radius=8
-        )
-        btn_next.pack(side="left")
+        top = ctk.CTkFrame(nav_frame, fg_color="transparent")
+        top.pack(fill="x", padx=24, pady=(22, 12))
 
+        mes_nome = self._mes_nome(self.mes_atual)
+        ctk.CTkLabel(
+            top,
+            text=f"{mes_nome} {self.ano_atual}",
+            font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"),
+            text_color=colors.TEXT,
+        ).pack(side="left")
+
+        nav_buttons_frame = ctk.CTkFrame(top, fg_color="transparent")
+        nav_buttons_frame.pack(side="right")
+
+        for texto, comando in (("<", self._semana_anterior), (">", self._semana_proxima)):
+            ctk.CTkButton(
+                nav_buttons_frame,
+                text=texto,
+                width=42,
+                height=42,
+                command=comando,
+                fg_color="transparent",
+                text_color=colors.MUTED,
+                hover_color=colors.GRAY_LIGHT,
+                corner_radius=21,
+                font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            ).pack(side="left", padx=(8, 0))
+
+        self._dias_container = nav_frame
 
     def _criar_calendario(self, parent):
-        """Cria o calendário com apenas 7 dias (semana)"""
-        dias_frame = ctk.CTkFrame(
-            parent, 
-            fg_color="white", # Fundo branco para o container dos dias
-            corner_radius=20, # Raio maior para o container principal
-            border_width=0
-        )
-        dias_frame.pack(fill="x", pady=(0, 30))
-        dias_frame.columnconfigure((0,1,2,3,4,5,6), weight=1, uniform="week_days")
-        
-        # Headers dos dias da semana
-        dias_semana_nomes = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"]
-        for i, dia_nome in enumerate(dias_semana_nomes):
-            ctk.CTkLabel(
-                dias_frame, 
-                text=dia_nome, 
-                font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
-                text_color=colors.NEUTRAL_500
-            ).grid(row=0, column=i, pady=(15, 5), padx=5)
-        
+        dias_frame = ctk.CTkFrame(self._dias_container, fg_color="transparent")
+        dias_frame.pack(fill="x", padx=20, pady=(0, 24))
+        dias_frame.columnconfigure((0, 1, 2, 3, 4, 5, 6), weight=1, uniform="week_days")
+
         dias_com_consultas = self.controller.dias_com_consultas_na_semana(self.semana_atual_start_date)
-        
-        for dia_semana_idx in range(7):
+        nomes_dias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"]
+
+        for dia_semana_idx, dia_nome in enumerate(nomes_dias):
             data_dia = self.semana_atual_start_date + timedelta(days=dia_semana_idx)
-            
-            # Garante que o dia exibido é do mês atual ou simulado
-            if data_dia.month != self.mes_atual or data_dia.year != self.ano_atual:
-                # Se for de outro mês, podemos pular ou escurecer
-                # Para simular a imagem, onde todos os dias estão visíveis e ativos,
-                # vamos prosseguir, mas em um calendário completo, aqui haveria tratamento.
-                pass 
+            self._criar_dia_button(
+                dias_frame,
+                data_dia,
+                dia_nome,
+                dia_semana_idx,
+                data_dia.date() in dias_com_consultas,
+            )
 
-            self._criar_dia_button(dias_frame, data_dia, dia_semana_idx, 
-                                  data_dia.date() in dias_com_consultas)
+    def _criar_dia_button(self, parent, data_dia, dia_nome, dia_semana_idx, tem_consulta):
+        selecionado = (
+            data_dia.day == self.dia_selecionado
+            and data_dia.month == self.mes_atual
+            and data_dia.year == self.ano_atual
+        )
+        hoje = data_dia.date() == datetime.now().date()
 
-    def _criar_dia_button(self, parent, data_dia: datetime, dia_semana_idx: int, tem_consulta: bool):
-        """Cria um botão para cada dia da semana com o novo estilo."""
-        eh_hoje = self.utils.eh_hoje(data_dia.day, data_dia.month, data_dia.year)
-        
-        # Use um frame para o efeito de "card" e sombra. CustomTkinter não tem sombra nativa.
-        # Simulação de sombra: um frame maior e escuro atrás do frame do dia.
-        # Isso é uma técnica de UI/UX, pode ser complexo replicar perfeitamente sem libs extras.
-        # Para a imagem, parece que a sombra é apenas no dia selecionado.
+        fg_color = colors.ACCENT_GREEN if selecionado else "#E8FAFA" if hoje else colors.GRAY_LIGHT
+        text_color = "white" if selecionado else colors.ACCENT_GREEN if hoje else colors.MUTED
+        border_color = colors.ACCENT_GREEN if hoje or tem_consulta else colors.GRAY_LIGHT
 
-        # O botão do dia em si
         btn = ctk.CTkButton(
-            parent, 
-            text=str(data_dia.day), 
-            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
-            fg_color=colors.GRAY_LIGHT, # Fundo cinza claro para dias não selecionados
-            text_color=colors.CALENDAR_DAY_TEXT_NORMAL, # Texto preto para dias não selecionados
-            hover_color=colors.NEUTRAL_100, # Hover sutil
-            border_width=0,
-            corner_radius=10, # Raio menor para o botão do dia
-            height=60,
-            command=lambda: self._selecionar_dia(data_dia.day, data_dia)
+            parent,
+            text=f"{dia_nome}\n{data_dia.day}",
+            font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
+            fg_color=fg_color,
+            text_color=text_color,
+            hover_color=colors.ACCENT_GREEN_HOVER if selecionado else "#E5F7F6",
+            border_width=2 if hoje or tem_consulta else 0,
+            border_color=border_color,
+            corner_radius=22,
+            height=78,
+            command=lambda data=data_dia: self._selecionar_dia(data),
         )
-        btn.grid(row=1, column=dia_semana_idx, pady=8, padx=5, sticky="nsew") # Padding ajustado
+        btn.grid(row=0, column=dia_semana_idx, pady=4, padx=6, sticky="nsew")
 
-        # Guarda a referência ao botão e seus dados
-        self.dias_buttons[data_dia.strftime("%Y-%m-%d")] = {
-            'button': btn,
-            'tem_consulta': tem_consulta,
-            'eh_hoje': eh_hoje,
-            'data': data_dia
-        }
-        
-        # Aplica o estilo inicial (incluindo o dia selecionado e "hoje")
-        self._atualizar_estilo_dia(data_dia.strftime("%Y-%m-%d"))
-
-    def _atualizar_estilo_dia(self, data_key: str):
-        """Atualiza o estilo de um botão de dia com base no estado."""
-        if data_key not in self.dias_buttons:
-            return
-            
-        btn_info = self.dias_buttons[data_key]
-        btn = btn_info['button']
-        data_dia = btn_info['data']
-        
-        # Resetar o estilo para o padrão de um dia não selecionado
-        btn.configure(
-            fg_color=colors.GRAY_LIGHT, # Fundo cinza claro
-            text_color=colors.CALENDAR_DAY_TEXT_NORMAL, # Texto preto
-            border_width=0, 
-            hover_color=colors.NEUTRAL_100
-        )
-        
-        # Lógica para o dia selecionado (com efeito de sombra simulado)
-        if data_dia.day == self.dia_selecionado and data_dia.month == self.mes_atual and data_dia.year == self.ano_atual:
-            # Para a sombra, o CustomTkinter não suporta diretamente.
-            # Uma forma seria criar um frame atrás do botão com um padding,
-            # mas isso adiciona complexidade ao grid e pode afetar o layout.
-            # Vamos simular a cor mais escura da sombra com uma borda interna
-            # ou um fg_color ligeiramente diferente no hover, ou simplesmente
-            # focar no fg_color e text_color.
-            
-            # Para simular a "sombra" ou o "glow" visto na imagem, que é complexo no CTk.
-            # Podemos tentar uma borda mais grossa na cor da sombra.
-            btn.configure(
-                fg_color=colors.ACCENT_GREEN, 
-                text_color="white", 
-                corner_radius=10,
-                border_width=3, # Borda para simular a sombra
-                border_color=colors.SHADOW_COLOR # Cor da "sombra"
-            )
-        elif btn_info['eh_hoje']:
-            # HOJE (NÃO SELECIONADO): Borda verde-água sutil
-            btn.configure(
-                fg_color=colors.GRAY_LIGHT, # Fundo cinza claro como padrão
-                text_color=colors.ACCENT_GREEN, # Texto na cor verde-água
-                border_width=2, 
-                border_color=colors.ACCENT_GREEN, 
-                corner_radius=10
-            )
-        # Se você quiser adicionar um indicador para 'tem_consulta' (a bolinha, por exemplo),
-        # precisaria de um frame mais complexo dentro do grid do dia, com um label para o número
-        # e outro para a bolinha. Para a imagem atual, não há um indicador visível além da seleção.
-
-    def _selecionar_dia(self, numero_dia, data_dia):
-        """Seleciona um dia e carrega as consultas"""
-        # Desseleciona o dia antigo
-        data_key_antigo = datetime(self.ano_atual, self.mes_atual, self.dia_selecionado).strftime("%Y-%m-%d")
-        if data_key_antigo in self.dias_buttons:
-            self._atualizar_estilo_dia(data_key_antigo)
-        
-        self.dia_selecionado = numero_dia
+    def _selecionar_dia(self, data_dia):
+        self.dia_selecionado = data_dia.day
         self.mes_atual = data_dia.month
         self.ano_atual = data_dia.year
-
-        # Atualiza o estilo do novo dia selecionado
-        self._atualizar_estilo_dia(data_dia.strftime("%Y-%m-%d"))
-        
-        self.consultas_selecionadas = self.controller.buscar_consultas_do_dia(
-            numero_dia, self.mes_atual, self.ano_atual
-        )
-        self._preencher_consultas()
+        self.tela_agenda()
 
     def _semana_anterior(self):
-        """Navega para a semana anterior"""
         self.semana_atual_start_date -= timedelta(days=7)
-        self.mes_atual = self.semana_atual_start_date.month
-        self.ano_atual = self.semana_atual_start_date.year
-        self.dia_selecionado = self.semana_atual_start_date.day # Sugere o primeiro dia da semana como selecionado
-        self.tela_agenda()
+        self._selecionar_dia(self.semana_atual_start_date)
 
     def _semana_proxima(self):
-        """Navega para a próxima semana"""
         self.semana_atual_start_date += timedelta(days=7)
-        self.mes_atual = self.semana_atual_start_date.month
-        self.ano_atual = self.semana_atual_start_date.year
-        self.dia_selecionado = self.semana_atual_start_date.day # Sugere o primeiro dia da semana como selecionado
+        self._selecionar_dia(self.semana_atual_start_date)
+
+    def abrir_calendario_completo(self):
+        if self.calendario_modal and self.calendario_modal.winfo_exists():
+            self.calendario_modal.lift()
+            return
+
+        self.calendario_mes = self.mes_atual
+        self.calendario_ano = self.ano_atual
+
+        self.calendario_modal = ctk.CTkToplevel(self.content)
+        self.calendario_modal.title("Calendario Completo")
+        self.calendario_modal.geometry("760x650")
+        self.calendario_modal.minsize(680, 580)
+        self.calendario_modal.configure(fg_color="white")
+        self.calendario_modal.grab_set()
+        self.calendario_modal.focus_set()
+
+        self.calendario_corpo = ctk.CTkFrame(self.calendario_modal, fg_color="transparent")
+        self.calendario_corpo.pack(fill="both", expand=True, padx=32, pady=28)
+
+        self._renderizar_calendario_completo()
+
+    def _renderizar_calendario_completo(self):
+        for widget in self.calendario_corpo.winfo_children():
+            widget.destroy()
+
+        header = ctk.CTkFrame(self.calendario_corpo, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 20))
+
+        ctk.CTkLabel(
+            header,
+            text=f"{self._mes_nome(self.calendario_mes)} {self.calendario_ano}",
+            font=ctk.CTkFont(family="Helvetica", size=28, weight="bold"),
+            text_color=colors.TEXT,
+        ).pack(side="left")
+
+        botoes = ctk.CTkFrame(header, fg_color="transparent")
+        botoes.pack(side="right")
+
+        ctk.CTkButton(
+            botoes,
+            text="<",
+            width=42,
+            height=42,
+            fg_color=colors.GRAY_LIGHT,
+            hover_color="#E5E7EB",
+            text_color=colors.MUTED,
+            corner_radius=21,
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            command=lambda: self._mudar_mes_calendario(-1),
+        ).pack(side="left", padx=(0, 8))
+
+        ctk.CTkButton(
+            botoes,
+            text=">",
+            width=42,
+            height=42,
+            fg_color=colors.GRAY_LIGHT,
+            hover_color="#E5E7EB",
+            text_color=colors.MUTED,
+            corner_radius=21,
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            command=lambda: self._mudar_mes_calendario(1),
+        ).pack(side="left", padx=(0, 8))
+
+        ctk.CTkButton(
+            botoes,
+            text="Fechar",
+            width=90,
+            height=42,
+            fg_color=colors.DANGER_BG,
+            hover_color="#FECACA",
+            text_color=colors.DANGER_TEXT,
+            corner_radius=14,
+            font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
+            command=self.calendario_modal.destroy,
+        ).pack(side="left")
+
+        grade = ctk.CTkFrame(
+            self.calendario_corpo,
+            fg_color=colors.CARD,
+            corner_radius=26,
+            border_width=1,
+            border_color=colors.BORDER,
+        )
+        grade.pack(fill="both", expand=True)
+        grade.columnconfigure((0, 1, 2, 3, 4, 5, 6), weight=1, uniform="calendar_days")
+
+        nomes_dias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"]
+        for coluna, nome in enumerate(nomes_dias):
+            ctk.CTkLabel(
+                grade,
+                text=nome,
+                font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"),
+                text_color=colors.MUTED,
+            ).grid(row=0, column=coluna, padx=8, pady=(18, 8), sticky="ew")
+
+        resumo_mes = self.controller.resumo_calendario_mes(self.calendario_mes, self.calendario_ano)
+
+        for linha, semana in enumerate(resumo_mes["semanas"], start=1):
+            grade.rowconfigure(linha, weight=1, uniform="calendar_rows")
+            for coluna, dia_info in enumerate(semana):
+                self._criar_dia_mes_button(grade, dia_info, linha, coluna)
+
+    def _criar_dia_mes_button(self, parent, dia_info, linha, coluna):
+        data_dia = dia_info["data"]
+        tem_consulta = dia_info["tem_consulta"]
+        data_atual = datetime.now().date()
+        data_selecionada = datetime(self.ano_atual, self.mes_atual, self.dia_selecionado).date()
+        fora_do_mes = dia_info["fora_do_mes"]
+        selecionado = data_dia == data_selecionada
+        hoje = data_dia == data_atual
+
+        fg_color = colors.ACCENT_GREEN if selecionado else "#E8FAFA" if hoje else colors.GRAY_LIGHT
+        text_color = "white" if selecionado else colors.ACCENT_GREEN if hoje or tem_consulta else colors.TEXT
+        if fora_do_mes:
+            fg_color = "#FAFAFA"
+            text_color = "#CBD5E1"
+
+        texto = str(data_dia.day)
+        if tem_consulta and not fora_do_mes:
+            texto = f"{data_dia.day}\n{dia_info['total_consultas']}"
+
+        ctk.CTkButton(
+            parent,
+            text=texto,
+            height=70,
+            fg_color=fg_color,
+            hover_color="#E5F7F6" if not fora_do_mes else "#FAFAFA",
+            text_color=text_color,
+            border_width=2 if (hoje or tem_consulta) and not fora_do_mes else 0,
+            border_color=colors.ACCENT_GREEN if hoje or tem_consulta else colors.GRAY_LIGHT,
+            corner_radius=18,
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            command=lambda data=data_dia: self._selecionar_dia_calendario(data),
+        ).grid(row=linha, column=coluna, padx=8, pady=8, sticky="nsew")
+
+    def _mudar_mes_calendario(self, direcao):
+        novo_mes = self.calendario_mes + direcao
+        if novo_mes < 1:
+            self.calendario_mes = 12
+            self.calendario_ano -= 1
+        elif novo_mes > 12:
+            self.calendario_mes = 1
+            self.calendario_ano += 1
+        else:
+            self.calendario_mes = novo_mes
+
+        self._renderizar_calendario_completo()
+
+    def _selecionar_dia_calendario(self, data_dia):
+        data_datetime = datetime(data_dia.year, data_dia.month, data_dia.day)
+        self.semana_atual_start_date = self._obter_semana_atual_start_date(data_datetime)
+        self.dia_selecionado = data_dia.day
+        self.mes_atual = data_dia.month
+        self.ano_atual = data_dia.year
+        if self.calendario_modal and self.calendario_modal.winfo_exists():
+            self.calendario_modal.destroy()
         self.tela_agenda()
 
+    def _carregar_consultas_da_semana(self):
+        self.consultas_selecionadas = self.controller.buscar_consultas_da_semana(self.semana_atual_start_date)
+        self._preencher_consultas()
+
     def _preencher_consultas(self):
-        """Preenche a lista com as consultas do dia"""
         for widget in self.lista_consultas.winfo_children():
             widget.destroy()
-        
+
         if not self.consultas_selecionadas:
             self._mostrar_mensagem_vazia()
             return
-        
-        for consulta in self.consultas_selecionadas:
-            self._criar_card_agendamento(
-                self.lista_consultas,
-                consulta.get('HORARIO_CONSULTA', 'N/A'),
-                consulta.get('TIPO_DE_CONSULTA', 'Consulta'),
-                f"Pet ID: {consulta.get('ID_PET', 'N/A')} | Vet ID: {consulta.get('ID_VETERINARIO', 'N/A')}"
-            )
 
-    def _criar_card_agendamento(self, master, hora, titulo, subtitulo):
-        """Cria card de consulta com o novo estilo."""
+        for consulta in self.consultas_selecionadas:
+            self._criar_card_agendamento(self.lista_consultas, consulta)
+
+    def _criar_card_agendamento(self, master, consulta):
+        hora = self._formatar_hora(consulta.get("HORARIO_CONSULTA"))
+        data = self._formatar_data_curta(consulta.get("DATA_CONSULTA"))
+        titulo = consulta.get("TIPO_DE_CONSULTA") or "Consulta"
+        pet_nome = consulta.get("NOME_PET") or f"Pet ID: {consulta.get('ID_PET', 'N/A')}"
+        tutor_nome = consulta.get("NOME_TUTOR") or "Nao informado"
+        status = consulta.get("STATUS") or "Sem status"
+
         card = ctk.CTkFrame(
-            master, 
-            fg_color="white", 
-            corner_radius=15, 
-            border_width=1, 
-            border_color=colors.NEUTRAL_200
+            master,
+            fg_color=colors.CARD,
+            corner_radius=28,
+            border_width=1,
+            border_color=colors.BORDER,
         )
-        card.pack(fill="x", pady=8, padx=15)
-        
+        card.pack(fill="x", pady=8)
+
         content = ctk.CTkFrame(card, fg_color="transparent")
-        content.pack(fill="x", padx=15, pady=12)
-        
+        content.pack(fill="x", padx=22, pady=18)
+
+        data_frame = ctk.CTkFrame(content, fg_color="transparent", width=96)
+        data_frame.pack(side="left", padx=(0, 20), fill="y")
+        data_frame.pack_propagate(False)
+
         ctk.CTkLabel(
-            content, 
-            text="🕒", 
-            font=("Arial", 22),
-            text_color=colors.NEUTRAL_500
-        ).pack(side="left", padx=(0, 15))
-        
+            data_frame,
+            text=data,
+            font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+            text_color=colors.PURPLE,
+        ).pack(anchor="center")
+
+        ctk.CTkLabel(
+            data_frame,
+            text=hora,
+            font=ctk.CTkFont(family="Helvetica", size=24, weight="bold"),
+            text_color=colors.TEXT,
+        ).pack(anchor="center", pady=(4, 0))
+
         info_frame = ctk.CTkFrame(content, fg_color="transparent")
         info_frame.pack(side="left", fill="x", expand=True)
-        
+
+        title_row = ctk.CTkFrame(info_frame, fg_color="transparent")
+        title_row.pack(fill="x")
+
         ctk.CTkLabel(
-            info_frame, 
-            text=str(hora), 
-            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"), 
-            text_color=colors.TEXT_PRIMARY
-        ).pack(anchor="w")
+            title_row,
+            text=titulo,
+            font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"),
+            text_color=colors.TEXT,
+        ).pack(side="left", anchor="w")
+
+        badge_bg, badge_text = self._cores_status(status)
         ctk.CTkLabel(
-            info_frame, 
-            text=titulo, 
-            font=ctk.CTkFont(family="Helvetica", size=13), 
-            text_color=colors.TEXT_PRIMARY
-        ).pack(anchor="w")
+            title_row,
+            text=status,
+            fg_color=badge_bg,
+            text_color=badge_text,
+            corner_radius=12,
+            font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+            width=96,
+            height=26,
+        ).pack(side="left", padx=(12, 0))
+
         ctk.CTkLabel(
-            info_frame, 
-            text=subtitulo, 
-            font=ctk.CTkFont(family="Helvetica", size=11), 
-            text_color=colors.TEXT_SECONDARY
-        ).pack(anchor="w")
+            info_frame,
+            text=f"{pet_nome}  |  Tutor: {tutor_nome}",
+            font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
+            text_color=colors.MUTED,
+        ).pack(anchor="w", pady=(5, 0))
+
+        acoes = ctk.CTkFrame(info_frame, fg_color="transparent")
+        acoes.pack(anchor="w", pady=(14, 0))
+
+        status_norm = self._status_normalizado(status)
+        if status_norm == "pendente":
+            self._criar_botao_acao(acoes, "Aceitar", colors.SUCCESS_TEXT, "#15803D", lambda: self._mudar_status(consulta, "Confirmado"))
+            self._criar_botao_acao(acoes, "Rejeitar", colors.DANGER_TEXT, "#991B1B", lambda: self._mudar_status(consulta, "Cancelado"))
+        if status_norm == "confirmado":
+            self._criar_botao_acao(acoes, "Finalizar Consulta", colors.PURPLE, colors.PURPLE_HOVER, lambda: self._mudar_status(consulta, "Concluido"))
+
+        self._criar_botao_acao(acoes, "Detalhes", colors.GRAY_LIGHT, "#E5E7EB", lambda: self._abrir_modal_detalhes(consulta), text_color=colors.MUTED)
+        self._criar_botao_acao(acoes, "Excluir", colors.DANGER_BG, "#FECACA", lambda: self._confirmar_exclusao(consulta), text_color=colors.DANGER_TEXT)
+
+    def _criar_botao_acao(self, parent, texto, cor, hover, comando, text_color="white"):
+        ctk.CTkButton(
+            parent,
+            text=texto,
+            fg_color=cor,
+            hover_color=hover,
+            text_color=text_color,
+            height=34,
+            corner_radius=12,
+            font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"),
+            command=comando,
+        ).pack(side="left", padx=(0, 8))
+
+    def _cores_status(self, status):
+        status_normalizado = self._status_normalizado(status)
+        if status_normalizado in ("confirmado", "concluido"):
+            return colors.SUCCESS_BG, colors.SUCCESS_TEXT
+        if status_normalizado == "pendente":
+            return colors.WARNING_BG, colors.WARNING_TEXT
+        if status_normalizado == "cancelado":
+            return colors.DANGER_BG, colors.DANGER_TEXT
+        return colors.GRAY_LIGHT, colors.MUTED
 
     def _mostrar_mensagem_vazia(self):
-        """Mostra mensagem quando não há consultas com o novo estilo."""
-        for widget in self.lista_consultas.winfo_children():
-            widget.destroy()
-        
-        msg_frame = ctk.CTkFrame(self.lista_consultas, fg_color="transparent")
-        msg_frame.pack(fill="both", expand=True)
-        
-        ctk.CTkLabel(
-            msg_frame, 
-            text="📅", 
-            font=("Arial", 60),
-            text_color=colors.NEUTRAL_300
-        ).pack(pady=(40, 10))
+        msg_frame = ctk.CTkFrame(
+            self.lista_consultas,
+            fg_color=colors.CARD,
+            corner_radius=30,
+            border_width=2,
+            border_color=colors.BORDER,
+        )
+        msg_frame.pack(fill="x", expand=True)
 
         ctk.CTkLabel(
-            msg_frame, 
-            text="Nenhuma consulta agendada para este período.", 
-            font=ctk.CTkFont(family="Helvetica", size=14), 
-            text_color=colors.TEXT_SECONDARY
-        ).pack(pady=(0, 40))
-        
+            msg_frame,
+            text="Nenhuma consulta agendada para este periodo.",
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
+            text_color=colors.MUTED,
+        ).pack(pady=64)
+
+    def _status_normalizado(self, status):
+        return (status or "").lower().replace("í", "i").replace("Ã­", "i")
+
+    def _formatar_hora(self, valor):
+        if not valor:
+            return "--:--"
+        if hasattr(valor, "strftime"):
+            return valor.strftime("%H:%M")
+        return str(valor)[:5]
+
+    def _como_data(self, valor):
+        if not valor:
+            return None
+        if hasattr(valor, "date"):
+            return valor.date()
+        return valor
+
+    def _formatar_data_curta(self, valor):
+        if not valor:
+            return "--"
+        data = self._como_data(valor)
+        meses = ["", "JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
+        return f"{data.day:02d} {meses[data.month]}"
+
+    def _formatar_data_longa(self, valor):
+        if not valor:
+            return "--"
+        data = self._como_data(valor)
+        return data.strftime("%d/%m/%Y")
+
+    def _mes_nome(self, mes):
+        nomes = ["", "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+        return nomes[mes] if 1 <= mes <= 12 else calendar.month_name[mes]
+
+    def _mudar_status(self, consulta, novo_status):
+        status_atual = self._status_normalizado(consulta.get("STATUS"))
+        if novo_status == "Confirmado" and status_atual != "pendente":
+            messagebox.showwarning("Agenda", "Apenas consultas pendentes podem ser aceitas.")
+            return
+        if novo_status == "Cancelado" and status_atual != "pendente":
+            messagebox.showwarning("Agenda", "Apenas consultas pendentes podem ser rejeitadas.")
+            return
+        if novo_status == "Concluido" and status_atual != "confirmado":
+            messagebox.showwarning("Agenda", "Apenas consultas confirmadas podem ser finalizadas.")
+            return
+
+        sucesso, mensagem = self.controller.atualizar_status_consulta(consulta.get("id"), novo_status)
+        if sucesso:
+            self.tela_agenda()
+            messagebox.showinfo("Agenda", mensagem)
+        else:
+            messagebox.showerror("Agenda", mensagem)
+
+    def _confirmar_exclusao(self, consulta):
+        pet_nome = consulta.get("NOME_PET") or "este pet"
+        confirmar = messagebox.askyesno(
+            "Confirmar exclusao",
+            f"Tem certeza que deseja excluir a consulta de {pet_nome}? Esta acao nao pode ser desfeita.",
+        )
+        if not confirmar:
+            return
+
+        sucesso, mensagem = self.controller.excluir_consulta(consulta.get("id"))
+        if sucesso:
+            self.tela_agenda()
+            messagebox.showinfo("Agenda", mensagem)
+        else:
+            messagebox.showerror("Agenda", mensagem)
+
+    def _abrir_modal_detalhes(self, consulta):
+        modal = ctk.CTkToplevel(self.content)
+        modal.title("Detalhes do Agendamento")
+        modal.geometry("520x500")
+        modal.resizable(False, False)
+        modal.configure(fg_color="white")
+        modal.grab_set()
+        modal.focus_set()
+
+        header = ctk.CTkFrame(modal, fg_color=colors.ACCENT_GREEN, corner_radius=0)
+        header.pack(fill="x")
+
+        ctk.CTkLabel(
+            header,
+            text=consulta.get("TIPO_DE_CONSULTA") or "Consulta",
+            font=ctk.CTkFont(family="Helvetica", size=24, weight="bold"),
+            text_color="white",
+        ).pack(anchor="w", padx=32, pady=(28, 4))
+
+        ctk.CTkLabel(
+            header,
+            text="Informacoes do agendamento",
+            font=ctk.CTkFont(family="Helvetica", size=13),
+            text_color="#E8FFFF",
+        ).pack(anchor="w", padx=32, pady=(0, 28))
+
+        body = ctk.CTkFrame(modal, fg_color="transparent")
+        body.pack(fill="both", expand=True, padx=32, pady=28)
+        body.columnconfigure((0, 1), weight=1)
+
+        self._detalhe_item(body, "Paciente", consulta.get("NOME_PET") or "Nao informado", 0, 0)
+        self._detalhe_item(body, "Tutor", consulta.get("NOME_TUTOR") or "Nao informado", 0, 1)
+        self._detalhe_item(body, "Data", self._formatar_data_longa(consulta.get("DATA_CONSULTA")), 1, 0)
+        self._detalhe_item(body, "Hora", self._formatar_hora(consulta.get("HORARIO_CONSULTA")), 1, 1)
+        self._detalhe_item(body, "Status", consulta.get("STATUS") or "Sem status", 2, 0)
+
+        ctk.CTkLabel(
+            body,
+            text="OBSERVACOES",
+            font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+            text_color=colors.MUTED,
+        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(18, 8))
+
+        obs = consulta.get("OBSERVACOES") or "Nenhuma observacao."
+        ctk.CTkLabel(
+            body,
+            text=obs,
+            fg_color="#E8FAFA",
+            text_color=colors.MUTED,
+            corner_radius=14,
+            justify="left",
+            anchor="w",
+            wraplength=420,
+            height=80,
+            font=ctk.CTkFont(family="Helvetica", size=13),
+        ).grid(row=4, column=0, columnspan=2, sticky="ew", pady=(0, 20))
+
+        ctk.CTkButton(
+            body,
+            text="Fechar",
+            height=46,
+            fg_color=colors.GRAY_LIGHT,
+            hover_color="#E5E7EB",
+            text_color=colors.MUTED,
+            corner_radius=14,
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            command=modal.destroy,
+        ).grid(row=5, column=0, columnspan=2, sticky="ew")
+
+    def _detalhe_item(self, parent, label, valor, row, column):
+        frame = ctk.CTkFrame(parent, fg_color="transparent")
+        frame.grid(row=row, column=column, sticky="ew", padx=(0, 12) if column == 0 else (12, 0), pady=(0, 14))
+
+        ctk.CTkLabel(
+            frame,
+            text=label.upper(),
+            font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+            text_color=colors.MUTED,
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            frame,
+            text=valor,
+            font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
+            text_color=colors.TEXT,
+        ).pack(anchor="w", pady=(3, 0))
+
     def abrir_modal_agendamento(self):
-        """Abre modal de novo agendamento (Marcar Retorno)"""
-        MockModalAgendamento(self.content, callback_refresh=self.tela_agenda) # Usando o mock
+        ModalAgendamento(
+            self.content,
+            callback_refresh=self.tela_agenda,
+            id_veterinario=self.id_veterinario,
+        )
 
     def abrir_modal_liberar_horarios(self):
-        """Implementar a lógica para liberar horários."""
-        messagebox.showinfo("Liberar Horários", "Funcionalidade 'Liberar Horários' a ser implementada!")
+        self.modal_horarios = ctk.CTkToplevel(self.content)
+        self.modal_horarios.title("Liberar Horarios")
+        self.modal_horarios.geometry("500x520")
+        self.modal_horarios.resizable(False, False)
+        self.modal_horarios.configure(fg_color="white")
+        self.modal_horarios.grab_set()
+        self.modal_horarios.focus_set()
+
+        header = ctk.CTkFrame(self.modal_horarios, fg_color="transparent")
+        header.pack(fill="x", padx=40, pady=(36, 24))
+
+        ctk.CTkLabel(
+            header,
+            text="Liberar Horarios",
+            font=ctk.CTkFont(family="Helvetica", size=26, weight="bold"),
+            text_color=colors.TEXT,
+        ).pack(anchor="w")
+        ctk.CTkLabel(
+            header,
+            text="Crie vagas disponiveis para os tutores",
+            font=ctk.CTkFont(family="Helvetica", size=13),
+            text_color=colors.MUTED,
+        ).pack(anchor="w", pady=(4, 0))
+
+        ctk.CTkButton(
+            self.modal_horarios,
+            text="X",
+            width=34,
+            height=34,
+            fg_color=colors.GRAY_LIGHT,
+            hover_color="#E5E7EB",
+            text_color=colors.MUTED,
+            corner_radius=17,
+            command=self.modal_horarios.destroy,
+        ).place(relx=0.92, rely=0.06, anchor="center")
+
+        form = ctk.CTkFrame(self.modal_horarios, fg_color="transparent")
+        form.pack(fill="both", expand=True, padx=40)
+
+        self.entry_data_liberar = self._criar_input_horario(
+            form,
+            "Dia da disponibilidade",
+            datetime(self.ano_atual, self.mes_atual, self.dia_selecionado).strftime("%d/%m/%Y"),
+        )
+
+        row = ctk.CTkFrame(form, fg_color="transparent")
+        row.pack(fill="x", pady=(0, 22))
+        row.columnconfigure((0, 1), weight=1)
+
+        col_inicio = ctk.CTkFrame(row, fg_color="transparent")
+        col_inicio.grid(row=0, column=0, padx=(0, 10), sticky="ew")
+        self.entry_inicio_liberar = self._criar_input_horario(col_inicio, "Hora de inicio", "08:00")
+
+        col_fim = ctk.CTkFrame(row, fg_color="transparent")
+        col_fim.grid(row=0, column=1, padx=(10, 0), sticky="ew")
+        self.entry_fim_liberar = self._criar_input_horario(col_fim, "Hora de termino", "18:00")
+
+        ctk.CTkLabel(
+            form,
+            text="INTERVALO ENTRE CONSULTAS",
+            font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+            text_color=colors.MUTED,
+        ).pack(anchor="w", pady=(0, 8))
+
+        self.combo_intervalo_liberar = ctk.CTkComboBox(
+            form,
+            values=["30 minutos", "60 minutos", "15 minutos", "45 minutos"],
+            height=45,
+            fg_color=colors.GRAY_LIGHT,
+            border_width=0,
+            corner_radius=12,
+            button_color=colors.GRAY_LIGHT,
+            button_hover_color="#E5E7EB",
+            text_color=colors.TEXT,
+            font=ctk.CTkFont(family="Helvetica", size=12),
+        )
+        self.combo_intervalo_liberar.pack(fill="x", pady=(0, 22))
+        self.combo_intervalo_liberar.set("30 minutos")
+
+        self.label_feedback_liberar = ctk.CTkLabel(
+            form,
+            text="",
+            font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"),
+            text_color=colors.MUTED,
+        )
+        self.label_feedback_liberar.pack(fill="x", pady=(0, 12))
+
+        botoes = ctk.CTkFrame(self.modal_horarios, fg_color="transparent")
+        botoes.pack(fill="x", padx=40, pady=(0, 30))
+        botoes.columnconfigure((0, 1), weight=1)
+
+        ctk.CTkButton(
+            botoes,
+            text="Cancelar",
+            height=48,
+            fg_color=colors.GRAY_LIGHT,
+            hover_color="#E5E7EB",
+            text_color=colors.MUTED,
+            corner_radius=12,
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            command=self.modal_horarios.destroy,
+        ).grid(row=0, column=0, padx=(0, 10), sticky="ew")
+
+        ctk.CTkButton(
+            botoes,
+            text="Criar vagas",
+            height=48,
+            fg_color=colors.PURPLE,
+            hover_color=colors.PURPLE_HOVER,
+            text_color="white",
+            corner_radius=12,
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            command=self._salvar_horarios_liberados,
+        ).grid(row=0, column=1, padx=(10, 0), sticky="ew")
+
+    def _criar_input_horario(self, parent, label, valor_padrao):
+        ctk.CTkLabel(
+            parent,
+            text=label.upper(),
+            font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+            text_color=colors.MUTED,
+        ).pack(anchor="w", pady=(0, 8))
+
+        entry = ctk.CTkEntry(
+            parent,
+            height=45,
+            fg_color=colors.GRAY_LIGHT,
+            border_width=0,
+            corner_radius=12,
+            text_color=colors.TEXT,
+            font=ctk.CTkFont(family="Helvetica", size=12),
+        )
+        entry.pack(fill="x", pady=(0, 22))
+        entry.insert(0, valor_padrao)
+        return entry
+
+    def _salvar_horarios_liberados(self):
+        intervalo = self.combo_intervalo_liberar.get().split()[0]
+        sucesso, mensagem, criados, existentes = self.controller.liberar_horarios(
+            self.entry_data_liberar.get().strip(),
+            self.entry_inicio_liberar.get().strip(),
+            self.entry_fim_liberar.get().strip(),
+            intervalo,
+        )
+
+        if not sucesso:
+            self.label_feedback_liberar.configure(text=mensagem, text_color=colors.DANGER_TEXT)
+            return
+
+        texto = f"{criados} horario(s) criado(s)."
+        if existentes:
+            texto += f" {existentes} ja existiam."
+        self.label_feedback_liberar.configure(text=texto, text_color=colors.SUCCESS_TEXT)
+        self.content.after(900, self.modal_horarios.destroy)
+        self.content.after(950, self.tela_agenda)
