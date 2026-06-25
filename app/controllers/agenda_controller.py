@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 import calendar
 
 class AgendaController:
-    def __init__(self):
-        pass
+    def __init__(self, vet_id=None):
+        self.vet_id = vet_id
 
     def buscar_consultas_do_dia(self, numero_dia, mes, ano):
         """Busca consultas do banco para um dia específico"""
@@ -15,14 +15,17 @@ class AgendaController:
             data_consulta = f"{ano}-{mes:02d}-{numero_dia:02d}"
             
             query = """
-                SELECT c.id, c.HORARIO_CONSULTA, c.TIPO_DE_CONSULTA, 
-                       c.ID_PET, c.OBSERVACOES, c.DATA_CONSULTA
+                SELECT c.id, c.HORARIO_CONSULTA, c.TIPO_DE_CONSULTA,
+                       c.ID_PET, p.NOME AS NOME_PET, c.OBSERVACOES,
+                       c.DATA_CONSULTA, c.STATUS, c.veterinario_id
                 FROM consulta c
+                LEFT JOIN pet p ON p.id = c.ID_PET
                 WHERE DATE(c.DATA_CONSULTA) = %s
+                  AND (%s IS NULL OR c.veterinario_id = %s)
                 ORDER BY c.HORARIO_CONSULTA ASC
             """
-            
-            cursor.execute(query, (data_consulta,))
+
+            cursor.execute(query, (data_consulta, self.vet_id, self.vet_id))
             consultas = cursor.fetchall()
             closedb(conn)
             return consultas
@@ -37,14 +40,18 @@ class AgendaController:
             cursor = conn.cursor(dictionary=True)
             
             query = """
-                SELECT c.id, c.HORARIO_CONSULTA, c.TIPO_DE_CONSULTA, 
-                       c.ID_PET, c.DATA_CONSULTA
+                SELECT c.id, c.HORARIO_CONSULTA, c.TIPO_DE_CONSULTA,
+                       c.ID_PET, p.NOME AS NOME_PET, c.DATA_CONSULTA,
+                       c.STATUS, c.veterinario_id
                 FROM consulta c
-                WHERE MONTH(c.DATA_CONSULTA) = %s AND YEAR(c.DATA_CONSULTA) = %s
-                ORDER BY c.DATA_CONSULTA ASC
+                LEFT JOIN pet p ON p.id = c.ID_PET
+                WHERE MONTH(c.DATA_CONSULTA) = %s
+                  AND YEAR(c.DATA_CONSULTA) = %s
+                  AND (%s IS NULL OR c.veterinario_id = %s)
+                ORDER BY c.DATA_CONSULTA ASC, c.HORARIO_CONSULTA ASC
             """
-            
-            cursor.execute(query, (mes, ano))
+
+            cursor.execute(query, (mes, ano, self.vet_id, self.vet_id))
             consultas = cursor.fetchall()
             closedb(conn)
             return consultas
@@ -74,8 +81,13 @@ class AgendaController:
             dias_semana = set()
             for consulta in consultas:
                 data_consulta = consulta['DATA_CONSULTA']
-                if data_inicial_semana.date() <= data_consulta.date() < (data_inicial_semana + timedelta(days=7)).date():
-                    dias_semana.add(data_consulta.date())
+                if hasattr(data_consulta, "date"):
+                    data_consulta = data_consulta.date()
+
+                inicio = data_inicial_semana.date()
+                fim = (data_inicial_semana + timedelta(days=7)).date()
+                if inicio <= data_consulta < fim:
+                    dias_semana.add(data_consulta)
 
             return dias_semana
         except Exception as e:

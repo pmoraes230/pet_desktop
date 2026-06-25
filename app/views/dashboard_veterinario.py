@@ -65,7 +65,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         # Controllers (garantindo que não seja None se user_id for None)
         self.vet_ctrl = VetController(self.user_id) if self.user_id else None
-        self.pet_ctrl = PetController()
+        self.pet_ctrl = PetController(self.user_id)
         self.prontuario_ctrl = ProntuarioController(self.user_id) if self.user_id else None
         self.foto_perfil_ctrl = FotoPerfil(self.user_id)
 
@@ -250,7 +250,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.mod_pacientes = ModuloPacientes(self.content, self.pet_ctrl)
         self.mod_financeiro = ModuloFinanceiro(self.content)
         self.mod_configuracoes = ModuloConfiguracoes(self.content, parent=self, on_avatar_updated=self.atualizar_avatar)
-        self.mod_agenda = ModuloAgenda(self.content)
+        self.mod_agenda = ModuloAgenda(self.content, self.user_id)
         self.mod_prontuario = ModuloProntuario(self.content, self.prontuario_ctrl)
         self.mod_chat = ModuloChat(self.content)
 

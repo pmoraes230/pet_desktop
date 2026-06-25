@@ -13,6 +13,7 @@ class VetController:
             FROM pet p
             INNER JOIN consulta c ON p.ID = c.ID_PET
             WHERE c.veterinario_id = %s
+              AND c.STATUS IN ('Confirmado', 'Concluido')
             ORDER BY c.DATA_CONSULTA DESC
             LIMIT 5
         """
@@ -105,6 +106,7 @@ class VetController:
             FROM pet p
             INNER JOIN consulta c ON p.ID = c.ID_PET
             WHERE c.veterinario_id = %s
+              AND c.STATUS IN ('Confirmado', 'Concluido')
         """, (self.vet_id,))
         total_pets = cursor.fetchone()[0] or 0
 

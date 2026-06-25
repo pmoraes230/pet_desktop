@@ -7,7 +7,7 @@ class ModalAgendamento:
         self.parent = parent
         self.callback_refresh = callback_refresh
         self.id_veterinario = id_veterinario  # ID do veterinário logado
-        self.controller = AgendamentoController()
+        self.controller = AgendamentoController(id_veterinario)
         self.janela = None
         self.pets = []
         

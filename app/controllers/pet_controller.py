@@ -3,12 +3,13 @@ import uuid
 from datetime import datetime
 
 class PetController:
-    def __init__(self):
+    def __init__(self, vet_id=None):
         self.pet_model = PetAll()
+        self.vet_id = vet_id
 
     def listar_pets(self) -> list:
         try:
-            return self.pet_model.listar_pets()
+            return self.pet_model.listar_pets(self.vet_id)
         except Exception as e:
             print(f"Erro ao listar pets: {e}")
             return []
@@ -29,7 +30,7 @@ class PetController:
 
     def buscar_pet(self, id_pet: str) -> dict:
         try:
-            return self.pet_model.buscar_pet(id_pet)
+            return self.pet_model.buscar_pet(id_pet, self.vet_id)
         except Exception as e:
             print(f"Erro ao buscar pet: {e}")
             return {}

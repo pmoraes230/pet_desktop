@@ -1,6 +1,10 @@
 import customtkinter as ctk
 from datetime import datetime, timedelta
 import calendar
+from app.controllers.agenda_controller import AgendaController
+from app.controllers.agendamento_controller import AgendamentoController
+from app.utils.agenda_utils import AgendaUtils
+from app.views.modal_agendamento import ModalAgendamento
 from tkinter import messagebox # Para o placeholder do modal de liberar horários
 # from ..controllers.agenda_controller import AgendaController # Removido para simplificar para um mock
 # from ..utils.agenda_utils import AgendaUtils # Removido para simplificar para um mock
@@ -68,18 +72,20 @@ class MockModalAgendamento:
         self.callback_refresh() # Simula o refresh
 
 class ModuloAgenda:
-    def __init__(self, content_frame):
+    def __init__(self, content_frame, vet_id=None):
         self.content = content_frame
+        self.vet_id = vet_id
         
         # Define o mês e ano iniciais para o exemplo (Junho 2026)
-        self.mes_atual = 6
-        self.ano_atual = 2026
-        self.dia_selecionado = 10 # Define o dia 10 como selecionado por padrão
+        hoje = datetime.now()
+        self.mes_atual = hoje.month
+        self.ano_atual = hoje.year
+        self.dia_selecionado = hoje.day
         
         self.semana_atual_start_date = self._obter_semana_atual_start_date()
         self.consultas_selecionadas = []
-        self.controller = MockAgendaController() # Usando o mock
-        self.utils = MockAgendaUtils() # Usando o mock
+        self.controller = AgendaController(self.vet_id)
+        self.utils = AgendaUtils()
         # self.modal_agendamento_class = MockModalAgendamento # Usando o mock
         self.dias_buttons = {}
 
@@ -385,12 +391,31 @@ class ModuloAgenda:
             return
         
         for consulta in self.consultas_selecionadas:
+            subtitulo = consulta.get('NOME_PET') or f"Pet ID: {consulta.get('ID_PET', 'N/A')}"
+            status = consulta.get('STATUS')
+            observacoes = consulta.get('OBSERVACOES')
+            if status:
+                subtitulo = f"{subtitulo} | {status}"
+            if observacoes:
+                subtitulo = f"{subtitulo} | {observacoes}"
+
             self._criar_card_agendamento(
                 self.lista_consultas,
-                consulta.get('HORARIO_CONSULTA', 'N/A'),
+                self._formatar_hora(consulta.get('HORARIO_CONSULTA')),
                 consulta.get('TIPO_DE_CONSULTA', 'Consulta'),
-                f"Pet ID: {consulta.get('ID_PET', 'N/A')} | Vet ID: {consulta.get('ID_VETERINARIO', 'N/A')}"
+                subtitulo
             )
+
+    def _formatar_hora(self, hora):
+        if hora is None:
+            return "N/A"
+        if hasattr(hora, "total_seconds"):
+            total = int(hora.total_seconds())
+            horas = total // 3600
+            minutos = (total % 3600) // 60
+            return f"{horas:02d}:{minutos:02d}"
+        texto = str(hora)
+        return texto[:5] if len(texto) >= 5 else texto
 
     def _criar_card_agendamento(self, master, hora, titulo, subtitulo):
         """Cria card de consulta com o novo estilo."""
@@ -459,8 +484,135 @@ class ModuloAgenda:
         
     def abrir_modal_agendamento(self):
         """Abre modal de novo agendamento (Marcar Retorno)"""
-        MockModalAgendamento(self.content, callback_refresh=self.tela_agenda) # Usando o mock
+        ModalAgendamento(self.content, callback_refresh=self.tela_agenda, id_veterinario=self.vet_id)
 
     def abrir_modal_liberar_horarios(self):
         """Implementar a lógica para liberar horários."""
-        messagebox.showinfo("Liberar Horários", "Funcionalidade 'Liberar Horários' a ser implementada!")
+        self._abrir_modal_liberar_horarios_real()
+
+    def _abrir_modal_liberar_horarios_real(self):
+        if not self.vet_id:
+            messagebox.showerror("Erro", "Veterinário logado não encontrado.")
+            return
+
+        janela = ctk.CTkToplevel(self.content)
+        janela.title("Liberar Horários")
+        janela.geometry("520x630")
+        janela.resizable(False, False)
+        janela.configure(fg_color="white")
+        janela.transient(self.content.winfo_toplevel())
+        janela.grab_set()
+        janela.focus_set()
+
+        ctk.CTkLabel(
+            janela,
+            text="Liberar Horários",
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color=colors.TEXT_DARK
+        ).pack(anchor="w", padx=32, pady=(32, 6))
+
+        ctk.CTkLabel(
+            janela,
+            text="Crie horários livres para os tutores agendarem.",
+            font=ctk.CTkFont(size=13),
+            text_color=colors.TEXT_SECONDARY
+        ).pack(anchor="w", padx=32, pady=(0, 24))
+
+        def criar_input(label, placeholder):
+            ctk.CTkLabel(
+                janela,
+                text=label,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color=colors.TEXT_SECONDARY
+            ).pack(anchor="w", padx=32, pady=(0, 6))
+            entry = ctk.CTkEntry(
+                janela,
+                placeholder_text=placeholder,
+                height=42,
+                corner_radius=10,
+                fg_color=colors.GRAY_LIGHT,
+                border_width=0
+            )
+            entry.pack(fill="x", padx=32, pady=(0, 14))
+            return entry
+
+        entry_data = criar_input("Data", "DD/MM/AAAA")
+        entry_inicio = criar_input("Hora inicial", "HH:MM")
+        entry_fim = criar_input("Hora final", "HH:MM")
+        entry_intervalo = criar_input("Intervalo em minutos", "30")
+        entry_intervalo.insert(0, "30")
+
+        def salvar():
+            data_text = entry_data.get().strip()
+            hora_inicio_text = entry_inicio.get().strip()
+            hora_fim_text = entry_fim.get().strip()
+            intervalo_text = entry_intervalo.get().strip()
+
+            if not data_text or data_text == "DD/MM/AAAA" or not hora_inicio_text or not hora_fim_text:
+                messagebox.showerror("Erro", "Preencha data e horários corretamente.")
+                return
+
+            try:
+                data_obj = datetime.strptime(data_text, "%d/%m/%Y")
+            except ValueError:
+                messagebox.showerror("Erro", "Data inválida. Use DD/MM/AAAA.")
+                return
+
+            try:
+                inicio_obj = datetime.strptime(hora_inicio_text, "%H:%M")
+                fim_obj = datetime.strptime(hora_fim_text, "%H:%M")
+            except ValueError:
+                messagebox.showerror("Erro", "Horário inválido. Use HH:MM.")
+                return
+
+            if inicio_obj >= fim_obj:
+                messagebox.showerror("Erro", "A hora inicial deve ser menor que a hora final.")
+                return
+
+            try:
+                intervalo = int(intervalo_text)
+                if intervalo <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Erro", "Intervalo inválido. Use um número inteiro maior que zero.")
+                return
+
+            controller = AgendamentoController(self.vet_id)
+            criados = controller.liberar_horarios(
+                self.vet_id,
+                data_obj.strftime("%Y-%m-%d"),
+                hora_inicio_text,
+                hora_fim_text,
+                intervalo
+            )
+
+            if criados > 0:
+                messagebox.showinfo("Sucesso", f"{criados} horário(s) liberado(s).")
+                janela.destroy()
+                self.tela_agenda()
+            else:
+                messagebox.showwarning("Aviso", "Nenhum horário novo foi liberado.")
+
+        btn_frame = ctk.CTkFrame(janela, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=32, pady=(8, 24))
+        btn_frame.columnconfigure((0, 1), weight=1)
+
+        ctk.CTkButton(
+            btn_frame,
+            text="Cancelar",
+            height=44,
+            fg_color=colors.GRAY_LIGHT,
+            hover_color=colors.NEUTRAL_200,
+            text_color=colors.TEXT_PRIMARY,
+            command=janela.destroy
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_frame,
+            text="Liberar",
+            height=44,
+            fg_color=colors.PURPLE_ACCENT,
+            hover_color=colors.PURPLE_ACCENT_HOVER,
+            text_color="white",
+            command=salvar
+        ).grid(row=0, column=1, sticky="ew", padx=(8, 0))
