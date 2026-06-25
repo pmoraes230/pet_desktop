@@ -9,6 +9,7 @@ from app.models.mudar_foto import salvar_nova_foto
 from ..controllers.veterinario_controller import vetController
 from app.config.database import connectdb
 from app.core.i18n import get_language, tr
+from app.core.theme import get_appearance_mode, is_dark_mode
 from django.contrib.auth.hashers import check_password, make_password
 
 def criar_imagem_redonda(pil_img, size):
@@ -33,6 +34,52 @@ class ModuloConfiguracoes:
         self.foto_key = None
         self.preview_img = None
         self._carregar_dados_perfil()
+
+    def _theme_colors(self):
+        if is_dark_mode():
+            return {
+                "page": "#111827",
+                "card": "#1F2937",
+                "muted_card": "#374151",
+                "border": "#374151",
+                "title": "#F9FAFB",
+                "text": "#E5E7EB",
+                "muted": "#9CA3AF",
+                "icon_text": "#0F172A",
+                "option_bg": "#111827",
+                "option_hover": "#374151",
+                "switch_panel": "#0F172A",
+                "switch_border": "#14B8A6",
+                "switch_track": "#4B5563",
+                "switch_button": "#F9FAFB",
+                "danger_bg": "#3F1D1D",
+                "danger_border": "#7F1D1D",
+                "danger_icon_bg": "#7F1D1D",
+                "danger_title": "#FCA5A5",
+                "danger_text": "#FECACA",
+            }
+
+        return {
+            "page": "#F8FAFC",
+            "card": "white",
+            "muted_card": "#F1F5F9",
+            "border": "#E2E8F0",
+            "title": "#1E293B",
+            "text": "#475569",
+            "muted": "#94A3B8",
+            "icon_text": "#1E293B",
+            "option_bg": "#F8FAFC",
+            "option_hover": "#F8FAFC",
+            "switch_panel": "#ECFDF5",
+            "switch_border": "#14B8A6",
+            "switch_track": "#CBD5E1",
+            "switch_button": "#FFFFFF",
+            "danger_bg": "#FEF2F2",
+            "danger_border": "#FCA5A5",
+            "danger_icon_bg": "#FEE2E2",
+            "danger_title": "#991B1B",
+            "danger_text": "#B91C1C",
+        }
 
     def _get_user_id(self):
         if self.parent and hasattr(self.parent, "current_user"):
@@ -186,7 +233,10 @@ class ModuloConfiguracoes:
         for widget in self.content.winfo_children():
             widget.destroy()
 
-        scroll = ctk.CTkScrollableFrame(self.content, fg_color="#F8FAFC")
+        theme = self._theme_colors()
+        self.content.configure(fg_color=theme["page"])
+
+        scroll = ctk.CTkScrollableFrame(self.content, fg_color=theme["page"])
         scroll.pack(fill="both", expand=True)
 
         container = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -194,38 +244,68 @@ class ModuloConfiguracoes:
 
         title_f = ctk.CTkFrame(container, fg_color="transparent")
         title_f.pack(fill="x", pady=(0, 30))
-        ctk.CTkLabel(title_f, text=self._t("account_settings"), font=("Helvetica", 24, "bold"), text_color="#1E293B").pack(side="left")
+        ctk.CTkLabel(title_f, text=self._t("account_settings"), font=("Helvetica", 24, "bold"), text_color=theme["title"]).pack(side="left")
 
         # Cards de Configuração (simples e funcionais)
-        def _card(master, icon, icon_bg, title, sub, dropdown=False, checks=None, arrow_btn=None):
-            card = ctk.CTkFrame(master, fg_color="white", corner_radius=20, border_width=1, border_color="#E2E8F0")
+        def _card(master, icon, icon_bg, title, sub, dropdown=False, checks=None, arrow_btn=None, theme_switch=False):
+            card = ctk.CTkFrame(master, fg_color=theme["card"], corner_radius=20, border_width=1, border_color=theme["border"])
             card.pack(fill="x", pady=10)
             header = ctk.CTkFrame(card, fg_color="transparent")
             header.pack(fill="x", padx=20, pady=20)
             icon_f = ctk.CTkFrame(header, width=45, height=45, corner_radius=12, fg_color=icon_bg)
             icon_f.pack(side="left"); icon_f.pack_propagate(False)
-            ctk.CTkLabel(icon_f, text=icon, font=("Helvetica", 18)).place(relx=0.5, rely=0.5, anchor="center")
+            ctk.CTkLabel(
+                icon_f,
+                text=icon,
+                font=("Segoe UI Emoji", 20),
+                width=45,
+                height=45,
+                text_color=theme["icon_text"],
+            ).place(relx=0.5, rely=0.5, anchor="center")
             txt_f = ctk.CTkFrame(header, fg_color="transparent")
             txt_f.pack(side="left", padx=15)
-            ctk.CTkLabel(txt_f, text=title, font=("Helvetica", 15, "bold")).pack(anchor="w")
-            ctk.CTkLabel(txt_f, text=sub, font=("Helvetica", 12), text_color="#94A3B8").pack(anchor="w")
+            ctk.CTkLabel(txt_f, text=title, font=("Helvetica", 15, "bold"), text_color=theme["title"]).pack(anchor="w")
+            ctk.CTkLabel(txt_f, text=sub, font=("Helvetica", 12), text_color=theme["muted"]).pack(anchor="w")
             if dropdown:
                 language_menu = ctk.CTkOptionMenu(
                     header,
                     values=["Português (Brasil)", "English"],
-                    fg_color="#F8FAFC",
-                    text_color="#1E293B",
-                    button_color="#F1F5F9",
+                    fg_color=theme["option_bg"],
+                    text_color=theme["title"],
+                    button_color=theme["muted_card"],
                     corner_radius=10,
                     command=self._on_language_selected,
                 )
                 language_menu.set("English" if self._language() == "en" else "Português (Brasil)")
                 language_menu.pack(side="right")
+            if theme_switch:
+                switch_panel = ctk.CTkFrame(
+                    header,
+                    fg_color=theme["switch_panel"],
+                    corner_radius=14,
+                    border_width=1,
+                    border_color=theme["switch_border"],
+                )
+                switch_panel.pack(side="right", padx=(16, 0))
+                switch = ctk.CTkSwitch(
+                    switch_panel,
+                    text=self._t("dark_mode_enabled"),
+                    text_color=theme["title"],
+                    font=("Helvetica", 13, "bold"),
+                    fg_color=theme["switch_track"],
+                    progress_color="#14B8A6",
+                    button_color=theme["switch_button"],
+                    button_hover_color=theme["muted_card"],
+                    command=self._on_theme_switch,
+                )
+                if get_appearance_mode() == "dark":
+                    switch.select()
+                switch.pack(padx=14, pady=10)
             if checks:
                 for c in checks:
-                    row = ctk.CTkFrame(card, fg_color="#F8FAFC", corner_radius=10)
+                    row = ctk.CTkFrame(card, fg_color=theme["option_bg"], corner_radius=10)
                     row.pack(fill="x", padx=20, pady=5)
-                    ctk.CTkLabel(row, text=c, font=("Helvetica", 12)).pack(side="left", padx=15, pady=10)
+                    ctk.CTkLabel(row, text=c, font=("Helvetica", 12), text_color=theme["text"]).pack(side="left", padx=15, pady=10)
                     cb = ctk.CTkCheckBox(row, text="", width=20)
                     cb.pack(side="right", padx=15); cb.select()
             if arrow_btn:
@@ -236,6 +316,7 @@ class ModuloConfiguracoes:
                 btn.pack(fill="x", padx=20, pady=(0, 15))
 
         _card(container, "🌐", "#DBEAFE", self._t("language"), self._t("language_subtitle"), dropdown=True)
+        _card(container, "🌙", "#CCF2ED", self._t("appearance"), self._t("appearance_subtitle"), theme_switch=True)
         _card(
             container,
             "🔔",
@@ -247,17 +328,24 @@ class ModuloConfiguracoes:
         _card(container, "🛡", "#FEF3C7", self._t("privacy"), self._t("privacy_subtitle"), arrow_btn=self._t("change_password"))
 
         # Danger Zone
-        danger = ctk.CTkFrame(container, fg_color="#FEF2F2", corner_radius=20, border_width=1, border_color="#FCA5A5")
+        danger = ctk.CTkFrame(container, fg_color=theme["danger_bg"], corner_radius=20, border_width=1, border_color=theme["danger_border"])
         danger.pack(fill="x", pady=20)
         d_inner = ctk.CTkFrame(danger, fg_color="transparent")
         d_inner.pack(padx=25, pady=20, fill="x")
-        icon_f = ctk.CTkFrame(d_inner, width=40, height=40, corner_radius=10, fg_color="#FEE2E2")
+        icon_f = ctk.CTkFrame(d_inner, width=40, height=40, corner_radius=10, fg_color=theme["danger_icon_bg"])
         icon_f.pack(side="left"); icon_f.pack_propagate(False)
-        ctk.CTkLabel(icon_f, text="⚠️", text_color="#EF4444").place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(
+            icon_f,
+            text="⚠️",
+            font=("Segoe UI Emoji", 18),
+            width=40,
+            height=40,
+            text_color="#EF4444",
+        ).place(relx=0.5, rely=0.5, anchor="center")
         txt_f = ctk.CTkFrame(d_inner, fg_color="transparent")
         txt_f.pack(side="left", padx=15)
-        ctk.CTkLabel(txt_f, text=self._t("danger_zone"), font=("Helvetica", 14, "bold"), text_color="#991B1B").pack(anchor="w")
-        ctk.CTkLabel(txt_f, text=self._t("deactivate_warning"), font=("Helvetica", 12), text_color="#B91C1C").pack(anchor="w")
+        ctk.CTkLabel(txt_f, text=self._t("danger_zone"), font=("Helvetica", 14, "bold"), text_color=theme["danger_title"]).pack(anchor="w")
+        ctk.CTkLabel(txt_f, text=self._t("deactivate_warning"), font=("Helvetica", 12), text_color=theme["danger_text"]).pack(anchor="w")
         ctk.CTkButton(danger, text=self._t("deactivate_account"), fg_color="#EF4444", hover_color="#DC2626", height=45, corner_radius=12, font=("Helvetica", 12, "bold")).pack(fill="x", padx=25, pady=(0, 20))
 
     def _language(self):
@@ -269,12 +357,21 @@ class ModuloConfiguracoes:
             self.parent.set_language(new_language)
         self.tela_configuracoes_gerais()
 
+    def _on_theme_switch(self):
+        next_mode = "light" if get_appearance_mode() == "dark" else "dark"
+        if self.parent and hasattr(self.parent, "set_theme_mode"):
+            self.parent.set_theme_mode(next_mode)
+        self.tela_configuracoes_gerais()
+
     def _t(self, key):
         local_translations = {
             "pt": {
                 "account_settings": "⚙ Configurações da Conta",
                 "language": "Idioma",
                 "language_subtitle": "Escolha o idioma da plataforma",
+                "appearance": "Aparência",
+                "appearance_subtitle": "Altere as cores do sistema",
+                "dark_mode_enabled": "Modo noturno",
                 "notifications": "Notificações",
                 "notifications_subtitle": "Gerencie seus alertas",
                 "email_notifications": "Notificações por e-mail",
@@ -291,6 +388,9 @@ class ModuloConfiguracoes:
                 "account_settings": "⚙ Account Settings",
                 "language": "Language",
                 "language_subtitle": "Choose the platform language",
+                "appearance": "Appearance",
+                "appearance_subtitle": "Change the system colors",
+                "dark_mode_enabled": "Night mode",
                 "notifications": "Notifications",
                 "notifications_subtitle": "Manage your alerts",
                 "email_notifications": "Email notifications",

@@ -15,6 +15,7 @@ from app.controllers.perfil_controller import FotoPerfil
 from app.controllers.prontuario_controller import ProntuarioController
 from app.services.s3_client import get_url_s3
 from app.core.i18n import get_language, set_language as set_app_language, tr
+from app.core.theme import is_dark_mode, set_appearance_mode
 
 # Módulos (assumindo que já existem)
 from .modulo_pacientes import ModuloPacientes
@@ -47,8 +48,36 @@ class Colors:
     METRIC_ICON_2 = "#FFC107" # Amarelo para Consultas Hoje
     METRIC_ICON_3 = "#DC3545" # Vermelho para Casos Críticos
     METRIC_ICON_4 = "#28A745" # Verde para Faturamento Mensal
+
+    def apply_appearance(self):
+        if is_dark_mode():
+            self.PRIMARY_DARK = "#0F766E"
+            self.PRIMARY = "#14B8A6"
+            self.PRIMARY_HOVER = "#115E59"
+            self.NEUTRAL_50 = "#111827"
+            self.NEUTRAL_100 = "#1F2937"
+            self.NEUTRAL_200 = "#374151"
+            self.NEUTRAL_300 = "#4B5563"
+            self.NEUTRAL_500 = "#9CA3AF"
+            self.TEXT_PRIMARY = "#F9FAFB"
+            self.TEXT_SECONDARY = "#D1D5DB"
+            self.SUCCESS_BG = "#064E3B"
+            return
+
+        self.PRIMARY_DARK = "#2E7D7D"
+        self.PRIMARY = "#4CAF50"
+        self.PRIMARY_HOVER = "#388E8E"
+        self.NEUTRAL_50 = "#F8F9FA"
+        self.NEUTRAL_100 = "#EAECEF"
+        self.NEUTRAL_200 = "#E0E3E8"
+        self.NEUTRAL_300 = "#CCD1D9"
+        self.NEUTRAL_500 = "#6B7280"
+        self.TEXT_PRIMARY = "#343A40"
+        self.TEXT_SECONDARY = "#6C757D"
+        self.SUCCESS_BG = "#E6FFED"
     
 colors = Colors() # Instância para uso
+colors.apply_appearance()
 
 class DashboardVeterinario(ctk.CTkFrame):
     """
@@ -162,7 +191,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             fg_color="transparent",
             hover_color=colors.PRIMARY_HOVER,
             text_color="white",
-            font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=15, weight="bold"),
             height=48, # Altura ajustada
             corner_radius=10, # Raio menor
             anchor="w",
@@ -172,7 +201,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.sidebar_buttons.append((btn, key, icon_str))
 
     def _build_topbar(self):
-        self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
+        self.topbar = ctk.CTkFrame(self, fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white", corner_radius=0)
         self.topbar.grid(row=0, column=1, sticky="ew")
         self.topbar.configure(border_width=0) # Garante sem borda
 
@@ -193,7 +222,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         btn_notif = ctk.CTkButton(
             right,
             text="🔔",
-            font=("Segoe UI", 20),
+            font=("Segoe UI Emoji", 20),
             fg_color="transparent",
             hover_color=colors.NEUTRAL_100,
             text_color=colors.NEUTRAL_500,
@@ -230,7 +259,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             text=self.profile_button_text,
             image=initial_avatar,
             compound="left",
-            fg_color="white",
+            fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white",
             hover_color=colors.NEUTRAL_100,
             text_color=colors.TEXT_PRIMARY,
             font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
@@ -270,6 +299,34 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.language = "en" if language == "en" else "pt"
         set_app_language(self.language)
         self._refresh_language_texts()
+
+    def set_theme_mode(self, mode: str):
+        set_appearance_mode(mode)
+        colors.apply_appearance()
+        self._refresh_theme_colors()
+
+    def _refresh_theme_colors(self):
+        self.configure(fg_color=colors.NEUTRAL_50)
+        if hasattr(self, "content"):
+            self.content.configure(fg_color=colors.NEUTRAL_50)
+        if hasattr(self, "sidebar"):
+            self.sidebar.configure(fg_color=colors.PRIMARY_DARK)
+        if hasattr(self, "topbar"):
+            self.topbar.configure(fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white")
+        if hasattr(self, "current_screen_title"):
+            self.current_screen_title.configure(text_color=colors.TEXT_PRIMARY)
+        if hasattr(self, "avatar_btn"):
+            self.avatar_btn.configure(
+                fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white",
+                hover_color=colors.NEUTRAL_200 if is_dark_mode() else colors.NEUTRAL_100,
+                text_color=colors.TEXT_PRIMARY,
+            )
+        for btn, _key, _icon_str in self.sidebar_buttons:
+            btn.configure(hover_color=colors.PRIMARY_HOVER)
+        if self.profile_menu_open:
+            self._toggle_profile_menu()
+        if self.notifications_open:
+            self._toggle_notifications()
 
     def _refresh_language_texts(self):
         for btn, key, icon_str in self.sidebar_buttons:
@@ -410,7 +467,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         # Agenda de Hoje
         agenda_frame = ctk.CTkFrame(
             scroll,
-            fg_color="white",
+            fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white",
             corner_radius=16, # Menor raio
             border_width=1,
             border_color=colors.NEUTRAL_200,
@@ -456,7 +513,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         # Alertas (novo card)
         alerts_frame = ctk.CTkFrame(
             scroll,
-            fg_color="white",
+            fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white",
             corner_radius=16,
             border_width=1,
             border_color=colors.NEUTRAL_200,
@@ -485,21 +542,29 @@ class DashboardVeterinario(ctk.CTkFrame):
     def _create_metric_card(self, parent, value, title, icon_str, col, prefix="", icon_color=None):
         card = ctk.CTkFrame(
             parent,
-            fg_color="white",
+            fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white",
             corner_radius=16, # Raio ajustado
             border_width=1,
             border_color=colors.NEUTRAL_200,
         )
         card.grid(row=0, column=col, padx=10, pady=10, sticky="nsew") # Padding ajustado
 
-        icon_frame = ctk.CTkFrame(card, fg_color=colors.NEUTRAL_100, width=48, height=48, corner_radius=12) # Fundo para ícone
+        icon_frame = ctk.CTkFrame(
+            card,
+            fg_color=colors.NEUTRAL_200 if is_dark_mode() else colors.NEUTRAL_100,
+            width=48,
+            height=48,
+            corner_radius=12,
+        )
         icon_frame.pack_propagate(False) # Impede que o frame se encolha
         icon_frame.pack(anchor="w", padx=20, pady=(20, 10))
 
         ctk.CTkLabel(
             icon_frame,
             text=icon_str, # Usa o ícone string
-            font=("Segoe UI", 24),
+            font=("Segoe UI Emoji", 22),
+            width=48,
+            height=48,
             text_color=icon_color or colors.PRIMARY, # Cor do ícone
         ).pack(expand=True) # Centraliza o ícone no frame
 
@@ -581,7 +646,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         self.notifications_menu = ctk.CTkFrame(
             self,
-            fg_color="white",
+            fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white",
             corner_radius=12, # Raio ajustado
             border_width=1,
             border_color=colors.NEUTRAL_200,
@@ -674,7 +739,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         self.profile_menu = ctk.CTkFrame(
             self,
-            fg_color="white",
+            fg_color=colors.NEUTRAL_100 if is_dark_mode() else "white",
             corner_radius=20,
             border_width=1,
             border_color=colors.NEUTRAL_200,
@@ -685,7 +750,13 @@ class DashboardVeterinario(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(self.profile_menu, fg_color="transparent")
         header_frame.pack(fill="x", padx=16, pady=(16, 12))
 
-        avatar_frame = ctk.CTkFrame(header_frame, fg_color=colors.NEUTRAL_100, width=54, height=54, corner_radius=27)
+        avatar_frame = ctk.CTkFrame(
+            header_frame,
+            fg_color=colors.NEUTRAL_200 if is_dark_mode() else colors.NEUTRAL_100,
+            width=54,
+            height=54,
+            corner_radius=27,
+        )
         avatar_frame.pack(side="left", padx=(0, 12))
         avatar_frame.pack_propagate(False)
 
@@ -693,7 +764,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             avatar_frame,
             image=self.avatar_image if self.avatar_image else None,
             text="" if self.avatar_image else "👤",
-            font=ctk.CTkFont(family="Helvetica", size=26),
+            font=ctk.CTkFont(family="Segoe UI Emoji", size=24),
             text_color=colors.PRIMARY,
         ).pack(expand=True)
 
@@ -734,7 +805,7 @@ class DashboardVeterinario(ctk.CTkFrame):
                 hover_color=colors.NEUTRAL_100,
                 text_color=color,
                 anchor="w",
-                font=ctk.CTkFont(family="Helvetica", size=14, weight="normal"),
+                font=ctk.CTkFont(family="Segoe UI", size=14, weight="normal"),
                 height=44,
                 corner_radius=14,
                 command=lambda c=cmd: [self._close_profile_menu(), c()] if c else self._close_profile_menu(),
