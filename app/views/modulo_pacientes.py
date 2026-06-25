@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from app.controllers.pet_controller import PetController
+from app.core.i18n import tr
 from app.services.s3_client import upload_foto_pet_s3, get_url_s3
 import uuid
 
@@ -87,14 +88,14 @@ class ModuloPacientes:
 
         ctk.CTkLabel(
             header_frame,
-            text="Pacientes",
+            text=tr("Pacientes"),
             font=ctk.CTkFont(family="Helvetica", size=28, weight="bold"),
             text_color=colors.TEXT_DARK
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             header_frame,
-            text="Gerencie os registros dos animais e tutores",
+            text=tr("Gerencie os registros dos animais e tutores"),
             font=ctk.CTkFont(family="Helvetica", size=14),
             text_color=colors.TEXT_SECONDARY
         ).pack(anchor="w", pady=(0, 20))
@@ -107,7 +108,7 @@ class ModuloPacientes:
 
         ctk.CTkEntry(
             search_filter_row,
-            placeholder_text="🔍 Pesquise por nome do tutor ou nome do pet",
+            placeholder_text=f"🔍 {tr('Pesquise por nome do tutor ou nome do pet')}",
             height=45,
             corner_radius=10, # Raio menor
             fg_color=colors.GRAY_LIGHT, # Ajustado para cor da segunda imagem
@@ -119,7 +120,7 @@ class ModuloPacientes:
 
         ctk.CTkButton(
             search_filter_row,
-            text="Filtrar",
+            text=tr("Filtrar"),
             fg_color=colors.GRAY_LIGHT, # Ajustado para cor da segunda imagem
             hover_color=colors.NEUTRAL_200,
             text_color=colors.TEXT_PRIMARY,
@@ -132,7 +133,7 @@ class ModuloPacientes:
         # Botão "+ Novo Paciente" - Posicionado separadamente no cabeçalho
         ctk.CTkButton(
             header_frame, # Anexa ao header_frame
-            text="+ Novo Paciente",
+            text=tr("+ Novo Paciente"),
             fg_color=colors.ACCENT_GREEN, # Ajustado para cor da segunda imagem
             hover_color=colors.ACCENT_GREEN_HOVER, # Ajustado para cor da segunda imagem
             width=160, # Ajuste de largura
@@ -154,7 +155,7 @@ class ModuloPacientes:
         if not pets:
             ctk.CTkLabel(
                 grid,
-                text="Nenhum paciente aceito por este veterinario.",
+                text=tr("Nenhum paciente aceito por este veterinario."),
                 font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"),
                 text_color=colors.TEXT_SECONDARY,
             ).grid(row=0, column=0, columnspan=3, pady=50)
@@ -182,7 +183,7 @@ class ModuloPacientes:
             idade_formatada = self.calcular_idade_formatada(data_nasc)
             
             # Placeholder para status de saúde (sempre "Saudável" por enquanto)
-            status_saude = "Saudável" 
+            status_saude = tr("Saudável") 
 
             self.criar_card_paciente(
                 grid,
@@ -198,18 +199,18 @@ class ModuloPacientes:
             
     def aplicar_filtro(self):
         # Implementar lógica de filtragem dos pets
-        messagebox.showinfo("Filtro", "Funcionalidade de filtro a ser implementada!")
+        messagebox.showinfo(tr("Filtro"), tr("Funcionalidade de filtro a ser implementada!"))
 
 
     def calcular_idade_formatada(self, data_nasc):
         """Calcula idade em anos e meses a partir da data de nascimento e formata."""
         if not data_nasc:
-            return "Idade ?"
+            return tr("Idade ?")
         try:
             if isinstance(data_nasc, str):
                 data_nasc = datetime.strptime(data_nasc, "%Y-%m-%d")
             elif not isinstance(data_nasc, datetime):
-                return "Idade ?"
+                return tr("Idade ?")
             
             hoje = datetime.now()
             
@@ -225,17 +226,17 @@ class ModuloPacientes:
             
             partes = []
             if anos > 0:
-                partes.append(f"{anos} ano{'s' if anos > 1 else ''}")
+                partes.append(f"{anos} {tr('anos') if anos > 1 else tr('ano')}")
             if meses > 0:
-                partes.append(f"{meses} mes{'es' if meses > 1 else ''}")
+                partes.append(f"{meses} {tr('meses') if meses > 1 else tr('mes')}")
             
             if not partes:
-                return "Recém-nascido" if anos == 0 and meses == 0 else "Idade ?"
+                return tr("Recém-nascido") if anos == 0 and meses == 0 else tr("Idade ?")
             
             return ", ".join(partes)
 
         except Exception:
-            return "Idade ?"
+            return tr("Idade ?")
 
 
     def criar_card_paciente(self, master, id_pet, nome, status_saude, raca, idade, imagem_key, row, col):
@@ -309,7 +310,7 @@ class ModuloPacientes:
         # Botão Ver detalhes
         btn_detalhes = ctk.CTkButton(
             card,
-            text="Ver detalhes",
+            text=tr("Ver detalhes"),
             fg_color="transparent", # Transparente no fundo do card
             hover_color=colors.NEUTRAL_100, # Hover sutil
             text_color=colors.TEXT_PRIMARY, # Texto escuro
@@ -336,10 +337,10 @@ class ModuloPacientes:
         self.modal_frame.place(relx=0.5, rely=0.5, anchor="center")
         self.modal_frame.pack_propagate(False)
 
-        ctk.CTkLabel(self.modal_frame, text="Novo Paciente", font=("Helvetica", 24, "bold"), 
+        ctk.CTkLabel(self.modal_frame, text=tr("Novo Paciente"), font=("Helvetica", 24, "bold"), 
                      text_color=colors.TEXT_DARK).pack(pady=(30, 10))
 
-        ctk.CTkLabel(self.modal_frame, text="Preencha os dados do novo paciente", font=("Helvetica", 13), 
+        ctk.CTkLabel(self.modal_frame, text=tr("Preencha os dados do novo paciente"), font=("Helvetica", 13), 
                      text_color=colors.TEXT_SECONDARY).pack(pady=(0, 20))
 
         form = ctk.CTkFrame(self.modal_frame, fg_color="transparent")
@@ -361,10 +362,10 @@ class ModuloPacientes:
             entry.pack(fill="x", pady=(2, 5))
             return entry
 
-        self.entry_nome_pet = criar_input("Nome do Pet", "Ex: Rex")
-        self.entry_nome_tutor = criar_input("Nome do Tutor", "Ex: Maria Silva")
-        self.entry_telefone_tutor = criar_input("Telefone de Contato", "Ex: (XX) XXXXX-XXXX")
-        self.entry_observacoes = criar_input("Observações Iniciais", "Comportamento, histórico breve...")
+        self.entry_nome_pet = criar_input(tr("Nome do Pet"), "Ex: Rex")
+        self.entry_nome_tutor = criar_input(tr("Nome do Tutor"), tr("Ex: Maria Silva"))
+        self.entry_telefone_tutor = criar_input(tr("Telefone de Contato"), "Ex: (XX) XXXXX-XXXX")
+        self.entry_observacoes = criar_input(tr("Observações Iniciais"), tr("Comportamento, histórico breve..."))
 
         btn_container = ctk.CTkFrame(self.modal_frame, fg_color="transparent")
         btn_container.pack(fill="x", pady=25, padx=30)
@@ -372,7 +373,7 @@ class ModuloPacientes:
 
         ctk.CTkButton(
             btn_container,
-            text="Cancelar",
+            text=tr("Cancelar"),
             fg_color=colors.NEUTRAL_200,
             hover_color=colors.NEUTRAL_300,
             text_color=colors.TEXT_PRIMARY,
@@ -383,7 +384,7 @@ class ModuloPacientes:
 
         ctk.CTkButton(
             btn_container,
-            text="Confirmar",
+            text=tr("Confirmar"),
             fg_color=colors.ACCENT_GREEN,
             hover_color=colors.ACCENT_GREEN_HOVER,
             text_color="white",
@@ -400,12 +401,12 @@ class ModuloPacientes:
         observacoes = self.entry_observacoes.get().strip()
 
         if not nome_pet or not nome_tutor:
-            messagebox.showwarning("Campos Obrigatórios", "Nome do Pet e Nome do Tutor são obrigatórios.")
+            messagebox.showwarning(tr("Campos Obrigatórios"), tr("Nome do Pet e Nome do Tutor são obrigatórios."))
             return
         
         # Aqui você chamaria seu controlador para salvar no banco
         # Ex: self.pet_controller.adicionar_novo_pet(nome_pet, nome_tutor, telefone, observacoes)
-        messagebox.showinfo("Sucesso", f"Novo paciente '{nome_pet}' adicionado com sucesso!")
+        messagebox.showinfo(tr("Sucesso"), tr("Novo paciente '{nome_pet}' adicionado com sucesso!", nome_pet=nome_pet))
         self.fechar_popup()
         self.tela_pacientes() # Recarrega a lista de pacientes
         
@@ -422,7 +423,7 @@ class ModuloPacientes:
         # Buscar dados completos do pet no banco
         pet_dados = self.pet_controller.buscar_pet(id_pet)
         if not pet_dados:
-            messagebox.showerror("Erro", "Detalhes do pet não encontrados.")
+            messagebox.showerror(tr("Erro"), tr("Detalhes do pet não encontrados."))
             self.tela_pacientes()
             return
             
@@ -479,7 +480,7 @@ class ModuloPacientes:
         # Botão para mudar foto (overlay)
         btn_mudar = ctk.CTkButton(
             img_container,
-            text="📷 Mudar Foto",
+            text=f"📷 {tr('Mudar Foto')}",
             font=("Helvetica", 12, "bold"), # Fonte ajustada
             text_color="white",
             fg_color=colors.ACCENT_GREEN,
@@ -498,7 +499,7 @@ class ModuloPacientes:
         # Tutor box
         tutor_box = ctk.CTkFrame(card_esq, fg_color=colors.NEUTRAL_100, corner_radius=15) # Cor ajustada
         tutor_box.pack(fill="x", padx=15, pady=8)
-        ctk.CTkLabel(tutor_box, text="TUTOR RESPONSÁVEL", font=("Helvetica", 9, "bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=12, pady=(8, 0))
+        ctk.CTkLabel(tutor_box, text=tr("TUTOR RESPONSÁVEL"), font=("Helvetica", 9, "bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=12, pady=(8, 0))
         
         # Busca nome do tutor
         tutor_dados = self.pet_controller.buscar_tutor_por_pet(id_pet)
@@ -522,18 +523,18 @@ class ModuloPacientes:
         
         p_box = ctk.CTkFrame(row_stats, fg_color=colors.STATUS_HEALTHY_BG, corner_radius=12, height=70) # Cor ajustada
         p_box.pack(side="left", fill="both", expand=True, padx=(0, 4))
-        ctk.CTkLabel(p_box, text="PESO", font=("Helvetica", 9, "bold"), text_color=colors.STATUS_HEALTHY_TEXT).pack(pady=(8, 0))
+        ctk.CTkLabel(p_box, text=tr("PESO"), font=("Helvetica", 9, "bold"), text_color=colors.STATUS_HEALTHY_TEXT).pack(pady=(8, 0))
         ctk.CTkLabel(p_box, text=str(peso), font=("Helvetica", 16, "bold"), text_color=colors.STATUS_HEALTHY_TEXT).pack(pady=(0, 5))
 
         s_box = ctk.CTkFrame(row_stats, fg_color=colors.NEUTRAL_100, corner_radius=12, height=70) # Cor ajustada
         s_box.pack(side="left", fill="both", expand=True, padx=(4, 0))
-        ctk.CTkLabel(s_box, text="SEXO", font=("Helvetica", 9, "bold"), text_color=colors.TEXT_SECONDARY).pack(pady=(8, 0)) # Cor ajustada
+        ctk.CTkLabel(s_box, text=tr("SEXO"), font=("Helvetica", 9, "bold"), text_color=colors.TEXT_SECONDARY).pack(pady=(8, 0)) # Cor ajustada
         ctk.CTkLabel(s_box, text=str(sexo), font=("Helvetica", 16, "bold"), text_color=colors.TEXT_PRIMARY).pack(pady=(0, 5)) # Cor ajustada
 
         # Próxima consulta (assumindo que seja uma info dinâmica ou mockada)
         prox_c = ctk.CTkFrame(card_esq, fg_color=colors.ACCENT_GREEN, corner_radius=30) # Cor ajustada
         prox_c.pack(fill="x", padx=15, pady=15)
-        ctk.CTkLabel(prox_c, text="Próxima consulta: 15 de Fev", font=("Helvetica", 15, "bold"), text_color="white").pack(anchor="w", padx=15, pady=8)
+        ctk.CTkLabel(prox_c, text=tr("Próxima consulta: 15 de Fev"), font=("Helvetica", 15, "bold"), text_color="white").pack(anchor="w", padx=15, pady=8)
 
         # Coluna direita responsiva
         self.right_col = ctk.CTkFrame(container, fg_color="white", corner_radius=20, # Raio ajustado
@@ -553,10 +554,10 @@ class ModuloPacientes:
 
         self.abas_botoes = {}
         abas = [
-            ("SOBRE", "sobre"),
-            ("SAÚDE", "saude"),
-            ("MEDICAMENTOS", "medicamentos"),
-            ("EMOCIONAL", "emocional")
+            (tr("SOBRE"), "sobre"),
+            (tr("SAÚDE"), "saude"),
+            (tr("MEDICAMENTOS"), "medicamentos"),
+            (tr("EMOCIONAL"), "emocional")
         ]
 
         for nome, chave in abas:
@@ -577,13 +578,13 @@ class ModuloPacientes:
 
     # --- ABA: SOBRE ---
     def _renderizar_aba_sobre(self):
-        ctk.CTkLabel(self.container_abas, text="Sobre o pet:", font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(10, 5))
+        ctk.CTkLabel(self.container_abas, text=tr("Sobre o pet:"), font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(10, 5))
         
         # Pega a descrição da coluna DESCRICAO do seu banco
-        desc_texto = self.dados_pet_atual.get('DESCRICAO') or "Sem descrição registrada."
+        desc_texto = self.dados_pet_atual.get('DESCRICAO') or tr("Sem descrição registrada.")
         ctk.CTkLabel(self.container_abas, text=desc_texto, font=ctk.CTkFont(family="Helvetica", size=14), text_color=colors.TEXT_SECONDARY, wraplength=600, justify="left").pack(anchor="w", pady=(0, 20))
 
-        ctk.CTkLabel(self.container_abas, text="Personalidade", font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(0, 10))
+        ctk.CTkLabel(self.container_abas, text=tr("Personalidade"), font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(0, 10))
         
         # Pega as tags da coluna PERSONALIDADE
         tags_raw = self.dados_pet_atual.get('PERSONALIDADE') or "Dócil, Agitado"
@@ -601,10 +602,10 @@ class ModuloPacientes:
     def _renderizar_aba_saude(self):
         header = ctk.CTkFrame(self.container_abas, fg_color="transparent")
         header.pack(fill="x", pady=(0, 20))
-        ctk.CTkLabel(header, text="Protocolo de Vacinação", font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(side="left")
+        ctk.CTkLabel(header, text=tr("Protocolo de Vacinação"), font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(side="left")
         ctk.CTkButton(
             header, 
-            text="+ NOVO REGISTRO", 
+            text=tr("+ NOVO REGISTRO"), 
             fg_color=colors.ACCENT_GREEN, 
             hover_color=colors.ACCENT_GREEN_HOVER,
             font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), 
@@ -615,12 +616,12 @@ class ModuloPacientes:
         
         vacinas = self.pet_controller.buscar_vacinas_por_pet(self.pet_atual_id)
         if not vacinas:
-            ctk.CTkLabel(self.container_abas, text="Sem vacinas.", text_color=colors.NEUTRAL_500).pack(pady=20)
+            ctk.CTkLabel(self.container_abas, text=tr("Sem vacinas."), text_color=colors.NEUTRAL_500).pack(pady=20)
         else:
             for v in vacinas:
                 card = ctk.CTkFrame(self.container_abas, fg_color="white", corner_radius=15, border_width=1, border_color=colors.NEUTRAL_200)
                 card.pack(fill="x", pady=8)
-                txt = f"{v.get('NOME')}\nPróxima dose: {v.get('PROXIMA_DOSE')}"
+                txt = f"{v.get('NOME')}\n{tr('Próxima dose')}: {v.get('PROXIMA_DOSE')}"
                 ctk.CTkLabel(card, text=txt, font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY, justify="left").pack(anchor="w", padx=15, pady=12)
 
     def _carregar_foto_pet_perfil(self, id_pet):
@@ -677,7 +678,7 @@ class ModuloPacientes:
             imagem_key = upload_foto_pet_s3(file_path, self.pet_atual_id)
             
             if not imagem_key:
-                messagebox.showerror("Erro", "Falha ao fazer upload da foto")
+                messagebox.showerror(tr("Erro"), tr("Falha ao fazer upload da foto"))
                 return
             
             sucesso = self.pet_controller.atualizar_imagem_pet(self.pet_atual_id, imagem_key)
@@ -699,15 +700,15 @@ class ModuloPacientes:
                     self.img_label.image = ctk_img
                     self.img_label.pack(fill="both", expand=True)
                     
-                    messagebox.showinfo("Sucesso", "Foto do pet atualizada com sucesso!")
+                    messagebox.showinfo(tr("Sucesso"), tr("Foto do pet atualizada com sucesso!"))
                 except Exception as e:
                     print(f"Erro ao exibir foto: {e}")
-                    messagebox.showwarning("Aviso", "Foto salva no banco mas não foi possível exibir")
+                    messagebox.showwarning(tr("Aviso"), tr("Foto salva no banco mas não foi possível exibir"))
             else:
-                messagebox.showerror("Erro", "Falha ao atualizar foto no banco de dados")
+                messagebox.showerror(tr("Erro"), tr("Falha ao atualizar foto no banco de dados"))
         except Exception as e:
             print(f"Erro ao fazer upload: {e}")
-            messagebox.showerror("Erro", f"Erro ao processar foto: {str(e)}")
+            messagebox.showerror(tr("Erro"), f"{tr('Erro ao processar foto')}: {str(e)}")
 
     def mudar_aba_pet(self, aba):
         self.active_aba = aba
@@ -736,14 +737,14 @@ class ModuloPacientes:
         
         ctk.CTkLabel(
             header,
-            text="Medicamentos em Uso",
+            text=tr("Medicamentos em Uso"),
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             text_color=colors.TEXT_DARK
         ).pack(side="left")
         
         ctk.CTkButton(
             header,
-            text="+ NOVO MEDICAMENTO",
+            text=tr("+ NOVO MEDICAMENTO"),
             fg_color=colors.ACCENT_GREEN,
             hover_color=colors.ACCENT_GREEN_HOVER,
             font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
@@ -777,7 +778,7 @@ class ModuloPacientes:
 
             ctk.CTkLabel(
                 empty_card,
-                text="Nenhum medicamento registrado.",
+                text=tr("Nenhum medicamento registrado."),
                 font=ctk.CTkFont(family="Helvetica", size=12, weight="italic"),
                 text_color=colors.NEUTRAL_500
             ).place(relx=0.5, rely=0.5, anchor="center")
@@ -848,8 +849,8 @@ class ModuloPacientes:
         chart_container = ctk.CTkFrame(main_row, fg_color="white", corner_radius=20, border_width=1, border_color=colors.NEUTRAL_200)
         chart_container.pack(side="left", fill="both", expand=True, padx=(0, 20))
 
-        ctk.CTkLabel(chart_container, text="Bem-estar do Pet", font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", padx=20, pady=(20, 0))
-        ctk.CTkLabel(chart_container, text="TENDÊNCIA SEMANAL", font=ctk.CTkFont(family="Helvetica", size=10, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=20)
+        ctk.CTkLabel(chart_container, text=tr("Bem-estar do Pet"), font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", padx=20, pady=(20, 0))
+        ctk.CTkLabel(chart_container, text=tr("TENDÊNCIA SEMANAL"), font=ctk.CTkFont(family="Helvetica", size=10, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=20)
 
         fig, ax = plt.subplots(figsize=(5, 3), dpi=100)
         fig.patch.set_facecolor('white')
@@ -873,13 +874,13 @@ class ModuloPacientes:
 
         humor_card = ctk.CTkFrame(right_panel, fg_color=colors.ACCENT_GREEN, corner_radius=20)
         humor_card.pack(fill="x", pady=(0, 20))
-        ctk.CTkLabel(humor_card, text="HUMOR REGISTRADO", font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color="white").pack(pady=(15, 5))
+        ctk.CTkLabel(humor_card, text=tr("HUMOR REGISTRADO"), font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color="white").pack(pady=(15, 5))
         ctk.CTkLabel(humor_card, text=emoji_humor, font=("Arial", 40)).pack()
         ctk.CTkLabel(humor_card, text=status_humor, font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color="white").pack(pady=(5, 15))
 
         nota_card = ctk.CTkFrame(right_panel, fg_color=colors.NEUTRAL_100, corner_radius=15) # Cor ajustada
         nota_card.pack(fill="x")
-        ctk.CTkLabel(nota_card, text="💬 NOTA DO TUTOR", font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=15, pady=(10, 0))
+        ctk.CTkLabel(nota_card, text=f"💬 {tr('NOTA DO TUTOR')}", font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=15, pady=(10, 0))
         ctk.CTkLabel(nota_card, text=f'"{nota_tutor}"', font=ctk.CTkFont(family="Helvetica", size=12, weight="italic"), text_color=colors.TEXT_SECONDARY, wraplength=200).pack(anchor="w", padx=15, pady=(5, 15))
         
     def abrir_modal_novo_medicamento(self):
@@ -898,7 +899,7 @@ class ModuloPacientes:
 
         ctk.CTkLabel(
             modal,
-            text="Novo Medicamento",
+            text=tr("Novo Medicamento"),
             font=ctk.CTkFont(family="Helvetica", size=24, weight="bold"),
             text_color=colors.TEXT_DARK
         ).pack(pady=(30, 20))
@@ -918,12 +919,12 @@ class ModuloPacientes:
             entry.pack(fill="x", padx=50, pady=10)
             return entry
 
-        self.ent_med_nome = criar_input("Nome do Medicamento")
-        self.ent_med_dose = criar_input("Dosagem (ex: 50mg)")
-        self.ent_med_freq = criar_input("Frequência (ex: 2x ao dia)")
+        self.ent_med_nome = criar_input(tr("Nome do Medicamento"))
+        self.ent_med_dose = criar_input(tr("Dosagem (ex: 50mg)"))
+        self.ent_med_freq = criar_input(tr("Frequência (ex: 2x ao dia)"))
 
-        self.ent_med_inicio = criar_input("Data de Início (DD/MM/AAAA)") # Placeholder ajustado
-        self.ent_med_fim = criar_input("Data de Término (DD/MM/AAAA)") # Placeholder ajustado
+        self.ent_med_inicio = criar_input(tr("Data de Início (DD/MM/AAAA)")) # Placeholder ajustado
+        self.ent_med_fim = criar_input(tr("Data de Término (DD/MM/AAAA)")) # Placeholder ajustado
 
         btn_box = ctk.CTkFrame(modal, fg_color="transparent")
         btn_box.pack(fill="x", padx=50, pady=30)
@@ -931,7 +932,7 @@ class ModuloPacientes:
 
         ctk.CTkButton(
             btn_box,
-            text="Cancelar",
+            text=tr("Cancelar"),
             fg_color=colors.NEUTRAL_200,
             hover_color=colors.NEUTRAL_300,
             text_color=colors.TEXT_PRIMARY,
@@ -943,7 +944,7 @@ class ModuloPacientes:
 
         ctk.CTkButton(
             btn_box,
-            text="Adicionar à Lista",
+            text=tr("Adicionar à Lista"),
             fg_color=colors.ACCENT_GREEN,
             hover_color=colors.ACCENT_GREEN_HOVER,
             height=50,
@@ -960,7 +961,7 @@ class ModuloPacientes:
         fim = self.ent_med_fim.get().strip()
 
         if not nome:
-            messagebox.showwarning("Aviso", "Digite o nome do medicamento")
+            messagebox.showwarning(tr("Aviso"), tr("Digite o nome do medicamento"))
             return
 
         def converter_data(data):
@@ -975,7 +976,7 @@ class ModuloPacientes:
         fim_formatado = converter_data(fim)
 
         if inicio_formatado == "ERRO" or fim_formatado == "ERRO":
-            messagebox.showerror("Erro", "Use o formato DD/MM/AAAA para as datas")
+            messagebox.showerror(tr("Erro"), tr("Use o formato DD/MM/AAAA para as datas"))
             return
 
         sucesso = self.pet_controller.adicionar_medicamento(
@@ -988,11 +989,11 @@ class ModuloPacientes:
         )
 
         if sucesso:
-            messagebox.showinfo("Sucesso", "Medicamento adicionado!")
+            messagebox.showinfo(tr("Sucesso"), tr("Medicamento adicionado!"))
             self.overlay_med.destroy()
             self.mudar_aba_pet("medicamentos")
         else:
-            messagebox.showerror("Erro", "Não foi possível salvar.")
+            messagebox.showerror(tr("Erro"), tr("Não foi possível salvar."))
 
     def abrir_modal_nova_vacina(self):
         self.overlay_vacina = ctk.CTkFrame(self.content.master, fg_color="black") # Cor preta para o overlay
@@ -1016,14 +1017,14 @@ class ModuloPacientes:
 
         ctk.CTkLabel(
             self.modal_vacina, 
-            text="Novo Registro", 
+            text=tr("Novo Registro"), 
             font=ctk.CTkFont(family="Helvetica", size=22, weight="bold"), 
             text_color=colors.TEXT_DARK
         ).pack(pady=(0, 5))
 
         ctk.CTkLabel(
             self.modal_vacina, 
-            text="Insira os dados da aplicação abaixo.", 
+            text=tr("Insira os dados da aplicação abaixo."), 
             font=ctk.CTkFont(family="Helvetica", size=12), 
             text_color=colors.TEXT_SECONDARY
         ).pack(pady=(0, 20))
@@ -1031,7 +1032,7 @@ class ModuloPacientes:
         form = ctk.CTkFrame(self.modal_vacina, fg_color="transparent")
         form.pack(fill="both", expand=True, padx=30)
 
-        ctk.CTkLabel(form, text="Nome da Vacina", font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(anchor="w", pady=(10, 0))
+        ctk.CTkLabel(form, text=tr("Nome da Vacina"), font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(anchor="w", pady=(10, 0))
         self.entry_nome_vacina = ctk.CTkEntry(
             form, 
             height=45, 
@@ -1045,7 +1046,7 @@ class ModuloPacientes:
         )
         self.entry_nome_vacina.pack(fill="x", pady=(2, 15))
 
-        ctk.CTkLabel(form, text="Data de Aplicação", font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(anchor="w", pady=(0, 0))
+        ctk.CTkLabel(form, text=tr("Data de Aplicação"), font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(anchor="w", pady=(0, 0))
         self.entry_data_aplicacao = ctk.CTkEntry(
             form, 
             placeholder_text="DD/MM/AAAA", 
@@ -1060,7 +1061,7 @@ class ModuloPacientes:
         )
         self.entry_data_aplicacao.pack(fill="x", pady=(2, 15))
 
-        ctk.CTkLabel(form, text="Próxima Dose", font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(anchor="w", pady=(0, 0))
+        ctk.CTkLabel(form, text=tr("Próxima Dose"), font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(anchor="w", pady=(0, 0))
         self.entry_proxima_dose = ctk.CTkEntry(
             form, 
             placeholder_text="DD/MM/AAAA", 
@@ -1082,7 +1083,7 @@ class ModuloPacientes:
 
         btn_cancelar = ctk.CTkButton(
             btn_container, 
-            text="CANCELAR", 
+            text=tr("CANCELAR"), 
             fg_color=colors.NEUTRAL_200, 
             text_color=colors.TEXT_PRIMARY,
             font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
@@ -1094,7 +1095,7 @@ class ModuloPacientes:
 
         btn_salvar = ctk.CTkButton(
             btn_container, 
-            text="SALVAR REGISTRO", 
+            text=tr("SALVAR REGISTRO"), 
             fg_color=colors.ACCENT_GREEN, 
             text_color="white",
             font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
@@ -1117,13 +1118,13 @@ class ModuloPacientes:
         proxima_dose = self.entry_proxima_dose.get().strip()
 
         if not nome_vacina:
-            messagebox.showwarning("Aviso", "Por favor, insira o nome da vacina")
+            messagebox.showwarning(tr("Aviso"), tr("Por favor, insira o nome da vacina"))
             return
         if not data_aplicacao: # Adicionada validação para data_aplicacao
-            messagebox.showwarning("Aviso", "Por favor, insira a data de aplicação")
+            messagebox.showwarning(tr("Aviso"), tr("Por favor, insira a data de aplicação"))
             return
         if not proxima_dose:
-            messagebox.showwarning("Aviso", "Por favor, insira a data da próxima dose")
+            messagebox.showwarning(tr("Aviso"), tr("Por favor, insira a data da próxima dose"))
             return
 
         try:
@@ -1135,7 +1136,7 @@ class ModuloPacientes:
             proxima_dose_formatada = proxima_dose_obj.strftime("%Y-%m-%d")
 
         except ValueError:
-            messagebox.showerror("Erro", "Data inválida! Use o formato DD/MM/YYYY")
+            messagebox.showerror(tr("Erro"), tr("Data inválida! Use o formato DD/MM/YYYY"))
             return
 
         sucesso = self.pet_controller.adicionar_vacina(
@@ -1145,11 +1146,11 @@ class ModuloPacientes:
         )
 
         if sucesso:
-            messagebox.showinfo("Sucesso", "Vacina registrada com sucesso!")
+            messagebox.showinfo(tr("Sucesso"), tr("Vacina registrada com sucesso!"))
             self.fechar_modal_vacina()
             self.mudar_aba_pet("saude")
         else:
-            messagebox.showerror("Erro", "Falha ao registrar a vacina")
+            messagebox.showerror(tr("Erro"), tr("Falha ao registrar a vacina"))
 
     def _carregar_foto_card(self, label, imagem_key):
         """Carrega foto do S3 para exibir no card de pacientes"""

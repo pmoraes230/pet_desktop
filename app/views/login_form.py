@@ -4,6 +4,7 @@ from threading import Thread
 from app.views.modal import Modal
 from app.controllers.auth_controller import AuthController
 import app.core.colors as colors
+from app.core.i18n import tr
 
 # ============================================================
 # 1. CLASSE DE CARREGAMENTO (LoadingOverlay) CORRIGIDA
@@ -111,14 +112,14 @@ class VetAuthForm(ctk.CTkFrame):
         self._criar_tela_login()
 
     def _criar_tela_login(self):
-        ctk.CTkLabel(self, text="Acesse sua conta", font=("Arial", 24, "bold"), text_color="#1F2937").pack(anchor="w", padx=50, pady=(40, 5))
-        ctk.CTkLabel(self, text="Digite seu email e senha para entrar", font=("Arial", 13), text_color="#6B7280").pack(anchor="w", padx=50, pady=(0, 30))
+        ctk.CTkLabel(self, text=tr("Acesse sua conta"), font=("Arial", 24, "bold"), text_color="#1F2937").pack(anchor="w", padx=50, pady=(40, 5))
+        ctk.CTkLabel(self, text=tr("Digite seu email e senha para entrar"), font=("Arial", 13), text_color="#6B7280").pack(anchor="w", padx=50, pady=(0, 30))
         
         ctk.CTkLabel(self, text="Email", font=("Arial", 12, "bold")).pack(anchor="w", padx=50, pady=(0, 5))
-        self.email = ctk.CTkEntry(self, placeholder_text="digite seu email aqui", width=340, height=42, corner_radius=10)
+        self.email = ctk.CTkEntry(self, placeholder_text=tr("digite seu email aqui"), width=340, height=42, corner_radius=10)
         self.email.pack(fill="x", padx=50, pady=(0, 15))
 
-        ctk.CTkLabel(self, text="Senha", font=("Arial", 12, "bold")).pack(anchor="w", padx=50, pady=(0, 5))
+        ctk.CTkLabel(self, text=tr("Senha"), font=("Arial", 12, "bold")).pack(anchor="w", padx=50, pady=(0, 5))
         self.senha = ctk.CTkEntry(self, placeholder_text="••••••••", show="•", width=340, height=42, corner_radius=10)
         self.senha.pack(fill="x", padx=50, pady=(0, 25))
         
@@ -126,15 +127,15 @@ class VetAuthForm(ctk.CTkFrame):
         self.senha.bind("<Return>", lambda event: self.tentar_entrar())
 
         ctk.CTkButton(
-            self, text="Entrar", width=340, height=45, fg_color=colors.BRAND_DARK_TEAL,
+            self, text=tr("Entrar"), width=340, height=45, fg_color=colors.BRAND_DARK_TEAL,
             hover_color="#0c5c54", corner_radius=10, font=("Arial", 14, "bold"),
             command=self.tentar_entrar
         ).pack(pady=(10, 20))
 
         link_frame = ctk.CTkFrame(self, fg_color="transparent")
         link_frame.pack(pady=10)
-        ctk.CTkLabel(link_frame, text="Não tem conta ainda? ", text_color="gray").pack(side="left")
-        link = ctk.CTkLabel(link_frame, text="Criar conta", text_color=colors.BRAND_DARK_TEAL, cursor="hand2", font=("Arial", 13, "underline"))
+        ctk.CTkLabel(link_frame, text=tr("Não tem conta ainda? "), text_color="gray").pack(side="left")
+        link = ctk.CTkLabel(link_frame, text=tr("Criar conta"), text_color=colors.BRAND_DARK_TEAL, cursor="hand2", font=("Arial", 13, "underline"))
         link.pack(side="left")
         link.bind("<Button-1>", lambda e: webbrowser.open(CADASTRO_URL))
         self.email.focus()

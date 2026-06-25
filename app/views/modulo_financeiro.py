@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from app.core.i18n import tr
 
 class ModuloFinanceiro:
     def __init__(self, content_frame):
@@ -20,7 +21,7 @@ class ModuloFinanceiro:
         # Título
         ctk.CTkLabel(
             scroll,
-            text="Painel Financeiro",
+            text=tr("Painel Financeiro"),
             font=("Arial", 24, "bold")
         ).pack(anchor="w", pady=(0, 25))
 
@@ -29,9 +30,9 @@ class ModuloFinanceiro:
         metrics.pack(fill="x", pady=(0, 30))
         metrics.columnconfigure((0, 1, 2), weight=1)
 
-        self.criar_card_fin_topo(metrics, "Entrada (Mês)", "R$ 14.500", 0)
-        self.criar_card_fin_topo(metrics, "Saídas (Mês)", "R$ 5.230", 1)
-        self.criar_card_fin_topo(metrics, "Saldo Líquido", "R$ 9.230", 2)
+        self.criar_card_fin_topo(metrics, tr("Entrada (Mês)"), "R$ 14.500", 0)
+        self.criar_card_fin_topo(metrics, tr("Saídas (Mês)"), "R$ 5.230", 1)
+        self.criar_card_fin_topo(metrics, tr("Saldo Líquido"), "R$ 9.230", 2)
 
         # Grid principal (gráfico + transações)
         main_grid = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -53,7 +54,7 @@ class ModuloFinanceiro:
         # Placeholder simples para o gráfico (você pode substituir por matplotlib depois)
         ctk.CTkLabel(
             chart,
-            text="Gráfico de Entradas/Saídas (placeholder)",
+            text=tr("Gráfico de Entradas/Saídas (placeholder)"),
             font=("Arial", 16),
             text_color="#64748B"
         ).pack(expand=True)
@@ -70,15 +71,15 @@ class ModuloFinanceiro:
 
         ctk.CTkLabel(
             trans,
-            text="Transações Recentes",
+            text=tr("Transações Recentes"),
             font=("Arial", 18, "bold")
         ).pack(pady=15, padx=15)
 
         # Exemplos de transações (depois virão do controller/banco)
         transacoes_exemplo = [
-            ("Pagamento: Paçoca", "Hoje, 14:30", "+ R$ 150,00", "#22C55E"),
-            ("Consulta: Luna", "Ontem, 09:15", "+ R$ 280,00", "#22C55E"),
-            ("Compra de vacinas", "05/02, 16:45", "- R$ 420,00", "#EF4444"),
+            (tr("Pagamento: Paçoca"), tr("Hoje, 14:30"), "+ R$ 150,00", "#22C55E"),
+            (tr("Consulta: Luna"), tr("Ontem, 09:15"), "+ R$ 280,00", "#22C55E"),
+            (tr("Compra de vacinas"), "05/02, 16:45", "- R$ 420,00", "#EF4444"),
         ]
 
         for tit, data, val, cor in transacoes_exemplo:

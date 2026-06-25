@@ -14,6 +14,7 @@ from app.controllers.pet_controller import PetController
 from app.controllers.perfil_controller import FotoPerfil
 from app.controllers.prontuario_controller import ProntuarioController
 from app.services.s3_client import get_url_s3
+from app.core.i18n import get_language, set_language as set_app_language, tr
 
 # Módulos (assumindo que já existem)
 from .modulo_pacientes import ModuloPacientes
@@ -75,6 +76,9 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.notifications_open = False
         self.notifications_menu = None
         self.avatar_image = None
+        self.language = get_language()
+        self.current_screen_title_key = "dashboard"
+        self.sidebar_buttons = []
 
         # Fundo geral mais limpo e moderno
         self.configure(fg_color=colors.NEUTRAL_50)
@@ -124,7 +128,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         ctk.CTkLabel(
             header,
-            text="Coração em Patas",
+            text=tr("Coração em Patas"),
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             text_color="white",
         ).pack(side="left")
@@ -140,21 +144,21 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         # Navegação moderna
         nav_items = [
-            ("Dashboard", self.show_dashboard, "🏠"),
-            ("Mensagens", lambda: self.mod_chat.tela_chat(), "💬"),
-            ("Pacientes", lambda: self.mod_pacientes.tela_pacientes(), "🐾"),
-            ("Agenda", lambda: self.mod_agenda.tela_agenda(), "📅"),
-            ("Prontuários", lambda: self.mod_prontuario.tela_prontuario(), "📋"), # Ordem ajustada
-            ("Financeiro", lambda: self.mod_financeiro.tela_financeiro(), "💰"),
+            ("dashboard", self.show_dashboard, "🏠"),
+            ("messages", lambda: self.mod_chat.tela_chat(), "💬"),
+            ("patients", lambda: self.mod_pacientes.tela_pacientes(), "🐾"),
+            ("schedule", lambda: self.mod_agenda.tela_agenda(), "📅"),
+            ("records", lambda: self.mod_prontuario.tela_prontuario(), "📋"), # Ordem ajustada
+            ("finance", lambda: self.mod_financeiro.tela_financeiro(), "💰"),
         ]
 
-        for label, command, icon_str in nav_items:
-            self._create_sidebar_button(label, command, icon_str)
+        for key, command, icon_str in nav_items:
+            self._create_sidebar_button(key, command, icon_str)
 
-    def _create_sidebar_button(self, label: str, command, icon_str: str):
+    def _create_sidebar_button(self, key: str, command, icon_str: str):
         btn = ctk.CTkButton(
             self.sidebar,
-            text=f"{icon_str}   {label}", # Usa o ícone string diretamente
+            text=f"{icon_str}   {self._t(key)}", # Usa o ícone string diretamente
             fg_color="transparent",
             hover_color=colors.PRIMARY_HOVER,
             text_color="white",
@@ -162,9 +166,10 @@ class DashboardVeterinario(ctk.CTkFrame):
             height=48, # Altura ajustada
             corner_radius=10, # Raio menor
             anchor="w",
-            command=lambda: self._switch_screen(command),
+            command=lambda: self._switch_screen(command, key),
         )
         btn.pack(fill="x", padx=20, pady=4) # Padding ajustado
+        self.sidebar_buttons.append((btn, key, icon_str))
 
     def _build_topbar(self):
         self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
@@ -174,7 +179,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         # Título "Dashboard" ou da tela atual
         self.current_screen_title = ctk.CTkLabel(
             self.topbar,
-            text="Dashboard", # Valor inicial
+            text=self._t("dashboard"), # Valor inicial
             font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"),
             text_color=colors.TEXT_PRIMARY,
         )
@@ -219,7 +224,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         except Exception:
             initial_avatar = None
 
-        self.profile_button_text = f"{self.user_name}\nMeu Perfil  ⌄"
+        self.profile_button_text = self._profile_button_text()
         self.avatar_btn = ctk.CTkButton(
             right,
             text=self.profile_button_text,
@@ -258,12 +263,109 @@ class DashboardVeterinario(ctk.CTkFrame):
         for child in self.content.winfo_children():
             child.destroy()
         target_screen_func()
-        self.current_screen_title.configure(text=title) # Atualiza o título da topbar
+        self.current_screen_title_key = self._title_to_key(title)
+        self.current_screen_title.configure(text=self._t(self.current_screen_title_key)) # Atualiza o título da topbar
+
+    def set_language(self, language: str):
+        self.language = "en" if language == "en" else "pt"
+        set_app_language(self.language)
+        self._refresh_language_texts()
+
+    def _refresh_language_texts(self):
+        for btn, key, icon_str in self.sidebar_buttons:
+            btn.configure(text=f"{icon_str}   {self._t(key)}")
+        self.profile_button_text = self._profile_button_text()
+        if hasattr(self, "avatar_btn"):
+            self.avatar_btn.configure(text=self.profile_button_text)
+        if hasattr(self, "current_screen_title"):
+            self.current_screen_title.configure(text=self._t(self.current_screen_title_key))
+        try:
+            self.winfo_toplevel().title(tr("Coração em Patas"))
+        except Exception:
+            pass
+        if self.profile_menu_open:
+            self._toggle_profile_menu()
+            self._toggle_profile_menu()
+
+    def _profile_button_text(self):
+        return f"{self.user_name}\n{self._t('my_profile')}  ⌄"
+
+    def _title_to_key(self, title):
+        title_map = {
+            "Dashboard": "dashboard",
+            "Mensagens": "messages",
+            "Pacientes": "patients",
+            "Agenda": "schedule",
+            "Prontuários": "records",
+            "Prontuario": "records",
+            "Financeiro": "finance",
+            "Meu Perfil": "my_profile",
+            "Configurações": "settings",
+            "Configuracoes": "settings",
+        }
+        return title_map.get(title, title if title in self._translations().get("pt", {}) else "dashboard")
+
+    def _translations(self):
+        return {
+            "pt": {
+                "dashboard": "Dashboard",
+                "messages": "Mensagens",
+                "patients": "Pacientes",
+                "schedule": "Agenda",
+                "records": "Prontuários",
+                "finance": "Financeiro",
+                "my_profile": "Meu Perfil",
+                "settings": "Configurações",
+                "logout": "Sair da conta",
+                "notifications": "Notificações",
+                "no_notifications": "Nenhuma notificação no momento",
+                "notification": "Notificação",
+                "new_appointment": "Novo Agendamento",
+                "sample_notification": "Dr. Rayan, você tem um novo agendamento para amanhã.",
+                "today_schedule": "Agenda de Hoje",
+                "no_today_appointments": "Nenhuma consulta agendada para hoje.",
+                "view_all": "Ver tudo",
+                "alerts": "Alertas",
+                "no_alerts": "Nenhum alerta pendente.",
+                "total_patients": "Total Pacientes",
+                "today_appointments": "Consultas Hoje",
+                "critical_cases": "Casos Críticos",
+                "today_revenue": "Faturamento Hoje",
+            },
+            "en": {
+                "dashboard": "Dashboard",
+                "messages": "Messages",
+                "patients": "Patients",
+                "schedule": "Schedule",
+                "records": "Medical Records",
+                "finance": "Finance",
+                "my_profile": "My Profile",
+                "settings": "Settings",
+                "logout": "Sign out",
+                "notifications": "Notifications",
+                "no_notifications": "No notifications right now",
+                "notification": "Notification",
+                "new_appointment": "New Appointment",
+                "sample_notification": "Dr. Rayan, you have a new appointment for tomorrow.",
+                "today_schedule": "Today's Schedule",
+                "no_today_appointments": "No appointments scheduled for today.",
+                "view_all": "View all",
+                "alerts": "Alerts",
+                "no_alerts": "No pending alerts.",
+                "total_patients": "Total Patients",
+                "today_appointments": "Today's Appointments",
+                "critical_cases": "Critical Cases",
+                "today_revenue": "Today's Revenue",
+            },
+        }
+
+    def _t(self, key):
+        return self._translations().get(self.language, {}).get(key, tr(key))
 
     # ── Telas ────────────────────────────────────────────────────────────────
 
     def show_dashboard(self):
-        self._switch_screen(self._build_dashboard_screen, "Dashboard")
+        self._switch_screen(self._build_dashboard_screen, "dashboard")
 
     def _build_dashboard_screen(self):
         scroll = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
@@ -284,21 +386,21 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         # Novos cards de métricas (4 ao invés de 3)
         self._create_metric_card(
-            scroll, metrics.get("total_pets", 0), "Total Pacientes", "👥", 0,
+            scroll, metrics.get("total_pets", 0), self._t("total_patients"), "👥", 0,
             icon_color=colors.METRIC_ICON_1
         )
         self._create_metric_card(
-            scroll, metrics.get("consultas_hoje", 0), "Consultas Hoje", "🗓️", 1,
+            scroll, metrics.get("consultas_hoje", 0), self._t("today_appointments"), "🗓️", 1,
             icon_color=colors.METRIC_ICON_2
         )
         self._create_metric_card(
-            scroll, metrics.get("casos_criticos", 0), "Casos Críticos", "⚠️", 2, # Novo card
+            scroll, metrics.get("casos_criticos", 0), self._t("critical_cases"), "⚠️", 2, # Novo card
             icon_color=colors.METRIC_ICON_3
         )
         self._create_metric_card(
             scroll,
             metrics.get("faturamento_mes", 0),
-            "Faturamento Hoje", # Texto ajustado
+            self._t("today_revenue"), # Texto ajustado
             "💲", # Ícone ajustado
             3,
             prefix="R$ ",
@@ -317,7 +419,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         ctk.CTkLabel(
             agenda_frame,
-            text="Agenda de Hoje",
+            text=self._t("today_schedule"),
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             text_color=colors.TEXT_PRIMARY,
         ).pack(padx=24, pady=(20, 10), anchor="w")
@@ -335,7 +437,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         ).pack(pady=(20, 10))
         ctk.CTkLabel(
             agenda_content,
-            text="Nenhuma consulta agendada para hoje.",
+            text=self._t("no_today_appointments"),
             font=ctk.CTkFont(family="Helvetica", size=14),
             text_color=colors.TEXT_SECONDARY,
         ).pack(pady=(0, 40))
@@ -343,12 +445,12 @@ class DashboardVeterinario(ctk.CTkFrame):
         # Botão "Ver tudo"
         ctk.CTkButton(
             agenda_frame,
-            text="Ver tudo",
+            text=self._t("view_all"),
             fg_color="transparent",
             hover_color=colors.NEUTRAL_100,
             text_color=colors.PRIMARY_DARK, # Cor do texto do botão
             font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
-            command=lambda: self._switch_screen(self.mod_agenda.tela_agenda, "Agenda"),
+            command=lambda: self._switch_screen(self.mod_agenda.tela_agenda, "schedule"),
         ).place(relx=0.95, rely=0.08, anchor="e") # Posicionamento para ficar no canto superior direito
 
         # Alertas (novo card)
@@ -363,7 +465,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         ctk.CTkLabel(
             alerts_frame,
-            text="Alertas",
+            text=self._t("alerts"),
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             text_color=colors.TEXT_PRIMARY,
         ).pack(padx=24, pady=(20, 10), anchor="w")
@@ -374,7 +476,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         ctk.CTkLabel(
             alerts_content,
-            text="Nenhum alerta pendente.",
+            text=self._t("no_alerts"),
             font=ctk.CTkFont(family="Helvetica", size=14),
             text_color=colors.TEXT_SECONDARY,
         ).pack(pady=60)
@@ -490,7 +592,7 @@ class DashboardVeterinario(ctk.CTkFrame):
 
         ctk.CTkLabel(
             self.notifications_menu,
-            text="Notificações",
+            text=self._t("notifications"),
             font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
             text_color=colors.TEXT_PRIMARY,
         ).pack(pady=12, padx=16, anchor="w")
@@ -501,12 +603,12 @@ class DashboardVeterinario(ctk.CTkFrame):
         notifications = self.vet_ctrl.fetch_alerts() if self.vet_ctrl else []
         # Simula alerts
         if not notifications and not self.vet_ctrl:
-            notifications = [{"id": 1, "tipo": "Novo Agendamento", "mensagem": "Dr. Rayan, você tem um novo agendamento para amanhã.", "lida": False}]
+            notifications = [{"id": 1, "tipo": self._t("new_appointment"), "mensagem": self._t("sample_notification"), "lida": False}]
 
         if not notifications:
             ctk.CTkLabel(
                 scroll,
-                text="Nenhuma notificação no momento",
+                text=self._t("no_notifications"),
                 font=ctk.CTkFont(family="Helvetica", size=13),
                 text_color=colors.TEXT_SECONDARY,
             ).pack(pady=40)
@@ -514,7 +616,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             for notif in notifications:
                 self._create_notification_item(
                     scroll,
-                    notif.get("tipo", "Notificação"),
+                    notif.get("tipo", self._t("notification")),
                     notif.get("mensagem", ""),
                     notif.get("id"),
                     bool(notif.get("lida", False)),
@@ -619,9 +721,9 @@ class DashboardVeterinario(ctk.CTkFrame):
         ctk.CTkLabel(self.profile_menu, text="", fg_color=colors.NEUTRAL_200, height=1).pack(fill="x", padx=16, pady=(8, 8))
 
         items = [
-            ("👤  Meu Perfil", lambda: self._switch_screen(self.mod_configuracoes.tela_configuracoes_perfil, "Meu Perfil"), colors.TEXT_PRIMARY),
-            ("⚙️  Configurações", lambda: self._switch_screen(self.mod_configuracoes.tela_configuracoes_gerais, "Configurações"), colors.TEXT_PRIMARY),
-            ("⇦  Sair da conta", self._logout, colors.DANGER),
+            (f"👤  {self._t('my_profile')}", lambda: self._switch_screen(self.mod_configuracoes.tela_configuracoes_perfil, "my_profile"), colors.TEXT_PRIMARY),
+            (f"⚙️  {self._t('settings')}", lambda: self._switch_screen(self.mod_configuracoes.tela_configuracoes_gerais, "settings"), colors.TEXT_PRIMARY),
+            (f"⇦  {self._t('logout')}", self._logout, colors.DANGER),
         ]
 
         for text, cmd, color in items:

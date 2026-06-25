@@ -5,6 +5,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from ..controllers.agenda_controller import AgendaController
+from app.core.i18n import tr
 from .modal_agendamento import ModalAgendamento
 
 
@@ -64,7 +65,7 @@ class ModuloAgenda:
         titulo_frame.pack(fill="x", pady=(30, 10))
         ctk.CTkLabel(
             titulo_frame,
-            text="Compromissos da Semana",
+            text=tr("Compromissos da Semana"),
             font=ctk.CTkFont(family="Helvetica", size=22, weight="bold"),
             text_color=colors.TEXT,
         ).pack(anchor="w")
@@ -83,14 +84,14 @@ class ModuloAgenda:
 
         ctk.CTkLabel(
             header_left,
-            text="Agenda de Consultas",
+            text=tr("Agenda de Consultas"),
             font=ctk.CTkFont(family="Helvetica", size=30, weight="bold"),
             text_color=colors.TEXT,
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             header_left,
-            text="Gerencie seus horarios e procedimentos",
+            text=tr("Gerencie seus horarios e procedimentos"),
             font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
             text_color=colors.MUTED,
         ).pack(anchor="w", pady=(3, 0))
@@ -100,7 +101,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             buttons_right_frame,
-            text="Liberar Horarios",
+            text=tr("Liberar Horarios"),
             fg_color=colors.PURPLE,
             hover_color=colors.PURPLE_HOVER,
             text_color="white",
@@ -113,7 +114,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             buttons_right_frame,
-            text="Calendario",
+            text=tr("Calendario"),
             fg_color=colors.GRAY_LIGHT,
             hover_color="#E5E7EB",
             text_color=colors.TEXT,
@@ -126,7 +127,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             buttons_right_frame,
-            text="+ Marcar retorno",
+            text=tr("+ Marcar retorno"),
             fg_color=colors.ACCENT_GREEN,
             hover_color=colors.ACCENT_GREEN_HOVER,
             text_color="white",
@@ -183,7 +184,7 @@ class ModuloAgenda:
         dias_frame.columnconfigure((0, 1, 2, 3, 4, 5, 6), weight=1, uniform="week_days")
 
         dias_com_consultas = self.controller.dias_com_consultas_na_semana(self.semana_atual_start_date)
-        nomes_dias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"]
+        nomes_dias = self._nomes_dias()
 
         for dia_semana_idx, dia_nome in enumerate(nomes_dias):
             data_dia = self.semana_atual_start_date + timedelta(days=dia_semana_idx)
@@ -245,7 +246,7 @@ class ModuloAgenda:
         self.calendario_ano = self.ano_atual
 
         self.calendario_modal = ctk.CTkToplevel(self.content)
-        self.calendario_modal.title("Calendario Completo")
+        self.calendario_modal.title(tr("Calendario Completo"))
         self.calendario_modal.geometry("760x650")
         self.calendario_modal.minsize(680, 580)
         self.calendario_modal.configure(fg_color="white")
@@ -302,7 +303,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             botoes,
-            text="Fechar",
+            text=tr("Fechar"),
             width=90,
             height=42,
             fg_color=colors.DANGER_BG,
@@ -323,7 +324,7 @@ class ModuloAgenda:
         grade.pack(fill="both", expand=True)
         grade.columnconfigure((0, 1, 2, 3, 4, 5, 6), weight=1, uniform="calendar_days")
 
-        nomes_dias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"]
+        nomes_dias = self._nomes_dias()
         for coluna, nome in enumerate(nomes_dias):
             ctk.CTkLabel(
                 grade,
@@ -413,10 +414,11 @@ class ModuloAgenda:
     def _criar_card_agendamento(self, master, consulta):
         hora = self._formatar_hora(consulta.get("HORARIO_CONSULTA"))
         data = self._formatar_data_curta(consulta.get("DATA_CONSULTA"))
-        titulo = consulta.get("TIPO_DE_CONSULTA") or "Consulta"
+        titulo = tr(consulta.get("TIPO_DE_CONSULTA") or "Consulta")
         pet_nome = consulta.get("NOME_PET") or f"Pet ID: {consulta.get('ID_PET', 'N/A')}"
-        tutor_nome = consulta.get("NOME_TUTOR") or "Nao informado"
-        status = consulta.get("STATUS") or "Sem status"
+        tutor_nome = consulta.get("NOME_TUTOR") or tr("Nao informado")
+        status_raw = consulta.get("STATUS") or "Sem status"
+        status = tr(status_raw)
 
         card = ctk.CTkFrame(
             master,
@@ -475,7 +477,7 @@ class ModuloAgenda:
 
         ctk.CTkLabel(
             info_frame,
-            text=f"{pet_nome}  |  Tutor: {tutor_nome}",
+            text=f"{pet_nome}  |  {tr('Tutor')}: {tutor_nome}",
             font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
             text_color=colors.MUTED,
         ).pack(anchor="w", pady=(5, 0))
@@ -483,15 +485,15 @@ class ModuloAgenda:
         acoes = ctk.CTkFrame(info_frame, fg_color="transparent")
         acoes.pack(anchor="w", pady=(14, 0))
 
-        status_norm = self._status_normalizado(status)
+        status_norm = self._status_normalizado(status_raw)
         if status_norm == "pendente":
-            self._criar_botao_acao(acoes, "Aceitar", colors.SUCCESS_TEXT, "#15803D", lambda: self._mudar_status(consulta, "Confirmado"))
-            self._criar_botao_acao(acoes, "Rejeitar", colors.DANGER_TEXT, "#991B1B", lambda: self._mudar_status(consulta, "Cancelado"))
+            self._criar_botao_acao(acoes, tr("Aceitar"), colors.SUCCESS_TEXT, "#15803D", lambda: self._mudar_status(consulta, "Confirmado"))
+            self._criar_botao_acao(acoes, tr("Rejeitar"), colors.DANGER_TEXT, "#991B1B", lambda: self._mudar_status(consulta, "Cancelado"))
         if status_norm == "confirmado":
-            self._criar_botao_acao(acoes, "Finalizar Consulta", colors.PURPLE, colors.PURPLE_HOVER, lambda: self._mudar_status(consulta, "Concluido"))
+            self._criar_botao_acao(acoes, tr("Finalizar Consulta"), colors.PURPLE, colors.PURPLE_HOVER, lambda: self._mudar_status(consulta, "Concluido"))
 
-        self._criar_botao_acao(acoes, "Detalhes", colors.GRAY_LIGHT, "#E5E7EB", lambda: self._abrir_modal_detalhes(consulta), text_color=colors.MUTED)
-        self._criar_botao_acao(acoes, "Excluir", colors.DANGER_BG, "#FECACA", lambda: self._confirmar_exclusao(consulta), text_color=colors.DANGER_TEXT)
+        self._criar_botao_acao(acoes, tr("Detalhes"), colors.GRAY_LIGHT, "#E5E7EB", lambda: self._abrir_modal_detalhes(consulta), text_color=colors.MUTED)
+        self._criar_botao_acao(acoes, tr("Excluir"), colors.DANGER_BG, "#FECACA", lambda: self._confirmar_exclusao(consulta), text_color=colors.DANGER_TEXT)
 
     def _criar_botao_acao(self, parent, texto, cor, hover, comando, text_color="white"):
         ctk.CTkButton(
@@ -528,7 +530,7 @@ class ModuloAgenda:
 
         ctk.CTkLabel(
             msg_frame,
-            text="Nenhuma consulta agendada para este periodo.",
+            text=tr("Nenhuma consulta agendada para este periodo."),
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             text_color=colors.MUTED,
         ).pack(pady=64)
@@ -554,7 +556,7 @@ class ModuloAgenda:
         if not valor:
             return "--"
         data = self._como_data(valor)
-        meses = ["", "JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
+        meses = ["", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] if tr("Idioma") == "Language" else ["", "JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
         return f"{data.day:02d} {meses[data.month]}"
 
     def _formatar_data_longa(self, valor):
@@ -564,33 +566,38 @@ class ModuloAgenda:
         return data.strftime("%d/%m/%Y")
 
     def _mes_nome(self, mes):
-        nomes = ["", "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+        nomes = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] if tr("Idioma") == "Language" else ["", "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
         return nomes[mes] if 1 <= mes <= 12 else calendar.month_name[mes]
+
+    def _nomes_dias(self):
+        if tr("Idioma") == "Language":
+            return ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+        return ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"]
 
     def _mudar_status(self, consulta, novo_status):
         status_atual = self._status_normalizado(consulta.get("STATUS"))
         if novo_status == "Confirmado" and status_atual != "pendente":
-            messagebox.showwarning("Agenda", "Apenas consultas pendentes podem ser aceitas.")
+            messagebox.showwarning(tr("Agenda"), tr("Apenas consultas pendentes podem ser aceitas."))
             return
         if novo_status == "Cancelado" and status_atual != "pendente":
-            messagebox.showwarning("Agenda", "Apenas consultas pendentes podem ser rejeitadas.")
+            messagebox.showwarning(tr("Agenda"), tr("Apenas consultas pendentes podem ser rejeitadas."))
             return
         if novo_status == "Concluido" and status_atual != "confirmado":
-            messagebox.showwarning("Agenda", "Apenas consultas confirmadas podem ser finalizadas.")
+            messagebox.showwarning(tr("Agenda"), tr("Apenas consultas confirmadas podem ser finalizadas."))
             return
 
         sucesso, mensagem = self.controller.atualizar_status_consulta(consulta.get("id"), novo_status)
         if sucesso:
             self.tela_agenda()
-            messagebox.showinfo("Agenda", mensagem)
+            messagebox.showinfo(tr("Agenda"), mensagem)
         else:
-            messagebox.showerror("Agenda", mensagem)
+            messagebox.showerror(tr("Agenda"), mensagem)
 
     def _confirmar_exclusao(self, consulta):
-        pet_nome = consulta.get("NOME_PET") or "este pet"
+        pet_nome = consulta.get("NOME_PET") or tr("este pet")
         confirmar = messagebox.askyesno(
-            "Confirmar exclusao",
-            f"Tem certeza que deseja excluir a consulta de {pet_nome}? Esta acao nao pode ser desfeita.",
+            tr("Confirmar exclusao"),
+            tr("Tem certeza que deseja excluir a consulta de {pet_nome}? Esta acao nao pode ser desfeita.", pet_nome=pet_nome),
         )
         if not confirmar:
             return
@@ -598,13 +605,13 @@ class ModuloAgenda:
         sucesso, mensagem = self.controller.excluir_consulta(consulta.get("id"))
         if sucesso:
             self.tela_agenda()
-            messagebox.showinfo("Agenda", mensagem)
+            messagebox.showinfo(tr("Agenda"), mensagem)
         else:
-            messagebox.showerror("Agenda", mensagem)
+            messagebox.showerror(tr("Agenda"), mensagem)
 
     def _abrir_modal_detalhes(self, consulta):
         modal = ctk.CTkToplevel(self.content)
-        modal.title("Detalhes do Agendamento")
+        modal.title(tr("Detalhes do Agendamento"))
         modal.geometry("520x500")
         modal.resizable(False, False)
         modal.configure(fg_color="white")
@@ -616,14 +623,14 @@ class ModuloAgenda:
 
         ctk.CTkLabel(
             header,
-            text=consulta.get("TIPO_DE_CONSULTA") or "Consulta",
+            text=tr(consulta.get("TIPO_DE_CONSULTA") or "Consulta"),
             font=ctk.CTkFont(family="Helvetica", size=24, weight="bold"),
             text_color="white",
         ).pack(anchor="w", padx=32, pady=(28, 4))
 
         ctk.CTkLabel(
             header,
-            text="Informacoes do agendamento",
+            text=tr("Informacoes do agendamento"),
             font=ctk.CTkFont(family="Helvetica", size=13),
             text_color="#E8FFFF",
         ).pack(anchor="w", padx=32, pady=(0, 28))
@@ -632,20 +639,20 @@ class ModuloAgenda:
         body.pack(fill="both", expand=True, padx=32, pady=28)
         body.columnconfigure((0, 1), weight=1)
 
-        self._detalhe_item(body, "Paciente", consulta.get("NOME_PET") or "Nao informado", 0, 0)
-        self._detalhe_item(body, "Tutor", consulta.get("NOME_TUTOR") or "Nao informado", 0, 1)
-        self._detalhe_item(body, "Data", self._formatar_data_longa(consulta.get("DATA_CONSULTA")), 1, 0)
-        self._detalhe_item(body, "Hora", self._formatar_hora(consulta.get("HORARIO_CONSULTA")), 1, 1)
-        self._detalhe_item(body, "Status", consulta.get("STATUS") or "Sem status", 2, 0)
+        self._detalhe_item(body, tr("Paciente"), consulta.get("NOME_PET") or tr("Nao informado"), 0, 0)
+        self._detalhe_item(body, tr("Tutor"), consulta.get("NOME_TUTOR") or tr("Nao informado"), 0, 1)
+        self._detalhe_item(body, tr("Data"), self._formatar_data_longa(consulta.get("DATA_CONSULTA")), 1, 0)
+        self._detalhe_item(body, tr("Hora"), self._formatar_hora(consulta.get("HORARIO_CONSULTA")), 1, 1)
+        self._detalhe_item(body, tr("Status"), tr(consulta.get("STATUS") or "Sem status"), 2, 0)
 
         ctk.CTkLabel(
             body,
-            text="OBSERVACOES",
+            text=tr("OBSERVACOES"),
             font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
             text_color=colors.MUTED,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(18, 8))
 
-        obs = consulta.get("OBSERVACOES") or "Nenhuma observacao."
+        obs = consulta.get("OBSERVACOES") or tr("Nenhuma observacao.")
         ctk.CTkLabel(
             body,
             text=obs,
@@ -661,7 +668,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             body,
-            text="Fechar",
+            text=tr("Fechar"),
             height=46,
             fg_color=colors.GRAY_LIGHT,
             hover_color="#E5E7EB",
@@ -698,7 +705,7 @@ class ModuloAgenda:
 
     def abrir_modal_liberar_horarios(self):
         self.modal_horarios = ctk.CTkToplevel(self.content)
-        self.modal_horarios.title("Liberar Horarios")
+        self.modal_horarios.title(tr("Liberar Horarios"))
         self.modal_horarios.geometry("500x520")
         self.modal_horarios.resizable(False, False)
         self.modal_horarios.configure(fg_color="white")
@@ -710,13 +717,13 @@ class ModuloAgenda:
 
         ctk.CTkLabel(
             header,
-            text="Liberar Horarios",
+            text=tr("Liberar Horarios"),
             font=ctk.CTkFont(family="Helvetica", size=26, weight="bold"),
             text_color=colors.TEXT,
         ).pack(anchor="w")
         ctk.CTkLabel(
             header,
-            text="Crie vagas disponiveis para os tutores",
+            text=tr("Crie vagas disponiveis para os tutores"),
             font=ctk.CTkFont(family="Helvetica", size=13),
             text_color=colors.MUTED,
         ).pack(anchor="w", pady=(4, 0))
@@ -738,7 +745,7 @@ class ModuloAgenda:
 
         self.entry_data_liberar = self._criar_input_horario(
             form,
-            "Dia da disponibilidade",
+            tr("Dia da disponibilidade"),
             datetime(self.ano_atual, self.mes_atual, self.dia_selecionado).strftime("%d/%m/%Y"),
         )
 
@@ -748,22 +755,22 @@ class ModuloAgenda:
 
         col_inicio = ctk.CTkFrame(row, fg_color="transparent")
         col_inicio.grid(row=0, column=0, padx=(0, 10), sticky="ew")
-        self.entry_inicio_liberar = self._criar_input_horario(col_inicio, "Hora de inicio", "08:00")
+        self.entry_inicio_liberar = self._criar_input_horario(col_inicio, tr("Hora de inicio"), "08:00")
 
         col_fim = ctk.CTkFrame(row, fg_color="transparent")
         col_fim.grid(row=0, column=1, padx=(10, 0), sticky="ew")
-        self.entry_fim_liberar = self._criar_input_horario(col_fim, "Hora de termino", "18:00")
+        self.entry_fim_liberar = self._criar_input_horario(col_fim, tr("Hora de termino"), "18:00")
 
         ctk.CTkLabel(
             form,
-            text="INTERVALO ENTRE CONSULTAS",
+            text=tr("INTERVALO ENTRE CONSULTAS"),
             font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
             text_color=colors.MUTED,
         ).pack(anchor="w", pady=(0, 8))
 
         self.combo_intervalo_liberar = ctk.CTkComboBox(
             form,
-            values=["30 minutos", "60 minutos", "15 minutos", "45 minutos"],
+            values=[tr("30 minutos"), tr("60 minutos"), tr("15 minutos"), tr("45 minutos")],
             height=45,
             fg_color=colors.GRAY_LIGHT,
             border_width=0,
@@ -774,7 +781,7 @@ class ModuloAgenda:
             font=ctk.CTkFont(family="Helvetica", size=12),
         )
         self.combo_intervalo_liberar.pack(fill="x", pady=(0, 22))
-        self.combo_intervalo_liberar.set("30 minutos")
+        self.combo_intervalo_liberar.set(tr("30 minutos"))
 
         self.label_feedback_liberar = ctk.CTkLabel(
             form,
@@ -790,7 +797,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             botoes,
-            text="Cancelar",
+            text=tr("Cancelar"),
             height=48,
             fg_color=colors.GRAY_LIGHT,
             hover_color="#E5E7EB",
@@ -802,7 +809,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             botoes,
-            text="Criar vagas",
+            text=tr("Criar vagas"),
             height=48,
             fg_color=colors.PURPLE,
             hover_color=colors.PURPLE_HOVER,
@@ -846,9 +853,9 @@ class ModuloAgenda:
             self.label_feedback_liberar.configure(text=mensagem, text_color=colors.DANGER_TEXT)
             return
 
-        texto = f"{criados} horario(s) criado(s)."
+        texto = tr("{criados} horario(s) criado(s).", criados=criados)
         if existentes:
-            texto += f" {existentes} ja existiam."
+            texto += tr(" {existentes} ja existiam.", existentes=existentes)
         self.label_feedback_liberar.configure(text=texto, text_color=colors.SUCCESS_TEXT)
         self.content.after(900, self.modal_horarios.destroy)
         self.content.after(950, self.tela_agenda)
