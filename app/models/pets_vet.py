@@ -8,10 +8,25 @@ class PetAll:
     # =========================
 
     @staticmethod
-    def listar_pets():
+    def listar_pets(vet_id=None):
         try:
             conn = connectdb()
             cursor = conn.cursor(dictionary=True)
+
+            if vet_id:
+                cursor.execute("""
+                    SELECT DISTINCT p.id, p.NOME, p.ESPECIE, p.RACA, p.DATA_NASCIMENTO,
+                           p.SEXO, p.PESO, p.CASTRADO, p.PERSONALIDADE,
+                           p.IMAGEM, p.ID_TUTOR
+                    FROM pet p
+                    INNER JOIN consulta c ON c.ID_PET = p.id
+                    WHERE c.veterinario_id = %s
+                      AND c.STATUS IN ('Confirmado', 'Concluido')
+                    ORDER BY p.NOME
+                """, (vet_id,))
+                pets = cursor.fetchall()
+                conn.close()
+                return pets if pets else []
 
             cursor.execute("""
                 SELECT id, NOME, ESPECIE, RACA, DATA_NASCIMENTO,
@@ -32,10 +47,25 @@ class PetAll:
             return []
 
     @staticmethod
-    def buscar_pet(id_pet):
+    def buscar_pet(id_pet, vet_id=None):
         try:
             conn = connectdb()
             cursor = conn.cursor(dictionary=True)
+
+            if vet_id:
+                cursor.execute("""
+                    SELECT DISTINCT p.id, p.NOME, p.ESPECIE, p.RACA, p.DATA_NASCIMENTO,
+                           p.SEXO, p.PESO, p.CASTRADO, p.PERSONALIDADE,
+                           p.IMAGEM, p.ID_TUTOR
+                    FROM pet p
+                    INNER JOIN consulta c ON c.ID_PET = p.id
+                    WHERE p.id = %s
+                      AND c.veterinario_id = %s
+                      AND c.STATUS IN ('Confirmado', 'Concluido')
+                """, (id_pet, vet_id))
+                pet = cursor.fetchone()
+                conn.close()
+                return pet if pet else {}
 
             cursor.execute("""
                 SELECT id, NOME, ESPECIE, RACA, DATA_NASCIMENTO,

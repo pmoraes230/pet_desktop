@@ -53,6 +53,23 @@ def upload_foto_pet_s3(file_path, pet_id):
     return key
 
 
+def upload_prontuario_arquivo_s3(file_path, pet_id):
+    """Faz upload do arquivo anexado ao prontuário para o S3"""
+    s3 = _get_s3_client()
+
+    extensao = file_path.split(".")[-1]
+    key = f"prontuario/{pet_id}_{uuid4().hex}.{extensao}"
+    content_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+
+    try:
+        s3.upload_file(file_path, BUCKET_NAME, key, ExtraArgs={"ContentType": content_type})
+    except botocore.exceptions.ClientError as e:
+        print("Erro ao fazer upload do arquivo do prontuário:", e)
+        return None
+
+    return key
+
+
 def baixar_imagem_s3(key):
     s3 = _get_s3_client()
     file_obj = BytesIO()
