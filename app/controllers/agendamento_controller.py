@@ -1,15 +1,16 @@
 from ..config.database import connectdb, closedb
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import uuid
 
 
 class AgendamentoController:
-    def __init__(self):
-        pass
+    def __init__(self, vet_id=None):
+        self.vet_id = vet_id
 
     def listar_pets(self, id_veterinario=None):
         """Lista apenas pets aceitos pelo veterinario logado."""
-        if not id_veterinario:
+        vet_id = id_veterinario if id_veterinario is not None else self.vet_id
+        if not vet_id:
             return []
 
         last_error = "Nenhum pet encontrado para este veterinario."
@@ -26,7 +27,7 @@ class AgendamentoController:
                       AND LOWER(COALESCE(c.STATUS, '')) IN ('confirmado', 'concluido', 'concluído')
                     ORDER BY p.NOME
                     LIMIT 100
-                """, (id_veterinario,))
+                """, (vet_id,))
                 pets = cursor.fetchall()
                 closedb(conn)
                 return pets
@@ -43,7 +44,7 @@ class AgendamentoController:
         try:
             conn = connectdb()
             cursor = conn.cursor(dictionary=True)
-            query = "SELECT id, nome FROM vet_user LIMIT 100"
+            query = "SELECT id, NOME AS nome FROM veterinario ORDER BY NOME LIMIT 100"
             cursor.execute(query)
             vets = cursor.fetchall()
             closedb(conn)
@@ -142,3 +143,55 @@ class AgendamentoController:
 
         print(f"Erro ao criar agendamento: {last_error}")
         return False
+
+    def liberar_horarios(self, id_veterinario, data, hora_inicio, hora_fim, intervalo_minutos=30):
+        """Cria horarios livres na agenda_disponivel para o veterinario."""
+        try:
+            if not id_veterinario:
+                print("Erro ao liberar horarios: veterinario logado nao informado")
+                return 0
+
+            inicio = datetime.strptime(hora_inicio, "%H:%M")
+            fim = datetime.strptime(hora_fim, "%H:%M")
+            if inicio >= fim:
+                print("Erro ao liberar horarios: hora inicial deve ser menor que hora final")
+                return 0
+
+            intervalo_minutos = int(intervalo_minutos)
+            if intervalo_minutos <= 0:
+                return 0
+
+            conn = connectdb()
+            cursor = conn.cursor()
+            criados = 0
+            atual = inicio
+
+            while atual < fim:
+                hora = atual.strftime("%H:%M")
+                cursor.execute("""
+                    SELECT id
+                    FROM agenda_disponivel
+                    WHERE ID_VETERINARIO = %s
+                      AND DATA = %s
+                      AND HORA = %s
+                    LIMIT 1
+                """, (id_veterinario, data, hora))
+                existente = cursor.fetchone()
+
+                if not existente:
+                    cursor.execute("""
+                        INSERT INTO agenda_disponivel
+                            (id, ID_VETERINARIO, DATA, HORA, STATUS)
+                        VALUES
+                            (%s, %s, %s, %s, 'Livre')
+                    """, (uuid.uuid4().hex, id_veterinario, data, hora))
+                    criados += 1
+
+                atual += timedelta(minutes=intervalo_minutos)
+
+            conn.commit()
+            closedb(conn)
+            return criados
+        except Exception as e:
+            print(f"Erro ao liberar horarios: {e}")
+            return 0

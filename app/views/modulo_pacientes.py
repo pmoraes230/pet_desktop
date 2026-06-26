@@ -4,6 +4,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from io import BytesIO
 import requests
+from pathlib import Path
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import matplotlib.pyplot as plt
@@ -60,7 +61,10 @@ class ModuloPacientes:
     def _load_default_pet_image(self):
         try:
             # Caminho de uma imagem genérica de pet, ou um ícone simples
-            path = "app/assets/default_pet.png" 
+            assets_dir = Path(__file__).resolve().parents[1] / "assets"
+            path = assets_dir / "default_pet.png"
+            if not path.exists():
+                path = assets_dir / "pet.png"
             # Vou usar um placeholder simples aqui se não houver um asset real.
             # Em um ambiente real, você teria um arquivo default_pet.png ou um ícone.
             # Para este exemplo, vou simular um ícone ou usar o placeholder anterior
@@ -73,7 +77,14 @@ class ModuloPacientes:
             img = Image.new('RGBA', (180, 120), (255, 255, 255, 0)) # Imagem transparente
             # Se você tiver um ícone de pata como PNG, pode carregá-lo aqui.
             # Por simplicidade, vou manter a lógica de texto ou um ícone simples
-            self.default_pet_image = None 
+            self.default_pet_image = None
+
+    def _usar_imagem_padrao(self, label, font_size=60):
+        if self.default_pet_image:
+            label.configure(image=self.default_pet_image, text="")
+            label.img_ref = self.default_pet_image
+        else:
+            label.configure(text="ðŸ¾", font=("Arial", font_size), text_color=colors.NEUTRAL_500)
 
     def tela_pacientes(self):
         for widget in self.content.winfo_children():
@@ -151,6 +162,14 @@ class ModuloPacientes:
 
         # Busca os pets reais do banco
         pets = self.pet_controller.listar_pets()
+        if not pets:
+            ctk.CTkLabel(
+                grid,
+                text="Nenhum paciente aceito encontrado.",
+                font=ctk.CTkFont(family="Helvetica", size=16),
+                text_color=colors.TEXT_SECONDARY
+            ).grid(row=0, column=0, columnspan=3, pady=40)
+            return
         # Simula pets para teste se o controller retornar vazio
         if not pets:
             ctk.CTkLabel(
@@ -1172,6 +1191,11 @@ class ModuloPacientes:
                 session.mount('https://', HTTPAdapter(max_retries=retries))
                 
                 response = session.get(url, timeout=10) # Reduzido timeout para cards
+                if response.status_code == 404:
+                    print(f"Foto do pet nÃ£o encontrada no S3: {imagem_key}")
+                    self._usar_imagem_padrao(label)
+                    return
+
                 response.raise_for_status()
                 
                 pil_img = Image.open(BytesIO(response.content))

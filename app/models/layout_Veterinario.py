@@ -22,7 +22,8 @@ def dados_perfil_veterinario(perfil_id):
                 ON c.ID_VETERINARIO = v.id
             INNER JOIN pet p 
                 ON p.id = c.ID_PET
-            WHERE v.id = %s;
+            WHERE v.id = %s
+              AND c.STATUS IN ('Confirmado', 'Concluido');
         """
 
         cursor.execute(query, (perfil_id,))

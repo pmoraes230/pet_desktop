@@ -8,8 +8,8 @@ class ProntuarioController:
     def listar_pets(self):
         return self.model.get_pets_do_vet(self.vet_id)
 
-    def salvar(self, pet_id, texto):
-        self.model.salvar_prontuario(pet_id, texto)
+    def salvar(self, pet_id, texto, arquivo_key=None):
+        return self.model.salvar_prontuario(pet_id, self.vet_id, texto, arquivo_key)
 
     def historico(self, pet_id):
-        return self.model.obter_historico(pet_id)
+        return self.model.obter_historico(pet_id, self.vet_id)

@@ -10,7 +10,7 @@ class ModalAgendamento:
         self.parent = parent
         self.callback_refresh = callback_refresh
         self.id_veterinario = id_veterinario
-        self.controller = AgendamentoController()
+        self.controller = AgendamentoController(id_veterinario)
         self.janela = None
         self.pets = []
 
@@ -56,7 +56,7 @@ class ModalAgendamento:
 
         ctk.CTkButton(
             self.janela,
-            text="✕",
+            text="X",
             width=35,
             height=35,
             fg_color="#F3F5F7",
@@ -81,7 +81,7 @@ class ModalAgendamento:
         create_label(container, "Qual pet?").pack(anchor="w", pady=(0, 8))
 
         self.pets = self.controller.listar_pets(self.id_veterinario)
-        pet_names = [p["nome"] for p in self.pets] if self.pets else [tr("Nenhum pet disponível")]
+        pet_names = [p["nome"] for p in self.pets] if self.pets else [tr("Nenhum pet disponivel")]
 
         self.combo_pet = ctk.CTkComboBox(
             container,
@@ -119,7 +119,7 @@ class ModalAgendamento:
 
         col_hora = ctk.CTkFrame(row2, fg_color="transparent")
         col_hora.grid(row=0, column=1, padx=(10, 0), sticky="ew")
-        create_label(col_hora, "Horário").pack(anchor="w", pady=(0, 8))
+        create_label(col_hora, "Horario").pack(anchor="w", pady=(0, 8))
         self.entry_hora = ctk.CTkEntry(
             col_hora,
             placeholder_text="HH:MM",
@@ -132,10 +132,10 @@ class ModalAgendamento:
         )
         self.entry_hora.pack(fill="x")
 
-        create_label(container, "Tipo de Serviço").pack(anchor="w", pady=(0, 8))
+        create_label(container, "Tipo de Servico").pack(anchor="w", pady=(0, 8))
         self.combo_tipo = ctk.CTkComboBox(
             container,
-            values=[tr("Consulta Geral"), tr("Vacinação"), tr("Limpeza"), tr("Cirurgia"), tr("Ultrassom"), tr("Outros")],
+            values=[tr("Consulta Geral"), tr("Vacinacao"), tr("Limpeza"), tr("Cirurgia"), tr("Ultrassom"), tr("Outros")],
             fg_color=self.colors["input_bg"],
             border_width=0,
             corner_radius=12,
@@ -148,7 +148,7 @@ class ModalAgendamento:
         self.combo_tipo.pack(fill="x", pady=(0, 25))
         self.combo_tipo.set(tr("Consulta Geral"))
 
-        create_label(container, "Observações").pack(anchor="w", pady=(0, 8))
+        create_label(container, "Observacoes").pack(anchor="w", pady=(0, 8))
         self.text_obs = ctk.CTkTextbox(
             container,
             height=80,
@@ -192,7 +192,7 @@ class ModalAgendamento:
         ).grid(row=0, column=1, padx=(10, 0), sticky="ew")
 
     def agendar_consulta(self):
-        if self.combo_pet.get() in [tr("Selecione um pet..."), tr("Nenhum pet disponível"), ""]:
+        if self.combo_pet.get() in [tr("Selecione um pet..."), tr("Nenhum pet disponivel"), ""]:
             self.mostrar_erro(tr("Selecione um pet"))
             return
 
@@ -201,7 +201,7 @@ class ModalAgendamento:
             return
 
         if not self.entry_hora.get():
-            self.mostrar_erro(tr("Preencha o horário"))
+            self.mostrar_erro(tr("Preencha o horario"))
             return
 
         try:
@@ -217,14 +217,14 @@ class ModalAgendamento:
             dia, mes, ano = data_str.split("/")
             data_banco = f"{ano}-{mes}-{dia}"
         except Exception:
-            self.mostrar_erro(tr("Data inválida (use dd/mm/aaaa)"))
+            self.mostrar_erro(tr("Data invalida (use dd/mm/aaaa)"))
             return
 
         try:
             hora_str = self.entry_hora.get()
             datetime.strptime(hora_str, "%H:%M")
         except Exception:
-            self.mostrar_erro(tr("Horário inválido (use HH:MM)"))
+            self.mostrar_erro(tr("Horario invalido (use HH:MM)"))
             return
 
         tipo_consulta = self._tipo_consulta_para_banco(self.combo_tipo.get())
@@ -237,7 +237,7 @@ class ModalAgendamento:
         )
 
         if sucesso:
-            self.mostrar_sucesso(f"✅ {tr('Consulta agendada com sucesso!')}")
+            self.mostrar_sucesso(tr("Consulta agendada com sucesso!"))
             if self.callback_refresh:
                 self.callback_refresh()
             self.janela.after(1500, self.janela.destroy)
@@ -255,7 +255,7 @@ class ModalAgendamento:
         frame = ctk.CTkFrame(dialog, fg_color="white")
         frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        ctk.CTkLabel(frame, text="⚠️", font=("Arial", 50)).pack(pady=(10, 5))
+        ctk.CTkLabel(frame, text="!", font=("Arial", 50), text_color="#F59E0B").pack(pady=(10, 5))
         ctk.CTkLabel(frame, text=mensagem, font=("Arial", 13, "bold"), text_color="#333333").pack(pady=5)
 
         ctk.CTkButton(
@@ -270,7 +270,7 @@ class ModalAgendamento:
         ).pack(pady=(10, 0), padx=20, fill="x")
 
     def _tipo_consulta_para_banco(self, tipo):
-        tipos = ["Consulta Geral", "Vacinação", "Limpeza", "Cirurgia", "Ultrassom", "Outros"]
+        tipos = ["Consulta Geral", "Vacinacao", "Limpeza", "Cirurgia", "Ultrassom", "Outros"]
         for tipo_pt in tipos:
             if tipo == tr(tipo_pt):
                 return tipo_pt
@@ -287,12 +287,12 @@ class ModalAgendamento:
         frame = ctk.CTkFrame(dialog, fg_color="white")
         frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        ctk.CTkLabel(frame, text="✅", font=("Arial", 50)).pack(pady=(10, 5))
+        ctk.CTkLabel(frame, text="OK", font=("Arial", 34, "bold"), text_color="#17A8A8").pack(pady=(10, 5))
         ctk.CTkLabel(frame, text=mensagem, font=("Arial", 13, "bold"), text_color="#333333").pack(pady=5)
 
         ctk.CTkButton(
             dialog,
-            text=tr("Ótimo!"),
+            text=tr("Otimo!"),
             font=("Arial", 12, "bold"),
             fg_color="#17A8A8",
             text_color="white",

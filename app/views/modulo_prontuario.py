@@ -1,5 +1,11 @@
 import customtkinter as ctk
+from datetime import datetime
+import os
+import tkinter as tk
+import webbrowser
 from tkinter import filedialog, messagebox
+from PIL import Image
+from app.services.s3_client import upload_prontuario_arquivo_s3, get_url_s3
 
 from app.core.i18n import tr
 
@@ -27,8 +33,10 @@ class ModuloProntuario:
         self.content = content_frame
         self.controller = prontuario_controller
         self.pets_map = {}
-        self.placeholder = tr(
-            "Descreva aqui os sintomas, temperatura, peso, exame físico, diagnóstico, conduta clínica e procedimentos realizados..."
+        self.arquivo_path = None
+        self.placeholder = (
+            "Descreva aqui os sintomas, temperatura, peso, exame físico, diagnóstico, conduta "
+            "clínica e procedimentos realizados..."
         )
         self.entry_med_nome = []
         self.entry_med_dosagem = []
@@ -203,6 +211,9 @@ class ModuloProntuario:
         self.entry_med_frequencia.append(e_freq)
 
     def _mostrar_estado_vazio_historico(self):
+        for widget in self.hist_scroll.winfo_children():
+            widget.destroy()
+
         empty_box = ctk.CTkFrame(self.hist_scroll, fg_color="transparent")
         empty_box.pack(expand=True, pady=50)
         ctk.CTkLabel(empty_box, text="📁", font=("Arial", 40), text_color=colors.BORDER_COLOR).pack()
@@ -223,12 +234,120 @@ class ModuloProntuario:
             self.combo_paciente.configure(values=[tr("Selecione um paciente...")] + nomes)
 
     def on_pet_selecionado(self, nome):
-        pass
+        # Lógica de atualização de histórico aqui (conforme seu controller)
+        pet_id = self.pets_map.get(nome)
+        if not pet_id:
+            self._mostrar_estado_vazio_historico()
+            return
+
+        historico = self.controller.historico(pet_id)
+        self._renderizar_historico(historico)
+
+    def _renderizar_historico(self, historico):
+        for widget in self.hist_scroll.winfo_children():
+            widget.destroy()
+
+        if not historico:
+            self._mostrar_estado_vazio_historico()
+            return
+
+        for registro in historico:
+            self._criar_card_historico(registro)
+
+    def _criar_card_historico(self, registro):
+        card = ctk.CTkFrame(
+            self.hist_scroll,
+            fg_color=colors.INPUT_BG,
+            corner_radius=12,
+            border_width=1,
+            border_color=colors.BORDER_COLOR
+        )
+        card.pack(fill="x", padx=5, pady=(0, 10))
+
+        data = registro.get("DATA_CRIACAO")
+        if isinstance(data, datetime):
+            data_texto = data.strftime("%d/%m/%Y %H:%M")
+        else:
+            data_texto = str(data or "Data nao informada")
+
+        ctk.CTkLabel(
+            card,
+            text=data_texto,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=colors.ACCENT_PURPLE
+        ).pack(anchor="w", padx=12, pady=(10, 4))
+
+        campos = [
+            ("Historico", registro.get("HISTORICO_VETERINARIO")),
+            ("Motivo", registro.get("MOTIVO_CONSULTA")),
+            ("Avaliacao", registro.get("AVALIACAO_GERAL")),
+            ("Procedimentos", registro.get("PROCEDIMENTOS")),
+            ("Diagnostico", registro.get("DIAGNOSTICO_CONSLUSIVO")),
+            ("Observacao", registro.get("OBSERVACAO")),
+        ]
+
+        for titulo, valor in campos:
+            if valor and str(valor).strip():
+                ctk.CTkLabel(
+                    card,
+                    text=f"{titulo}: {valor}",
+                    font=ctk.CTkFont(size=12),
+                    text_color=colors.TEXT_SECONDARY,
+                    justify="left",
+                    wraplength=280
+                ).pack(anchor="w", padx=12, pady=2)
+
+        arquivo = registro.get("arquivo")
+        if arquivo and str(arquivo).strip():
+            arquivo_nome = os.path.basename(str(arquivo))
+            arquivo_label = ctk.CTkLabel(
+                card,
+                text=f"Anexo: {arquivo_nome}",
+                font=ctk.CTkFont(size=11),
+                text_color=colors.ACCENT_CYAN,
+                justify="left",
+                wraplength=280,
+                cursor="hand2"
+            )
+            arquivo_label.pack(anchor="w", padx=12, pady=(4, 10))
+            arquivo_label.bind("<Button-1>", lambda e, key=arquivo: self._abrir_anexo(key))
+        else:
+            ctk.CTkFrame(card, fg_color="transparent", height=8).pack()
 
     def _escolher_arquivo(self):
-        path = filedialog.askopenfilename()
-        if path:
-            self.lbl_file.configure(text=path.split("/")[-1])
+        path = filedialog.askopenfilename(
+            filetypes=[
+                ("Imagens e PDF", "*.jpg;*.jpeg;*.png;*.pdf"),
+                ("Todos os arquivos", "*.*")
+            ]
+        )
+        if not path:
+            return
+
+        extensao = os.path.splitext(path)[1].lower()
+        if extensao not in [".jpg", ".jpeg", ".png", ".pdf"]:
+            messagebox.showwarning("Atenção", "Selecione um arquivo JPG, PNG ou PDF.")
+            self.arquivo_path = None
+            self.lbl_file.configure(text="Nenhum arquivo escolhido")
+            return
+
+        self.arquivo_path = path
+        self.lbl_file.configure(text=os.path.basename(path))
+
+    def _abrir_anexo(self, arquivo_key):
+        if not arquivo_key:
+            return
+
+        url = get_url_s3(arquivo_key, expires_in=3600)
+        if not url:
+            messagebox.showerror("Erro", "Não foi possível gerar o link do anexo.")
+            return
+
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            print(f"Erro ao abrir anexo: {e}")
+            messagebox.showerror("Erro", "Não foi possível abrir o anexo no navegador.")
 
     def _on_txt_focus_in(self, _event):
         if self.txt.get("1.0", "end-1c") == self.placeholder:
@@ -241,4 +360,29 @@ class ModuloProntuario:
             self.txt.configure(text_color=colors.PLACEHOLDER_TEXT)
 
     def salvar_prontuario(self):
-        messagebox.showinfo(tr("Sucesso"), tr("Prontuário salvo com sucesso!"))
+        nome_pet = self.combo_paciente.get()
+        pet_id = self.pets_map.get(nome_pet)
+        if not pet_id:
+            messagebox.showwarning("Atenção", "Selecione um paciente antes de salvar.")
+            return
+
+        texto = self.txt.get("1.0", "end-1c").strip()
+        if not texto or texto == self.placeholder:
+            messagebox.showwarning("Atenção", "Preencha a evolução clínica antes de salvar.")
+            return
+
+        arquivo_key = None
+        if self.arquivo_path:
+            arquivo_key = upload_prontuario_arquivo_s3(self.arquivo_path, pet_id)
+            if not arquivo_key:
+                messagebox.showerror("Erro", "Falha ao enviar o arquivo para a nuvem.")
+                return
+
+        sucesso = self.controller.salvar(pet_id, texto, arquivo_key)
+        if sucesso:
+            messagebox.showinfo("Sucesso", "Prontuário salvo com sucesso!")
+            self.arquivo_path = None
+            self.lbl_file.configure(text="Nenhum arquivo escolhido")
+            self._renderizar_historico(self.controller.historico(pet_id))
+        else:
+            messagebox.showerror("Erro", "Não foi possível salvar o prontuário.")

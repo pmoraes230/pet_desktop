@@ -15,7 +15,7 @@ class ProntuarioModel:
                     FROM pet p
                     INNER JOIN consulta c ON p.id = c.ID_PET
                     WHERE c.{vet_column} = %s
-                      AND LOWER(COALESCE(c.STATUS, '')) IN ('confirmado', 'concluido', 'concluído')
+                      AND LOWER(COALESCE(c.STATUS, '')) IN ('confirmado', 'concluido', 'concluido')
                     ORDER BY p.NOME
                 """, (vet_id,))
                 resultado = cursor.fetchall()
@@ -29,17 +29,26 @@ class ProntuarioModel:
         print(f"Erro ao buscar pets: {last_error}")
         return []
 
-    def obter_historico(self, pet_id):
+    def obter_historico(self, pet_id, vet_id):
         """Retorna o historico de prontuarios do pet."""
         try:
             conn = connectdb()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
-                SELECT DATA_CONSULTA, OBSERVACOES
-                FROM consulta
+                SELECT id,
+                       HISTORICO_VETERINARIO,
+                       MOTIVO_CONSULTA,
+                       AVALIACAO_GERAL,
+                       PROCEDIMENTOS,
+                       DIAGNOSTICO_CONSLUSIVO,
+                       OBSERVACAO,
+                       DATA_CRIACAO,
+                       arquivo
+                FROM prontuariopet
                 WHERE ID_PET = %s
-                ORDER BY DATA_CONSULTA DESC
-            """, (pet_id,))
+                  AND ID_VETERINARIO = %s
+                ORDER BY DATA_CRIACAO DESC
+            """, (pet_id, vet_id))
             resultado = cursor.fetchall()
             closedb(conn)
             return resultado
@@ -47,17 +56,27 @@ class ProntuarioModel:
             print(f"Erro ao buscar historico: {e}")
             return []
 
-    def salvar_prontuario(self, pet_id, texto):
+    def salvar_prontuario(self, pet_id, vet_id, texto, arquivo=None):
         """Salva um novo prontuario."""
         try:
             from uuid import uuid4
+
             conn = connectdb()
             cursor = conn.cursor()
             consulta_id = uuid4().hex
             cursor.execute("""
-                INSERT INTO consulta (id, ID_PET, OBSERVACOES, DATA_CONSULTA)
-                VALUES (%s, %s, %s, NOW())
-            """, (consulta_id, pet_id, texto))
+                INSERT INTO prontuariopet
+                    (id, ID_PET, ID_VETERINARIO, AVALIACAO_GERAL, OBSERVACAO, arquivo, DATA_CRIACAO)
+                VALUES
+                    (%s, %s, %s, %s, %s, %s, NOW())
+            """, (
+                consulta_id,
+                pet_id,
+                vet_id,
+                "Registrado pelo veterinario via desktop",
+                texto,
+                arquivo,
+            ))
             conn.commit()
             closedb(conn)
             return True

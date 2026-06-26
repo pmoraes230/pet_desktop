@@ -5,8 +5,9 @@ import uuid
 
 
 class AgendaController:
-    def __init__(self, id_veterinario=None):
-        self.id_veterinario = id_veterinario
+    def __init__(self, id_veterinario=None, vet_id=None):
+        self.id_veterinario = id_veterinario if id_veterinario is not None else vet_id
+        self.vet_id = self.id_veterinario
 
     def _como_data(self, valor):
         if not valor:
