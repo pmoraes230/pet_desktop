@@ -286,7 +286,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.mod_configuracoes = ModuloConfiguracoes(self.content, parent=self, on_avatar_updated=self.atualizar_avatar)
         self.mod_agenda = ModuloAgenda(self.content, self.user_id)
         self.mod_prontuario = ModuloProntuario(self.content, self.prontuario_ctrl)
-        self.mod_chat = ModuloChat(self.content)
+        self.mod_chat = ModuloChat(self.content, self.current_user)
 
     def _switch_screen(self, target_screen_func, title="Dashboard"):
         for child in self.content.winfo_children():
