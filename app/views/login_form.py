@@ -5,6 +5,7 @@ from app.views.modal import Modal
 from app.controllers.auth_controller import AuthController
 import app.core.colors as colors
 from app.core.i18n import tr
+from app.utils.loading import LoadingOverlay as CentralLoadingOverlay, run_backend_task
 
 # ============================================================
 # 1. CLASSE DE CARREGAMENTO (LoadingOverlay) CORRIGIDA
@@ -106,8 +107,7 @@ class VetAuthForm(ctk.CTkFrame):
         self.master = master
         self.on_login_success = on_login_success  
         
-        # Inicializa o Singleton
-        LoadingOverlay.get_instance(self.master.winfo_toplevel())
+        CentralLoadingOverlay.get_instance(self.master.winfo_toplevel())
         
         self._criar_tela_login()
 
@@ -148,7 +148,33 @@ class VetAuthForm(ctk.CTkFrame):
             Modal(self, "Atenção", "Preencha todos os campos.", type="error")
             return
 
-        run_with_loading(self._executar_login_com_loading, "Autenticando...", email_digitado, senha_digitada)
+        run_backend_task(
+            self,
+            lambda: self._executar_login_backend(email_digitado, senha_digitada),
+            on_success=self._finalizar_login,
+            on_error=lambda erro: Modal(self, "Erro", f"Erro critico: {erro}", type="error"),
+            message="Autenticando...",
+        )
+
+    def _executar_login_backend(self, email, senha):
+        controller = AuthController(email, senha)
+        sucesso, resposta = controller.login()
+        user_data = controller.get_user_data() if sucesso else None
+        return sucesso, resposta, user_data
+
+    def _finalizar_login(self, resultado):
+        sucesso, resposta, user_data = resultado
+
+        if not sucesso:
+            Modal(self, "Erro", resposta["message"], type="error")
+            return
+
+        self.user_data = user_data
+        nome_usuario = self.user_data.get("name", "Usuario")
+        loader = CentralLoadingOverlay.get_instance(self)
+        loader.show_success(f"Bem-vindo, {nome_usuario}!")
+        if self.on_login_success:
+            self.after(1300, lambda: self.on_login_success(self.user_data))
 
     def _executar_login_com_loading(self, email, senha):
         try:

@@ -6,6 +6,7 @@ import customtkinter as ctk
 
 from ..controllers.agenda_controller import AgendaController
 from app.core.i18n import tr
+from app.utils.loading import run_backend_task
 from .modal_agendamento import ModalAgendamento
 
 
@@ -247,7 +248,7 @@ class ModuloAgenda:
 
         self.calendario_modal = ctk.CTkToplevel(self.content)
         self.calendario_modal.title(tr("Calendario Completo"))
-        self.calendario_modal.geometry("760x650")
+        self.calendario_modal.geometry("760x850")
         self.calendario_modal.minsize(680, 580)
         self.calendario_modal.configure(fg_color="white")
         self.calendario_modal.grab_set()
@@ -586,7 +587,19 @@ class ModuloAgenda:
             messagebox.showwarning(tr("Agenda"), tr("Apenas consultas confirmadas podem ser finalizadas."))
             return
 
-        sucesso, mensagem = self.controller.atualizar_status_consulta(consulta.get("id"), novo_status)
+        run_backend_task(
+            self.content,
+            lambda: self.controller.atualizar_status_consulta(consulta.get("id"), novo_status),
+            on_success=self._finalizar_mudanca_status,
+            on_error=lambda erro: messagebox.showerror(tr("Agenda"), f"{erro}"),
+            message=tr("Atualizando consulta..."),
+        )
+        return
+
+        sucesso, mensagem = False, ""
+
+    def _finalizar_mudanca_status(self, resultado):
+        sucesso, mensagem = resultado
         if sucesso:
             self.tela_agenda()
             messagebox.showinfo(tr("Agenda"), mensagem)
@@ -602,7 +615,19 @@ class ModuloAgenda:
         if not confirmar:
             return
 
-        sucesso, mensagem = self.controller.excluir_consulta(consulta.get("id"))
+        run_backend_task(
+            self.content,
+            lambda: self.controller.excluir_consulta(consulta.get("id")),
+            on_success=self._finalizar_exclusao_consulta,
+            on_error=lambda erro: messagebox.showerror(tr("Agenda"), f"{erro}"),
+            message=tr("Excluindo consulta..."),
+        )
+        return
+
+        sucesso, mensagem = False, ""
+
+    def _finalizar_exclusao_consulta(self, resultado):
+        sucesso, mensagem = resultado
         if sucesso:
             self.tela_agenda()
             messagebox.showinfo(tr("Agenda"), mensagem)
@@ -701,19 +726,22 @@ class ModuloAgenda:
             self.content,
             callback_refresh=self.tela_agenda,
             id_veterinario=self.id_veterinario,
+            data_inicial=datetime(self.ano_atual, self.mes_atual, self.dia_selecionado),
         )
 
     def abrir_modal_liberar_horarios(self):
         self.modal_horarios = ctk.CTkToplevel(self.content)
         self.modal_horarios.title(tr("Liberar Horarios"))
-        self.modal_horarios.geometry("500x520")
+        self.modal_horarios.geometry("500x600")
         self.modal_horarios.resizable(False, False)
         self.modal_horarios.configure(fg_color="white")
+        self.modal_horarios.grid_columnconfigure(0, weight=1)
+        self.modal_horarios.grid_rowconfigure(1, weight=1)
         self.modal_horarios.grab_set()
         self.modal_horarios.focus_set()
 
         header = ctk.CTkFrame(self.modal_horarios, fg_color="transparent")
-        header.pack(fill="x", padx=40, pady=(36, 24))
+        header.grid(row=0, column=0, sticky="ew", padx=40, pady=(36, 20))
 
         ctk.CTkLabel(
             header,
@@ -741,7 +769,7 @@ class ModuloAgenda:
         ).place(relx=0.92, rely=0.06, anchor="center")
 
         form = ctk.CTkFrame(self.modal_horarios, fg_color="transparent")
-        form.pack(fill="both", expand=True, padx=40)
+        form.grid(row=1, column=0, sticky="nsew", padx=40)
 
         self.entry_data_liberar = self._criar_input_horario(
             form,
@@ -792,7 +820,7 @@ class ModuloAgenda:
         self.label_feedback_liberar.pack(fill="x", pady=(0, 12))
 
         botoes = ctk.CTkFrame(self.modal_horarios, fg_color="transparent")
-        botoes.pack(fill="x", padx=40, pady=(0, 30))
+        botoes.grid(row=2, column=0, sticky="ew", padx=40, pady=(8, 30))
         botoes.columnconfigure((0, 1), weight=1)
 
         ctk.CTkButton(
@@ -809,7 +837,7 @@ class ModuloAgenda:
 
         ctk.CTkButton(
             botoes,
-            text=tr("Criar vagas"),
+            text=tr("Liberar Horarios"),
             height=48,
             fg_color=colors.PURPLE,
             hover_color=colors.PURPLE_HOVER,
@@ -842,12 +870,23 @@ class ModuloAgenda:
 
     def _salvar_horarios_liberados(self):
         intervalo = self.combo_intervalo_liberar.get().split()[0]
-        sucesso, mensagem, criados, existentes = self.controller.liberar_horarios(
-            self.entry_data_liberar.get().strip(),
-            self.entry_inicio_liberar.get().strip(),
-            self.entry_fim_liberar.get().strip(),
-            intervalo,
+        data = self.entry_data_liberar.get().strip()
+        hora_inicio = self.entry_inicio_liberar.get().strip()
+        hora_fim = self.entry_fim_liberar.get().strip()
+
+        def tarefa():
+            return self.controller.liberar_horarios(data, hora_inicio, hora_fim, intervalo)
+
+        run_backend_task(
+            self.modal_horarios,
+            tarefa,
+            on_success=self._finalizar_liberacao_horarios,
+            on_error=self._erro_liberacao_horarios,
+            message=tr("Liberando horarios..."),
         )
+
+    def _finalizar_liberacao_horarios(self, resultado):
+        sucesso, mensagem, criados, existentes = resultado
 
         if not sucesso:
             self.label_feedback_liberar.configure(text=mensagem, text_color=colors.DANGER_TEXT)
@@ -859,3 +898,9 @@ class ModuloAgenda:
         self.label_feedback_liberar.configure(text=texto, text_color=colors.SUCCESS_TEXT)
         self.content.after(900, self.modal_horarios.destroy)
         self.content.after(950, self.tela_agenda)
+
+    def _erro_liberacao_horarios(self, erro):
+        self.label_feedback_liberar.configure(
+            text=tr("Erro ao liberar horarios: {erro}", erro=erro),
+            text_color=colors.DANGER_TEXT,
+        )

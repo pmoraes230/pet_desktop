@@ -2,14 +2,16 @@ import customtkinter as ctk
 from datetime import datetime
 
 from app.core.i18n import tr
+from app.utils.loading import run_backend_task
 from ..controllers.agendamento_controller import AgendamentoController
 
 
 class ModalAgendamento:
-    def __init__(self, parent, callback_refresh=None, id_veterinario=None):
+    def __init__(self, parent, callback_refresh=None, id_veterinario=None, data_inicial=None):
         self.parent = parent
         self.callback_refresh = callback_refresh
         self.id_veterinario = id_veterinario
+        self.data_inicial = data_inicial
         self.controller = AgendamentoController(id_veterinario)
         self.janela = None
         self.pets = []
@@ -30,7 +32,7 @@ class ModalAgendamento:
     def criar_modal(self):
         self.janela = ctk.CTkToplevel(self.parent)
         self.janela.title(tr("Novo Agendamento"))
-        self.janela.geometry("500x620")
+        self.janela.geometry("700x620")
         self.janela.resizable(False, False)
         self.janela.configure(fg_color=self.colors["background"])
 
@@ -80,8 +82,7 @@ class ModalAgendamento:
 
         create_label(container, "Qual pet?").pack(anchor="w", pady=(0, 8))
 
-        self.pets = self.controller.listar_pets(self.id_veterinario)
-        pet_names = [p["nome"] for p in self.pets] if self.pets else [tr("Nenhum pet disponivel")]
+        pet_names = [tr("Carregando...")]
 
         self.combo_pet = ctk.CTkComboBox(
             container,
@@ -97,6 +98,13 @@ class ModalAgendamento:
         )
         self.combo_pet.pack(fill="x", pady=(0, 25))
         self.combo_pet.set(tr("Selecione um pet..."))
+        run_backend_task(
+            self.janela,
+            lambda: self.controller.listar_pets(self.id_veterinario),
+            on_success=self._finalizar_carregamento_pets,
+            on_error=lambda erro: self.mostrar_erro(tr("Erro ao carregar pets: {erro}", erro=erro)),
+            message=tr("Carregando pets..."),
+        )
 
         row2 = ctk.CTkFrame(container, fg_color="transparent")
         row2.pack(fill="x", pady=(0, 25))
@@ -116,6 +124,8 @@ class ModalAgendamento:
             font=("Arial", 12),
         )
         self.entry_data.pack(fill="x")
+        if self.data_inicial:
+            self.entry_data.insert(0, self.data_inicial.strftime("%d/%m/%Y"))
 
         col_hora = ctk.CTkFrame(row2, fg_color="transparent")
         col_hora.grid(row=0, column=1, padx=(10, 0), sticky="ew")
@@ -191,6 +201,12 @@ class ModalAgendamento:
             command=self.agendar_consulta,
         ).grid(row=0, column=1, padx=(10, 0), sticky="ew")
 
+    def _finalizar_carregamento_pets(self, pets):
+        self.pets = pets or []
+        pet_names = [p["nome"] for p in self.pets] if self.pets else [tr("Nenhum pet disponivel")]
+        self.combo_pet.configure(values=pet_names)
+        self.combo_pet.set(tr("Selecione um pet...") if self.pets else tr("Nenhum pet disponivel"))
+
     def agendar_consulta(self):
         if self.combo_pet.get() in [tr("Selecione um pet..."), tr("Nenhum pet disponivel"), ""]:
             self.mostrar_erro(tr("Selecione um pet"))
@@ -232,17 +248,32 @@ class ModalAgendamento:
         if observacoes == tr("Descreva brevemente..."):
             observacoes = ""
 
-        sucesso = self.controller.criar_agendamento(
-            id_pet, self.id_veterinario, data_banco, hora_str, tipo_consulta, observacoes
+        def tarefa():
+            return self.controller.criar_agendamento(
+                id_pet, self.id_veterinario, data_banco, hora_str, tipo_consulta, observacoes
+            )
+
+        run_backend_task(
+            self.janela,
+            tarefa,
+            on_success=self._finalizar_agendamento,
+            on_error=self._erro_agendamento,
+            message=tr("Agendando consulta..."),
         )
 
+    def _finalizar_agendamento(self, resultado):
+        sucesso, mensagem = resultado
+
         if sucesso:
-            self.mostrar_sucesso(tr("Consulta agendada com sucesso!"))
+            self.mostrar_sucesso(tr(mensagem))
             if self.callback_refresh:
-                self.callback_refresh()
-            self.janela.after(1500, self.janela.destroy)
+                self.janela.after(1200, self.callback_refresh)
+            self.janela.after(1300, self.janela.destroy)
         else:
-            self.mostrar_erro(tr("Erro ao agendar consulta no banco de dados"))
+            self.mostrar_erro(tr(mensagem))
+
+    def _erro_agendamento(self, erro):
+        self.mostrar_erro(tr("Erro ao agendar consulta: {erro}", erro=erro))
 
     def mostrar_erro(self, mensagem):
         dialog = ctk.CTkToplevel(self.janela)

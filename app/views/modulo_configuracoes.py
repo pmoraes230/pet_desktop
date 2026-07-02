@@ -3,7 +3,7 @@ from tkinter import filedialog
 from io import BytesIO
 import requests
 from PIL import Image, ImageDraw
-from app.utils.loading_overlay import run_with_loading
+from app.utils.loading import run_backend_task
 from ..services.s3_client import get_url_s3
 from ..controllers.veterinario_controller import vetController
 from app.core.i18n import get_language, tr
@@ -457,24 +457,23 @@ class ModuloConfiguracoes:
             self._pwd_msg.configure(text=self._t("As senhas não coincidem"))
             return
 
-        # Run update with loading
-        run_with_loading(self._change_password_backend, self._t("Atualizando senha..."), cur, new)
+        run_backend_task(
+            self.content,
+            lambda: self._change_password_backend(cur, new),
+            on_success=self._finalizar_alteracao_senha,
+            on_error=lambda erro: self._pwd_msg.configure(text=f"{self._t('Erro ao atualizar senha')}: {erro}"),
+            message=self._t("Atualizando senha..."),
+        )
 
     def _change_password_backend(self, current_password, new_password):
-        try:
-            if not self.current_user_id or not self.vet_ctrl:
-                self.content.after(0, lambda: self._pwd_msg.configure(text=self._t("Usuario nao encontrado")))
-                return
+        if not self.current_user_id or not self.vet_ctrl:
+            return {"success": False, "message": "Usuario nao encontrado"}
+        return self.vet_ctrl.alterar_senha(current_password, new_password)
 
-            resultado = self.vet_ctrl.alterar_senha(current_password, new_password)
-            if not resultado.get("success"):
-                mensagem = resultado.get("message", "Erro ao atualizar senha")
-                self.content.after(0, lambda: self._pwd_msg.configure(text=self._t(mensagem)))
-                return
+    def _finalizar_alteracao_senha(self, resultado):
+        if not resultado.get("success"):
+            mensagem = resultado.get("message", "Erro ao atualizar senha")
+            self._pwd_msg.configure(text=self._t(mensagem))
+            return
 
-            self.content.after(0, self.tela_configuracoes_gerais)
-            return
-        except Exception as e:
-            print(f"Erro ao alterar senha: {e}")
-            self.content.after(0, lambda: self._pwd_msg.configure(text=self._t("Erro ao atualizar senha")))
-            return
+        self.tela_configuracoes_gerais()

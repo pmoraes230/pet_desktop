@@ -16,6 +16,7 @@ from app.controllers.prontuario_controller import ProntuarioController
 from app.services.s3_client import get_url_s3
 from app.core.i18n import get_language, set_language as set_app_language, tr
 from app.core.theme import is_dark_mode, set_appearance_mode
+from app.utils.loading import LoadingOverlay
 
 # Módulos (assumindo que já existem)
 from .modulo_pacientes import ModuloPacientes
@@ -289,6 +290,22 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.mod_chat = ModuloChat(self.content, self.current_user)
 
     def _switch_screen(self, target_screen_func, title="Dashboard"):
+        loader = LoadingOverlay.get_instance(self)
+        loader.show(self._t("Carregando..."))
+
+        def render():
+            try:
+                for child in self.content.winfo_children():
+                    child.destroy()
+                target_screen_func()
+                self.current_screen_title_key = self._title_to_key(title)
+                self.current_screen_title.configure(text=self._t(self.current_screen_title_key))
+            finally:
+                loader.hide()
+
+        self.after(30, render)
+        return
+
         for child in self.content.winfo_children():
             child.destroy()
         target_screen_func()

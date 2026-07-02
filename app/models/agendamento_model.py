@@ -65,7 +65,7 @@ class AgendamentoModel:
                 if cursor.fetchone():
                     closedb(conn)
                     print("Erro ao criar agendamento: horario ja ocupado")
-                    return False
+                    return False, "Este horario ja esta ocupado."
 
                 cursor.execute("""
                     SELECT id, STATUS
@@ -80,7 +80,7 @@ class AgendamentoModel:
                 if vaga and len(vaga) > 1 and vaga[1] == "Bloqueado":
                     closedb(conn)
                     print("Erro ao criar agendamento: horario bloqueado")
-                    return False
+                    return False, "Este horario esta bloqueado."
 
                 if vaga:
                     cursor.execute("""
@@ -106,14 +106,14 @@ class AgendamentoModel:
                 conn.commit()
                 closedb(conn)
                 print(f"Agendamento criado com sucesso! ID: {id_consulta}")
-                return True
+                return True, "Consulta agendada com sucesso!"
             except Exception as e:
                 if conn:
                     closedb(conn)
                 last_error = e
 
         print(f"Erro ao criar agendamento: {last_error}")
-        return False
+        return False, "Erro ao agendar consulta no banco de dados"
 
     def liberar_horarios(self, id_veterinario, data, horarios):
         conn = None

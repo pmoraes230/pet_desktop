@@ -8,6 +8,7 @@ from PIL import Image
 from app.services.s3_client import upload_prontuario_arquivo_s3, get_url_s3
 
 from app.core.i18n import tr
+from app.utils.loading import run_backend_task
 
 
 class Colors:
@@ -226,7 +227,15 @@ class ModuloProntuario:
         ).pack(pady=10)
 
     def carregar_pets(self):
-        pets = self.controller.listar_pets()
+        run_backend_task(
+            self.content,
+            self.controller.listar_pets,
+            on_success=self._finalizar_carregamento_pets,
+            on_error=lambda erro: messagebox.showerror("Erro", f"Nao foi possivel carregar os pacientes: {erro}"),
+            message="Carregando pacientes...",
+        )
+
+    def _finalizar_carregamento_pets(self, pets):
         nomes = [p.get("NOME", tr("Sem nome")) for p in pets]
         for p in pets:
             self.pets_map[p.get("NOME")] = p.get("id")
@@ -240,8 +249,13 @@ class ModuloProntuario:
             self._mostrar_estado_vazio_historico()
             return
 
-        historico = self.controller.historico(pet_id)
-        self._renderizar_historico(historico)
+        run_backend_task(
+            self.content,
+            lambda: self.controller.historico(pet_id),
+            on_success=self._renderizar_historico,
+            on_error=lambda erro: messagebox.showerror("Erro", f"Nao foi possivel carregar o historico: {erro}"),
+            message="Carregando historico...",
+        )
 
     def _renderizar_historico(self, historico):
         for widget in self.hist_scroll.winfo_children():
@@ -371,6 +385,27 @@ class ModuloProntuario:
             messagebox.showwarning("Atenção", "Preencha a evolução clínica antes de salvar.")
             return
 
+        arquivo_path = self.arquivo_path
+
+        def tarefa():
+            arquivo_key = None
+            if arquivo_path:
+                arquivo_key = upload_prontuario_arquivo_s3(arquivo_path, pet_id)
+                if not arquivo_key:
+                    return False, None
+            sucesso = self.controller.salvar(pet_id, texto, arquivo_key)
+            historico = self.controller.historico(pet_id) if sucesso else None
+            return sucesso, historico
+
+        run_backend_task(
+            self.content,
+            tarefa,
+            on_success=self._finalizar_salvar_prontuario,
+            on_error=lambda erro: messagebox.showerror("Erro", f"Nao foi possivel salvar o prontuario: {erro}"),
+            message="Salvando prontuario...",
+        )
+        return
+
         arquivo_key = None
         if self.arquivo_path:
             arquivo_key = upload_prontuario_arquivo_s3(self.arquivo_path, pet_id)
@@ -386,3 +421,12 @@ class ModuloProntuario:
             self._renderizar_historico(self.controller.historico(pet_id))
         else:
             messagebox.showerror("Erro", "Não foi possível salvar o prontuário.")
+    def _finalizar_salvar_prontuario(self, resultado):
+        sucesso, historico = resultado
+        if sucesso:
+            messagebox.showinfo("Sucesso", "Prontuario salvo com sucesso!")
+            self.arquivo_path = None
+            self.lbl_file.configure(text="Nenhum arquivo escolhido")
+            self._renderizar_historico(historico)
+        else:
+            messagebox.showerror("Erro", "Nao foi possivel salvar o prontuario.")

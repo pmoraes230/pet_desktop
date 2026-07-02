@@ -23,25 +23,25 @@ class AgendamentoController:
         """Cria um retorno confirmado para um pet ja aceito pelo veterinario."""
         if not id_veterinario:
             print("Erro ao criar agendamento: veterinario nao informado")
-            return False
+            return False, "Veterinario nao identificado."
 
         try:
             data_consulta = datetime.strptime(data, "%Y-%m-%d").date() if isinstance(data, str) else data
             datetime.strptime(horario, "%H:%M") if isinstance(horario, str) else horario
         except Exception:
             print("Erro ao criar agendamento: data ou horario invalido")
-            return False
+            return False, "Data ou horario invalido."
 
         if data_consulta < date.today():
             print("Erro ao criar agendamento: nao e possivel marcar retorno em data passada")
-            return False
+            return False, "Nao e possivel marcar consulta em data passada."
 
         tipo_consulta = tipo_consulta or "Retorno"
         observacoes = (observacoes or "")[:255]
         retorno_agendado = data if tipo_consulta == "Retorno" else None
         id_consulta = uuid.uuid4().hex
 
-        return self.model.criar_agendamento(
+        sucesso, mensagem = self.model.criar_agendamento(
             id_consulta,
             id_pet,
             id_veterinario,
@@ -51,6 +51,7 @@ class AgendamentoController:
             observacoes,
             retorno_agendado,
         )
+        return sucesso, mensagem
 
     def liberar_horarios(self, id_veterinario, data, hora_inicio, hora_fim, intervalo_minutos=30):
         """Cria horarios livres na agenda_disponivel para o veterinario."""

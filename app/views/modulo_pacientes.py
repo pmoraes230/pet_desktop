@@ -13,6 +13,7 @@ import numpy as np
 from app.controllers.pet_controller import PetController
 from app.core.i18n import tr
 from app.services.s3_client import upload_foto_pet_s3, get_url_s3
+from app.utils.loading import run_backend_task
 import uuid
 
 # Reuso da classe Colors do exemplo anterior
@@ -693,6 +694,22 @@ class ModuloPacientes:
             self._fazer_upload_foto_pet(file_path)
 
     def _fazer_upload_foto_pet(self, file_path):
+        def tarefa():
+            imagem_key = upload_foto_pet_s3(file_path, self.pet_atual_id)
+            if not imagem_key:
+                return False, None
+            sucesso = self.pet_controller.atualizar_imagem_pet(self.pet_atual_id, imagem_key)
+            return sucesso, imagem_key
+
+        run_backend_task(
+            self.content,
+            tarefa,
+            on_success=lambda resultado: self._finalizar_upload_foto_pet(resultado, file_path),
+            on_error=lambda erro: messagebox.showerror(tr("Erro"), f"{tr('Erro ao processar foto')}: {erro}"),
+            message=tr("Processando foto..."),
+        )
+        return
+
         try:
             imagem_key = upload_foto_pet_s3(file_path, self.pet_atual_id)
             
@@ -728,6 +745,38 @@ class ModuloPacientes:
         except Exception as e:
             print(f"Erro ao fazer upload: {e}")
             messagebox.showerror(tr("Erro"), f"{tr('Erro ao processar foto')}: {str(e)}")
+
+    def _finalizar_upload_foto_pet(self, resultado, file_path):
+        sucesso, imagem_key = resultado
+
+        if not imagem_key:
+            messagebox.showerror(tr("Erro"), tr("Falha ao fazer upload da foto"))
+            return
+
+        if not sucesso:
+            messagebox.showerror(tr("Erro"), tr("Falha ao atualizar foto no banco de dados"))
+            return
+
+        try:
+            pil_img = Image.open(file_path)
+            pil_img = pil_img.resize((200, 200), Image.Resampling.LANCZOS)
+
+            ctk_img = ctk.CTkImage(light_image=pil_img, size=(200, 200))
+
+            self.img_label.destroy()
+            self.img_label = ctk.CTkLabel(
+                self.img_placeholder,
+                image=ctk_img,
+                text="",
+                fg_color=colors.NEUTRAL_100
+            )
+            self.img_label.image = ctk_img
+            self.img_label.pack(fill="both", expand=True)
+
+            messagebox.showinfo(tr("Sucesso"), tr("Foto do pet atualizada com sucesso!"))
+        except Exception as e:
+            print(f"Erro ao exibir foto: {e}")
+            messagebox.showwarning(tr("Aviso"), tr("Foto salva no banco mas nÃ£o foi possÃ­vel exibir"))
 
     def mudar_aba_pet(self, aba):
         self.active_aba = aba
@@ -998,15 +1047,25 @@ class ModuloPacientes:
             messagebox.showerror(tr("Erro"), tr("Use o formato DD/MM/AAAA para as datas"))
             return
 
-        sucesso = self.pet_controller.adicionar_medicamento(
-            self.pet_atual_id,
-            nome,
-            dose,
-            freq,
-            inicio_formatado,
-            fim_formatado
+        run_backend_task(
+            self.content,
+            lambda: self.pet_controller.adicionar_medicamento(
+                self.pet_atual_id,
+                nome,
+                dose,
+                freq,
+                inicio_formatado,
+                fim_formatado
+            ),
+            on_success=self._finalizar_salvar_medicamento,
+            on_error=lambda erro: messagebox.showerror(tr("Erro"), f"{tr('NÃ£o foi possÃ­vel salvar.')}: {erro}"),
+            message=tr("Salvando medicamento..."),
         )
+        return
 
+        sucesso = False
+
+    def _finalizar_salvar_medicamento(self, sucesso):
         if sucesso:
             messagebox.showinfo(tr("Sucesso"), tr("Medicamento adicionado!"))
             self.overlay_med.destroy()
@@ -1158,12 +1217,33 @@ class ModuloPacientes:
             messagebox.showerror(tr("Erro"), tr("Data inválida! Use o formato DD/MM/YYYY"))
             return
 
+        run_backend_task(
+            self.content,
+            lambda: self.pet_controller.adicionar_vacina(
+                self.pet_atual_id,
+                nome_vacina,
+                proxima_dose_formatada,
+            ),
+            on_success=self._finalizar_salvar_vacina,
+            on_error=lambda erro: messagebox.showerror(tr("Erro"), f"{tr('Falha ao registrar a vacina')}: {erro}"),
+            message=tr("Salvando vacina..."),
+        )
+        return
+
         sucesso = self.pet_controller.adicionar_vacina(
             self.pet_atual_id, 
             nome_vacina, 
             proxima_dose_formatada # Assumindo que seu método de adicionar vacina já recebe isso
         )
 
+        if sucesso:
+            messagebox.showinfo(tr("Sucesso"), tr("Vacina registrada com sucesso!"))
+            self.fechar_modal_vacina()
+            self.mudar_aba_pet("saude")
+        else:
+            messagebox.showerror(tr("Erro"), tr("Falha ao registrar a vacina"))
+
+    def _finalizar_salvar_vacina(self, sucesso):
         if sucesso:
             messagebox.showinfo(tr("Sucesso"), tr("Vacina registrada com sucesso!"))
             self.fechar_modal_vacina()
