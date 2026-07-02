@@ -5,12 +5,9 @@ import requests
 from PIL import Image, ImageDraw
 from app.utils.loading_overlay import run_with_loading
 from ..services.s3_client import get_url_s3
-from app.models.mudar_foto import salvar_nova_foto
 from ..controllers.veterinario_controller import vetController
-from app.config.database import connectdb
 from app.core.i18n import get_language, tr
 from app.core.theme import get_appearance_mode, is_dark_mode
-from django.contrib.auth.hashers import check_password, make_password
 
 def criar_imagem_redonda(pil_img, size):
     # Para o novo layout, o arredondamento é menor (corner_radius alto, mas não círculo perfeito)
@@ -464,42 +461,20 @@ class ModuloConfiguracoes:
         run_with_loading(self._change_password_backend, self._t("Atualizando senha..."), cur, new)
 
     def _change_password_backend(self, current_password, new_password):
-        # Verifica usuário atual
-        if not self.current_user_id:
-            self.content.after(0, lambda: self._pwd_msg.configure(text=self._t("Usuário não encontrado")))
-            return
-
         try:
-            conn = connectdb()
-            cursor = conn.cursor()
-            # Busca hash atual
-            cursor.execute("SELECT senha_veterinario FROM veterinario WHERE id = %s", (self.current_user_id,))
-            row = cursor.fetchone()
-            if not row:
-                self.content.after(0, lambda: self._pwd_msg.configure(text=self._t("Usuário não encontrado")))
+            if not self.current_user_id or not self.vet_ctrl:
+                self.content.after(0, lambda: self._pwd_msg.configure(text=self._t("Usuario nao encontrado")))
                 return
 
-            stored_hash = row[0]
-            if not check_password(current_password, stored_hash):
-                self.content.after(0, lambda: self._pwd_msg.configure(text=self._t("Senha atual incorreta")))
+            resultado = self.vet_ctrl.alterar_senha(current_password, new_password)
+            if not resultado.get("success"):
+                mensagem = resultado.get("message", "Erro ao atualizar senha")
+                self.content.after(0, lambda: self._pwd_msg.configure(text=self._t(mensagem)))
                 return
 
-            # Gerar hash da nova senha e atualizar
-            new_hash = make_password(new_password)
-            cursor.execute("UPDATE veterinario SET senha_veterinario = %s WHERE id = %s", (new_hash, self.current_user_id))
-            conn.commit()
-            cursor.close(); conn.close()
-
-            # Success -> volta para gerais com mensagem
-            def _on_success():
-                self.tela_configuracoes_gerais()
-            self.content.after(0, _on_success)
-
+            self.content.after(0, self.tela_configuracoes_gerais)
+            return
         except Exception as e:
             print(f"Erro ao alterar senha: {e}")
-            try:
-                cursor.close()
-                conn.close()
-            except:
-                pass
             self.content.after(0, lambda: self._pwd_msg.configure(text=self._t("Erro ao atualizar senha")))
+            return

@@ -1,4 +1,5 @@
 from ..models.vet_modal import VetModal
+from app.models.mudar_foto import salvar_nova_foto
 
 class vetController:
     def __init__(self, vet_id: int):
@@ -8,6 +9,28 @@ class vetController:
         """Busca os dados do veterinário usando o VetModal."""
         vet_data = VetModal(self.vet_id)
         return vet_data.get_vet_info()
+
+    def salvar_nova_foto(self, file_path):
+        return salvar_nova_foto(self.vet_id, file_path)
+
+    def alterar_senha(self, senha_atual: str, nova_senha: str) -> dict:
+        response = {
+            "success": False,
+            "message": "",
+        }
+
+        if not senha_atual or not nova_senha:
+            response["message"] = "Preencha todos os campos"
+            return response
+
+        if len(nova_senha) < 8:
+            response["message"] = "A nova senha deve ter ao menos 8 caracteres"
+            return response
+
+        sucesso, mensagem = VetModal(self.vet_id).alterar_senha(senha_atual, nova_senha)
+        response["success"] = sucesso
+        response["message"] = mensagem
+        return response
     
     def update_perfil_data(self, nome: str, email: str, crmv: str, uf_crmv: str) -> dict:
         """Atualiza os dados do veterinário e retorna resultado para a view"""

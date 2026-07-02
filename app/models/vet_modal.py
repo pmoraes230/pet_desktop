@@ -1,4 +1,5 @@
 from ..config.database import connectdb
+from django.contrib.auth.hashers import check_password, make_password
 
 class VetModal:
     def __init__(self, vet_id: int):
@@ -71,3 +72,36 @@ class VetModal:
         except Exception as e:
             print(f"Erro ao conectar ao banco de dados: {str(e)}")
             return False
+
+    def alterar_senha(self, senha_atual: str, nova_senha: str):
+        conn = None
+        cursor = None
+        try:
+            conn = connectdb()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT senha_veterinario FROM veterinario WHERE id = %s",
+                (self.vet_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return False, "Usuario nao encontrado"
+
+            stored_hash = row[0]
+            if not check_password(senha_atual, stored_hash):
+                return False, "Senha atual incorreta"
+
+            cursor.execute(
+                "UPDATE veterinario SET senha_veterinario = %s WHERE id = %s",
+                (make_password(nova_senha), self.vet_id),
+            )
+            conn.commit()
+            return True, "Senha atualizada com sucesso"
+        except Exception as e:
+            print(f"Erro ao alterar senha: {e}")
+            return False, "Erro ao atualizar senha"
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
