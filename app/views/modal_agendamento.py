@@ -2,6 +2,7 @@ import customtkinter as ctk
 from datetime import datetime
 
 from app.core.i18n import tr
+from app.core.theme import is_dark_mode
 from app.utils.loading import run_backend_task
 from ..controllers.agendamento_controller import AgendamentoController
 
@@ -16,18 +17,43 @@ class ModalAgendamento:
         self.janela = None
         self.pets = []
 
-        self.colors = {
+        self.colors = self._theme_colors()
+
+        self.criar_modal()
+
+    def _theme_colors(self):
+        if is_dark_mode():
+            return {
+                "background": "#111827",
+                "card": "#1F2937",
+                "input_bg": "#1F2937",
+                "input_hover": "#374151",
+                "border": "#374151",
+                "text_main": "#F9FAFB",
+                "text_label": "#D1D5DB",
+                "placeholder": "#9CA3AF",
+                "primary": "#17A8A8",
+                "primary_hover": "#148F8F",
+                "cancel": "#374151",
+                "cancel_hover": "#4B5563",
+                "cancel_text": "#F9FAFB",
+            }
+
+        return {
             "background": "#FFFFFF",
+            "card": "#FFFFFF",
             "input_bg": "#F3F5F7",
+            "input_hover": "#E8EEF5",
+            "border": "#D4DDE8",
             "text_main": "#1A2F44",
             "text_label": "#7A8A99",
             "placeholder": "#A0ACB9",
             "primary": "#17A8A8",
+            "primary_hover": "#148F8F",
             "cancel": "#F3F5F7",
+            "cancel_hover": "#EBECEE",
             "cancel_text": "#7A8A99",
         }
-
-        self.criar_modal()
 
     def criar_modal(self):
         self.janela = ctk.CTkToplevel(self.parent)
@@ -61,12 +87,12 @@ class ModalAgendamento:
             text="X",
             width=35,
             height=35,
-            fg_color="#F3F5F7",
-            text_color="#666666",
+            fg_color=self.colors["cancel"],
+            text_color=self.colors["cancel_text"],
             command=self.janela.destroy,
             font=("Arial", 16),
             corner_radius=50,
-            hover_color="#E8EEF5",
+            hover_color=self.colors["cancel_hover"],
         ).place(relx=0.92, rely=0.06, anchor="center")
 
         container = ctk.CTkScrollableFrame(self.janela, fg_color="transparent")
@@ -92,8 +118,9 @@ class ModalAgendamento:
             corner_radius=12,
             height=45,
             button_color=self.colors["input_bg"],
-            button_hover_color="#E8EEF5",
+            button_hover_color=self.colors["input_hover"],
             text_color=self.colors["text_main"],
+            placeholder_text_color=self.colors["placeholder"],
             font=("Arial", 12),
         )
         self.combo_pet.pack(fill="x", pady=(0, 25))
@@ -121,6 +148,7 @@ class ModalAgendamento:
             border_width=0,
             corner_radius=12,
             text_color=self.colors["text_main"],
+            placeholder_text_color=self.colors["placeholder"],
             font=("Arial", 12),
         )
         self.entry_data.pack(fill="x")
@@ -153,7 +181,7 @@ class ModalAgendamento:
             text_color=self.colors["text_main"],
             font=("Arial", 12),
             button_color=self.colors["input_bg"],
-            button_hover_color="#E8EEF5",
+            button_hover_color=self.colors["input_hover"],
         )
         self.combo_tipo.pack(fill="x", pady=(0, 25))
         self.combo_tipo.set(tr("Consulta Geral"))
@@ -183,10 +211,10 @@ class ModalAgendamento:
             text_color=self.colors["cancel_text"],
             font=("Arial", 14, "bold"),
             corner_radius=12,
-            hover_color="#EBECEE",
+            hover_color=self.colors["cancel_hover"],
             command=self.janela.destroy,
             border_width=1,
-            border_color="#D4DDE8",
+            border_color=self.colors["border"],
         ).grid(row=0, column=0, padx=(0, 10), sticky="ew")
 
         ctk.CTkButton(
@@ -197,7 +225,7 @@ class ModalAgendamento:
             text_color="white",
             font=("Arial", 14, "bold"),
             corner_radius=12,
-            hover_color="#148F8F",
+            hover_color=self.colors["primary_hover"],
             command=self.agendar_consulta,
         ).grid(row=0, column=1, padx=(10, 0), sticky="ew")
 
@@ -281,13 +309,13 @@ class ModalAgendamento:
         dialog.geometry("350x180")
         dialog.resizable(False, False)
         dialog.grab_set()
-        dialog.configure(fg_color="white")
+        dialog.configure(fg_color=self.colors["background"])
 
-        frame = ctk.CTkFrame(dialog, fg_color="white")
+        frame = ctk.CTkFrame(dialog, fg_color=self.colors["card"])
         frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         ctk.CTkLabel(frame, text="!", font=("Arial", 50), text_color="#F59E0B").pack(pady=(10, 5))
-        ctk.CTkLabel(frame, text=mensagem, font=("Arial", 13, "bold"), text_color="#333333").pack(pady=5)
+        ctk.CTkLabel(frame, text=mensagem, font=("Arial", 13, "bold"), text_color=self.colors["text_main"]).pack(pady=5)
 
         ctk.CTkButton(
             dialog,
@@ -313,13 +341,13 @@ class ModalAgendamento:
         dialog.geometry("350x180")
         dialog.resizable(False, False)
         dialog.grab_set()
-        dialog.configure(fg_color="white")
+        dialog.configure(fg_color=self.colors["background"])
 
-        frame = ctk.CTkFrame(dialog, fg_color="white")
+        frame = ctk.CTkFrame(dialog, fg_color=self.colors["card"])
         frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         ctk.CTkLabel(frame, text="OK", font=("Arial", 34, "bold"), text_color="#17A8A8").pack(pady=(10, 5))
-        ctk.CTkLabel(frame, text=mensagem, font=("Arial", 13, "bold"), text_color="#333333").pack(pady=5)
+        ctk.CTkLabel(frame, text=mensagem, font=("Arial", 13, "bold"), text_color=self.colors["text_main"]).pack(pady=5)
 
         ctk.CTkButton(
             dialog,

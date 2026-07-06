@@ -108,6 +108,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.avatar_image = None
         self.language = get_language()
         self.current_screen_title_key = "dashboard"
+        self.current_screen_func = None
         self.sidebar_buttons = []
 
         # Fundo geral mais limpo e moderno
@@ -290,6 +291,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.mod_chat = ModuloChat(self.content, self.current_user)
 
     def _switch_screen(self, target_screen_func, title="Dashboard"):
+        self.current_screen_func = target_screen_func
         loader = LoadingOverlay.get_instance(self)
         loader.show(self._t("Carregando..."))
 
@@ -321,6 +323,7 @@ class DashboardVeterinario(ctk.CTkFrame):
         set_appearance_mode(mode)
         colors.apply_appearance()
         self._refresh_theme_colors()
+        self._rerender_current_screen()
 
     def _refresh_theme_colors(self):
         self.configure(fg_color=colors.NEUTRAL_50)
@@ -344,6 +347,16 @@ class DashboardVeterinario(ctk.CTkFrame):
             self._toggle_profile_menu()
         if self.notifications_open:
             self._toggle_notifications()
+
+    def _rerender_current_screen(self):
+        if not self.current_screen_func:
+            return
+
+        for child in self.content.winfo_children():
+            child.destroy()
+        self.current_screen_func()
+        if hasattr(self, "current_screen_title"):
+            self.current_screen_title.configure(text=self._t(self.current_screen_title_key))
 
     def _refresh_language_texts(self):
         for btn, key, icon_str in self.sidebar_buttons:

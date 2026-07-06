@@ -3,7 +3,42 @@ from datetime import datetime
 import customtkinter as ctk
 
 from app.core.i18n import tr
+from app.core.theme import is_dark_mode
 from app.services.realtime_client import RealtimeClient
+
+
+class Colors:
+    ACCENT = "#9333EA"
+    ACCENT_SOFT = "#F3E8FF"
+
+    def __init__(self):
+        self.apply_appearance()
+
+    def apply_appearance(self):
+        if is_dark_mode():
+            self.BG = "#111827"
+            self.CARD_BG = "#1F2937"
+            self.PANEL_BG = "#111827"
+            self.BORDER = "#374151"
+            self.TEXT = "#F9FAFB"
+            self.TEXT_MUTED = "#9CA3AF"
+            self.SELECTED = "#3B0764"
+            self.HOVER = "#374151"
+            self.BUBBLE_OTHER = "#111827"
+            return
+
+        self.BG = "#F8FAFC"
+        self.CARD_BG = "#FFFFFF"
+        self.PANEL_BG = "#F8FAFC"
+        self.BORDER = "#E2E8F0"
+        self.TEXT = "#111827"
+        self.TEXT_MUTED = "#64748B"
+        self.SELECTED = "#F3E8FF"
+        self.HOVER = "#F8FAFC"
+        self.BUBBLE_OTHER = "#FFFFFF"
+
+
+colors = Colors()
 
 
 class ModuloChat:
@@ -18,6 +53,8 @@ class ModuloChat:
         self.status_label = None
 
     def tela_chat(self):
+        colors.apply_appearance()
+        self.content.configure(fg_color=colors.BG)
         self._fechar_tempo_real()
 
         for widget in self.content.winfo_children():
@@ -29,30 +66,30 @@ class ModuloChat:
         chat_container.columnconfigure(1, weight=3)
         chat_container.rowconfigure(0, weight=1)
 
-        contatos_frame = ctk.CTkFrame(chat_container, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
+        contatos_frame = ctk.CTkFrame(chat_container, fg_color=colors.CARD_BG, corner_radius=25, border_width=1, border_color=colors.BORDER)
         contatos_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-        ctk.CTkLabel(contatos_frame, text=tr("Conversas"), font=("Arial", 20, "bold")).pack(anchor="w", padx=25, pady=20)
+        ctk.CTkLabel(contatos_frame, text=tr("Conversas"), font=("Arial", 20, "bold"), text_color=colors.TEXT).pack(anchor="w", padx=25, pady=20)
 
         scroll_contatos = ctk.CTkScrollableFrame(contatos_frame, fg_color="transparent")
         scroll_contatos.pack(fill="both", expand=True, padx=10)
 
         self.criar_item_contato(scroll_contatos, "Canal do veterinario", "Vet", True)
 
-        janela_chat = ctk.CTkFrame(chat_container, fg_color="white", corner_radius=25, border_width=1, border_color="#E2E8F0")
+        janela_chat = ctk.CTkFrame(chat_container, fg_color=colors.CARD_BG, corner_radius=25, border_width=1, border_color=colors.BORDER)
         janela_chat.grid(row=0, column=1, sticky="nsew")
 
         header = ctk.CTkFrame(janela_chat, fg_color="transparent", height=60)
         header.pack(fill="x", padx=25, pady=15)
-        ctk.CTkLabel(header, text=tr("Tempo real"), font=("Arial", 16, "bold")).pack(side="left")
-        self.status_label = ctk.CTkLabel(header, text="Conectando...", font=("Arial", 12), text_color="#64748B")
+        ctk.CTkLabel(header, text=tr("Tempo real"), font=("Arial", 16, "bold"), text_color=colors.TEXT).pack(side="left")
+        self.status_label = ctk.CTkLabel(header, text="Conectando...", font=("Arial", 12), text_color=colors.TEXT_MUTED)
         self.status_label.pack(side="right")
 
-        self.area_msg = ctk.CTkScrollableFrame(janela_chat, fg_color="#F8FAFC", corner_radius=0)
+        self.area_msg = ctk.CTkScrollableFrame(janela_chat, fg_color=colors.PANEL_BG, corner_radius=0)
         self.area_msg.pack(fill="both", expand=True)
 
-        input_f = ctk.CTkFrame(janela_chat, fg_color="white", height=80)
+        input_f = ctk.CTkFrame(janela_chat, fg_color=colors.CARD_BG, height=80)
         input_f.pack(fill="x", side="bottom", padx=20, pady=20)
-        self.input_msg = ctk.CTkEntry(input_f, placeholder_text=tr("Digite sua mensagem..."), height=50, corner_radius=25)
+        self.input_msg = ctk.CTkEntry(input_f, placeholder_text=tr("Digite sua mensagem..."), height=50, corner_radius=25, fg_color=colors.PANEL_BG, border_color=colors.BORDER, text_color=colors.TEXT, placeholder_text_color=colors.TEXT_MUTED)
         self.input_msg.pack(side="left", fill="x", expand=True, padx=(0, 10))
         self.input_msg.bind("<Return>", lambda _event: self.enviar_mensagem())
         ctk.CTkButton(input_f, text="Enviar", width=90, height=50, corner_radius=25, fg_color="#A855F7", command=self.enviar_mensagem).pack(side="right")
@@ -116,9 +153,9 @@ class ModuloChat:
         btn = ctk.CTkButton(
             master,
             text=f"{avatar}  {nome}",
-            fg_color="#F3E8FF" if sel else "transparent",
-            text_color="black",
-            hover_color="#F8FAFC",
+            fg_color=colors.SELECTED if sel else "transparent",
+            text_color=colors.TEXT,
+            hover_color=colors.HOVER,
             anchor="w",
             height=60,
             corner_radius=15,
@@ -127,14 +164,14 @@ class ModuloChat:
 
     def criar_bolha_mensagem(self, master, texto, hora, tipo):
         side = "right" if tipo == "vet" else "left"
-        cor = "#9333EA" if tipo == "vet" else "white"
-        txt_cor = "white" if tipo == "vet" else "black"
+        cor = colors.ACCENT if tipo == "vet" else colors.BUBBLE_OTHER
+        txt_cor = "white" if tipo == "vet" else colors.TEXT
         f = ctk.CTkFrame(master, fg_color="transparent")
         f.pack(fill="x", padx=15, pady=5)
-        bolha = ctk.CTkFrame(f, fg_color=cor, corner_radius=15, border_width=1 if tipo == "tutor" else 0, border_color="#E2E8F0")
+        bolha = ctk.CTkFrame(f, fg_color=cor, corner_radius=15, border_width=1 if tipo == "tutor" else 0, border_color=colors.BORDER)
         bolha.pack(side=side)
         ctk.CTkLabel(bolha, text=texto, text_color=txt_cor, wraplength=250, justify="left").pack(padx=15, pady=10)
-        ctk.CTkLabel(f, text=hora, font=("Arial", 9), text_color="#94A3B8").pack(side=side, padx=5)
+        ctk.CTkLabel(f, text=hora, font=("Arial", 9), text_color=colors.TEXT_MUTED).pack(side=side, padx=5)
 
     def _hora_atual(self):
         return datetime.now().strftime("%H:%M")

@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from app.controllers.pet_controller import PetController
 from app.core.i18n import tr
+from app.core.theme import is_dark_mode
 from app.services.s3_client import upload_foto_pet_s3, get_url_s3
 from app.utils.loading import run_backend_task
 import uuid
@@ -48,6 +49,46 @@ class Colors:
     STATUS_HEALTHY_TEXT = "#10B981" # Texto para status saudável
     STATUS_WARNING_BG = "#FFFBEB" # Fundo para status de alerta
     STATUS_WARNING_TEXT = "#F59E0B" # Texto para status de alerta
+
+    def __init__(self):
+        self.apply_appearance()
+
+    def apply_appearance(self):
+        if is_dark_mode():
+            self.PRIMARY_DARK = "#0F766E"
+            self.PRIMARY = "#14B8A6"
+            self.PRIMARY_HOVER = "#115E59"
+            self.NEUTRAL_50 = "#111827"
+            self.NEUTRAL_100 = "#1F2937"
+            self.NEUTRAL_200 = "#374151"
+            self.NEUTRAL_300 = "#4B5563"
+            self.NEUTRAL_500 = "#9CA3AF"
+            self.TEXT_PRIMARY = "#F9FAFB"
+            self.TEXT_SECONDARY = "#D1D5DB"
+            self.SUCCESS_BG = "#064E3B"
+            self.GRAY_LIGHT = "#111827"
+            self.CARD_BG = "#1F2937"
+            self.TEXT_DARK = "#F9FAFB"
+            self.STATUS_HEALTHY_BG = "#064E3B"
+            self.STATUS_WARNING_BG = "#451A03"
+            return
+
+        self.PRIMARY_DARK = "#004D40"
+        self.PRIMARY = "#4CAF50"
+        self.PRIMARY_HOVER = "#00695C"
+        self.NEUTRAL_50 = "#F8F9FA"
+        self.NEUTRAL_100 = "#EAECEF"
+        self.NEUTRAL_200 = "#E0E3E8"
+        self.NEUTRAL_300 = "#CCD1D9"
+        self.NEUTRAL_500 = "#6B7280"
+        self.TEXT_PRIMARY = "#343A40"
+        self.TEXT_SECONDARY = "#6C757D"
+        self.SUCCESS_BG = "#E6FFED"
+        self.GRAY_LIGHT = "#F1F5F9"
+        self.CARD_BG = "#FFFFFF"
+        self.TEXT_DARK = "#1E293B"
+        self.STATUS_HEALTHY_BG = "#E6FFEE"
+        self.STATUS_WARNING_BG = "#FFFBEB"
 
 colors = Colors()
 
@@ -88,6 +129,9 @@ class ModuloPacientes:
             label.configure(text="ðŸ¾", font=("Arial", font_size), text_color=colors.NEUTRAL_500)
 
     def tela_pacientes(self):
+        colors.apply_appearance()
+        self.content.configure(fg_color=colors.NEUTRAL_50)
+
         for widget in self.content.winfo_children():
             widget.destroy()
 
@@ -263,7 +307,7 @@ class ModuloPacientes:
         """Card de paciente com novo design"""
         card = ctk.CTkFrame(
             master,
-            fg_color="white",
+            fg_color=colors.CARD_BG,
             corner_radius=16, # Menor raio
             border_width=1,
             border_color=colors.NEUTRAL_200
@@ -353,7 +397,7 @@ class ModuloPacientes:
         self.overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
 
         self.modal_frame = ctk.CTkFrame(self.overlay, width=450, height=550, corner_radius=20, 
-                                       border_width=0, fg_color="white") # Sem borda
+                                       border_width=0, fg_color=colors.CARD_BG) # Sem borda
         self.modal_frame.place(relx=0.5, rely=0.5, anchor="center")
         self.modal_frame.pack_propagate(False)
 
@@ -437,6 +481,9 @@ class ModuloPacientes:
 
     # Ajuste para a função tela_perfil_pet: removi 'emoji' pois não será mais usado diretamente
     def tela_perfil_pet(self, id_pet, nome_pet, raca_pet, _): 
+        colors.apply_appearance()
+        self.content.configure(fg_color=colors.NEUTRAL_50)
+
         # Guardar id do pet para usar nas funções de atualizar foto
         self.pet_atual_id = id_pet
         
@@ -467,11 +514,11 @@ class ModuloPacientes:
         container.rowconfigure(1, weight=1)
 
         if modo_vertical:
-            card_esq = ctk.CTkFrame(container, fg_color="white", corner_radius=20, # Raio ajustado
+            card_esq = ctk.CTkFrame(container, fg_color=colors.CARD_BG, corner_radius=20, # Raio ajustado
                                    border_width=1, border_color=colors.NEUTRAL_200)
             card_esq.grid(row=0, column=0, sticky="ew", padx=0, pady=(0, 15))
         else:
-            card_esq = ctk.CTkFrame(container, fg_color="white", corner_radius=20, # Raio ajustado
+            card_esq = ctk.CTkFrame(container, fg_color=colors.CARD_BG, corner_radius=20, # Raio ajustado
                                    width=350, border_width=1, border_color=colors.NEUTRAL_200)
             card_esq.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
 
@@ -557,7 +604,7 @@ class ModuloPacientes:
         ctk.CTkLabel(prox_c, text=tr("Próxima consulta: 15 de Fev"), font=("Helvetica", 15, "bold"), text_color="white").pack(anchor="w", padx=15, pady=8)
 
         # Coluna direita responsiva
-        self.right_col = ctk.CTkFrame(container, fg_color="white", corner_radius=20, # Raio ajustado
+        self.right_col = ctk.CTkFrame(container, fg_color=colors.CARD_BG, corner_radius=20, # Raio ajustado
                                      border_width=1, border_color=colors.NEUTRAL_200)
         if modo_vertical:
             self.right_col.grid(row=1, column=0, sticky="ew", padx=0)
@@ -614,7 +661,7 @@ class ModuloPacientes:
         tags_frame.pack(anchor="w")
 
         for t in tags:
-            tag = ctk.CTkFrame(tags_frame, fg_color="#F3F4F6", corner_radius=15) # Cor ajustada
+            tag = ctk.CTkFrame(tags_frame, fg_color=colors.NEUTRAL_100, corner_radius=15) # Cor ajustada
             tag.pack(side="left", padx=5)
             ctk.CTkLabel(tag, text=t, font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(padx=15, pady=5)
 
@@ -639,7 +686,7 @@ class ModuloPacientes:
             ctk.CTkLabel(self.container_abas, text=tr("Sem vacinas."), text_color=colors.NEUTRAL_500).pack(pady=20)
         else:
             for v in vacinas:
-                card = ctk.CTkFrame(self.container_abas, fg_color="white", corner_radius=15, border_width=1, border_color=colors.NEUTRAL_200)
+                card = ctk.CTkFrame(self.container_abas, fg_color=colors.CARD_BG, corner_radius=15, border_width=1, border_color=colors.NEUTRAL_200)
                 card.pack(fill="x", pady=8)
                 txt = f"{v.get('NOME')}\n{tr('Próxima dose')}: {v.get('PROXIMA_DOSE')}"
                 ctk.CTkLabel(card, text=txt, font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"), text_color=colors.TEXT_PRIMARY, justify="left").pack(anchor="w", padx=15, pady=12)
@@ -855,7 +902,7 @@ class ModuloPacientes:
             for med in medicamentos:
                 card = ctk.CTkFrame(
                     list_frame,
-                    fg_color="white",
+                    fg_color=colors.CARD_BG,
                     corner_radius=12,
                     border_width=1,
                     border_color=colors.NEUTRAL_200
@@ -914,14 +961,15 @@ class ModuloPacientes:
         main_row = ctk.CTkFrame(self.container_abas, fg_color="transparent")
         main_row.pack(fill="both", expand=True)
 
-        chart_container = ctk.CTkFrame(main_row, fg_color="white", corner_radius=20, border_width=1, border_color=colors.NEUTRAL_200)
+        chart_container = ctk.CTkFrame(main_row, fg_color=colors.CARD_BG, corner_radius=20, border_width=1, border_color=colors.NEUTRAL_200)
         chart_container.pack(side="left", fill="both", expand=True, padx=(0, 20))
 
         ctk.CTkLabel(chart_container, text=tr("Bem-estar do Pet"), font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", padx=20, pady=(20, 0))
         ctk.CTkLabel(chart_container, text=tr("TENDÊNCIA SEMANAL"), font=ctk.CTkFont(family="Helvetica", size=10, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=20)
 
         fig, ax = plt.subplots(figsize=(5, 3), dpi=100)
-        fig.patch.set_facecolor('white')
+        fig.patch.set_facecolor(colors.CARD_BG)
+        ax.set_facecolor(colors.CARD_BG)
         
         ax.plot(datas, niveis, color=colors.ACCENT_GREEN, marker='o', linewidth=3, markersize=8)
         ax.fill_between(datas, niveis, color=colors.ACCENT_GREEN, alpha=0.1)
@@ -960,7 +1008,7 @@ class ModuloPacientes:
             width=500,
             height=600,
             corner_radius=30,
-            fg_color="white" # Fundo branco
+            fg_color=colors.CARD_BG
         )
         modal.place(relx=0.5, rely=0.5, anchor="center")
         modal.pack_propagate(False)
@@ -1082,7 +1130,7 @@ class ModuloPacientes:
             width=420,
             corner_radius=20, 
             border_width=0, # Sem borda
-            fg_color="white"
+            fg_color=colors.CARD_BG
         )
         self.modal_vacina.place(relx=0.5, rely=0.5, anchor="center")
 

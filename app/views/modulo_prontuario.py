@@ -8,22 +8,39 @@ from PIL import Image
 from app.services.s3_client import upload_prontuario_arquivo_s3, get_url_s3
 
 from app.core.i18n import tr
+from app.core.theme import is_dark_mode
 from app.utils.loading import run_backend_task
 
 
 class Colors:
-    PRIMARY_DARK = "#004D40"
-    BG_LIGHT_GRAY = "#F8FAFC"
-    CARD_BG = "#FFFFFF"
-    BORDER_COLOR = "#E2E8F0"
-    TEXT_DARK = "#1E293B"
-    TEXT_SECONDARY = "#64748B"
-    PLACEHOLDER_TEXT = "#94A3B8"
     ACCENT_PURPLE = "#A855F7"
     ACCENT_PURPLE_HOVER = "#9333EA"
     ACCENT_TEAL = "#2DD4BF"
-    ACCENT_CYAN = "#00838F"
-    INPUT_BG = "#F8FAFC"
+    ACCENT_CYAN = "#06B6D4"
+
+    def __init__(self):
+        self.apply_appearance()
+
+    def apply_appearance(self):
+        if is_dark_mode():
+            self.PRIMARY_DARK = "#0F766E"
+            self.BG_LIGHT_GRAY = "#111827"
+            self.CARD_BG = "#1F2937"
+            self.BORDER_COLOR = "#374151"
+            self.TEXT_DARK = "#F9FAFB"
+            self.TEXT_SECONDARY = "#D1D5DB"
+            self.PLACEHOLDER_TEXT = "#9CA3AF"
+            self.INPUT_BG = "#111827"
+            return
+
+        self.PRIMARY_DARK = "#004D40"
+        self.BG_LIGHT_GRAY = "#F8FAFC"
+        self.CARD_BG = "#FFFFFF"
+        self.BORDER_COLOR = "#E2E8F0"
+        self.TEXT_DARK = "#1E293B"
+        self.TEXT_SECONDARY = "#64748B"
+        self.PLACEHOLDER_TEXT = "#94A3B8"
+        self.INPUT_BG = "#F8FAFC"
 
 
 colors = Colors()
@@ -45,6 +62,8 @@ class ModuloProntuario:
         self.med_frames = []
 
     def tela_prontuario(self):
+        colors.apply_appearance()
+
         for widget in self.content.winfo_children():
             widget.destroy()
 

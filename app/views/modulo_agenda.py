@@ -6,6 +6,7 @@ import customtkinter as ctk
 
 from ..controllers.agenda_controller import AgendaController
 from app.core.i18n import tr
+from app.core.theme import is_dark_mode
 from app.utils.loading import run_backend_task
 from .modal_agendamento import ModalAgendamento
 
@@ -13,19 +14,54 @@ from .modal_agendamento import ModalAgendamento
 class Colors:
     ACCENT_GREEN = "#26C2B9"
     ACCENT_GREEN_HOVER = "#1EB0A8"
-    BORDER = "#E5E7EB"
-    CARD = "#FFFFFF"
-    DANGER_BG = "#FEE2E2"
-    DANGER_TEXT = "#B91C1C"
-    GRAY_LIGHT = "#F3F4F6"
-    MUTED = "#6B7280"
     PURPLE = "#7C3AED"
     PURPLE_HOVER = "#6D28D9"
-    SUCCESS_BG = "#DCFCE7"
     SUCCESS_TEXT = "#166534"
-    TEXT = "#1F2937"
-    WARNING_BG = "#FEF3C7"
     WARNING_TEXT = "#92400E"
+
+    def __init__(self):
+        self.apply_appearance()
+
+    def apply_appearance(self):
+        if is_dark_mode():
+            self.BG = "#111827"
+            self.CARD = "#1F2937"
+            self.CARD_ALT = "#111827"
+            self.BORDER = "#374151"
+            self.GRAY_LIGHT = "#374151"
+            self.GRAY_HOVER = "#4B5563"
+            self.MUTED = "#D1D5DB"
+            self.TEXT = "#F9FAFB"
+            self.SUBTLE_TEXT = "#9CA3AF"
+            self.TODAY_BG = "#134E4A"
+            self.OUTSIDE_BG = "#111827"
+            self.OUTSIDE_TEXT = "#6B7280"
+            self.SUCCESS_BG = "#064E3B"
+            self.SUCCESS_TEXT = "#A7F3D0"
+            self.WARNING_BG = "#451A03"
+            self.WARNING_TEXT = "#FDE68A"
+            self.DANGER_BG = "#450A0A"
+            self.DANGER_TEXT = "#FCA5A5"
+            return
+
+        self.BG = "#F8F9FA"
+        self.CARD = "#FFFFFF"
+        self.CARD_ALT = "#F8FAFC"
+        self.BORDER = "#E5E7EB"
+        self.GRAY_LIGHT = "#F3F4F6"
+        self.GRAY_HOVER = "#E5E7EB"
+        self.MUTED = "#6B7280"
+        self.TEXT = "#1F2937"
+        self.SUBTLE_TEXT = "#6B7280"
+        self.TODAY_BG = "#E8FAFA"
+        self.OUTSIDE_BG = "#FAFAFA"
+        self.OUTSIDE_TEXT = "#CBD5E1"
+        self.SUCCESS_BG = "#DCFCE7"
+        self.SUCCESS_TEXT = "#166534"
+        self.WARNING_BG = "#FEF3C7"
+        self.WARNING_TEXT = "#92400E"
+        self.DANGER_BG = "#FEE2E2"
+        self.DANGER_TEXT = "#B91C1C"
 
 
 colors = Colors()
@@ -52,6 +88,9 @@ class ModuloAgenda:
         return data_base - timedelta(days=dias_desde_domingo)
 
     def tela_agenda(self):
+        colors.apply_appearance()
+        self.content.configure(fg_color=colors.BG)
+
         for widget in self.content.winfo_children():
             widget.destroy()
 
@@ -117,7 +156,7 @@ class ModuloAgenda:
             buttons_right_frame,
             text=tr("Calendario"),
             fg_color=colors.GRAY_LIGHT,
-            hover_color="#E5E7EB",
+            hover_color=colors.GRAY_HOVER,
             text_color=colors.TEXT,
             font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
             corner_radius=16,
@@ -172,7 +211,7 @@ class ModuloAgenda:
                 command=comando,
                 fg_color="transparent",
                 text_color=colors.MUTED,
-                hover_color=colors.GRAY_LIGHT,
+                hover_color=colors.GRAY_HOVER,
                 corner_radius=21,
                 font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             ).pack(side="left", padx=(8, 0))
@@ -205,7 +244,7 @@ class ModuloAgenda:
         )
         hoje = data_dia.date() == datetime.now().date()
 
-        fg_color = colors.ACCENT_GREEN if selecionado else "#E8FAFA" if hoje else colors.GRAY_LIGHT
+        fg_color = colors.ACCENT_GREEN if selecionado else colors.TODAY_BG if hoje else colors.GRAY_LIGHT
         text_color = "white" if selecionado else colors.ACCENT_GREEN if hoje else colors.MUTED
         border_color = colors.ACCENT_GREEN if hoje or tem_consulta else colors.GRAY_LIGHT
 
@@ -215,7 +254,7 @@ class ModuloAgenda:
             font=ctk.CTkFont(family="Helvetica", size=15, weight="bold"),
             fg_color=fg_color,
             text_color=text_color,
-            hover_color=colors.ACCENT_GREEN_HOVER if selecionado else "#E5F7F6",
+            hover_color=colors.ACCENT_GREEN_HOVER if selecionado else colors.GRAY_HOVER,
             border_width=2 if hoje or tem_consulta else 0,
             border_color=border_color,
             corner_radius=22,
@@ -250,7 +289,7 @@ class ModuloAgenda:
         self.calendario_modal.title(tr("Calendario Completo"))
         self.calendario_modal.geometry("760x850")
         self.calendario_modal.minsize(680, 580)
-        self.calendario_modal.configure(fg_color="white")
+        self.calendario_modal.configure(fg_color=colors.BG)
         self.calendario_modal.grab_set()
         self.calendario_modal.focus_set()
 
@@ -282,7 +321,7 @@ class ModuloAgenda:
             width=42,
             height=42,
             fg_color=colors.GRAY_LIGHT,
-            hover_color="#E5E7EB",
+            hover_color=colors.GRAY_HOVER,
             text_color=colors.MUTED,
             corner_radius=21,
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
@@ -295,7 +334,7 @@ class ModuloAgenda:
             width=42,
             height=42,
             fg_color=colors.GRAY_LIGHT,
-            hover_color="#E5E7EB",
+            hover_color=colors.GRAY_HOVER,
             text_color=colors.MUTED,
             corner_radius=21,
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
@@ -308,7 +347,7 @@ class ModuloAgenda:
             width=90,
             height=42,
             fg_color=colors.DANGER_BG,
-            hover_color="#FECACA",
+            hover_color=colors.GRAY_HOVER,
             text_color=colors.DANGER_TEXT,
             corner_radius=14,
             font=ctk.CTkFont(family="Helvetica", size=13, weight="bold"),
@@ -350,11 +389,11 @@ class ModuloAgenda:
         selecionado = data_dia == data_selecionada
         hoje = data_dia == data_atual
 
-        fg_color = colors.ACCENT_GREEN if selecionado else "#E8FAFA" if hoje else colors.GRAY_LIGHT
+        fg_color = colors.ACCENT_GREEN if selecionado else colors.TODAY_BG if hoje else colors.GRAY_LIGHT
         text_color = "white" if selecionado else colors.ACCENT_GREEN if hoje or tem_consulta else colors.TEXT
         if fora_do_mes:
-            fg_color = "#FAFAFA"
-            text_color = "#CBD5E1"
+            fg_color = colors.OUTSIDE_BG
+            text_color = colors.OUTSIDE_TEXT
 
         texto = str(data_dia.day)
         if tem_consulta and not fora_do_mes:
@@ -365,7 +404,7 @@ class ModuloAgenda:
             text=texto,
             height=70,
             fg_color=fg_color,
-            hover_color="#E5F7F6" if not fora_do_mes else "#FAFAFA",
+            hover_color=colors.GRAY_HOVER if not fora_do_mes else colors.OUTSIDE_BG,
             text_color=text_color,
             border_width=2 if (hoje or tem_consulta) and not fora_do_mes else 0,
             border_color=colors.ACCENT_GREEN if hoje or tem_consulta else colors.GRAY_LIGHT,
@@ -493,8 +532,8 @@ class ModuloAgenda:
         if status_norm == "confirmado":
             self._criar_botao_acao(acoes, tr("Finalizar Consulta"), colors.PURPLE, colors.PURPLE_HOVER, lambda: self._mudar_status(consulta, "Concluido"))
 
-        self._criar_botao_acao(acoes, tr("Detalhes"), colors.GRAY_LIGHT, "#E5E7EB", lambda: self._abrir_modal_detalhes(consulta), text_color=colors.MUTED)
-        self._criar_botao_acao(acoes, tr("Excluir"), colors.DANGER_BG, "#FECACA", lambda: self._confirmar_exclusao(consulta), text_color=colors.DANGER_TEXT)
+        self._criar_botao_acao(acoes, tr("Detalhes"), colors.GRAY_LIGHT, colors.GRAY_HOVER, lambda: self._abrir_modal_detalhes(consulta), text_color=colors.MUTED)
+        self._criar_botao_acao(acoes, tr("Excluir"), colors.DANGER_BG, colors.GRAY_HOVER, lambda: self._confirmar_exclusao(consulta), text_color=colors.DANGER_TEXT)
 
     def _criar_botao_acao(self, parent, texto, cor, hover, comando, text_color="white"):
         ctk.CTkButton(
@@ -639,7 +678,7 @@ class ModuloAgenda:
         modal.title(tr("Detalhes do Agendamento"))
         modal.geometry("520x500")
         modal.resizable(False, False)
-        modal.configure(fg_color="white")
+        modal.configure(fg_color=colors.BG)
         modal.grab_set()
         modal.focus_set()
 
@@ -681,7 +720,7 @@ class ModuloAgenda:
         ctk.CTkLabel(
             body,
             text=obs,
-            fg_color="#E8FAFA",
+            fg_color=colors.CARD_ALT,
             text_color=colors.MUTED,
             corner_radius=14,
             justify="left",
@@ -696,7 +735,7 @@ class ModuloAgenda:
             text=tr("Fechar"),
             height=46,
             fg_color=colors.GRAY_LIGHT,
-            hover_color="#E5E7EB",
+            hover_color=colors.GRAY_HOVER,
             text_color=colors.MUTED,
             corner_radius=14,
             font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
@@ -734,7 +773,7 @@ class ModuloAgenda:
         self.modal_horarios.title(tr("Liberar Horarios"))
         self.modal_horarios.geometry("500x600")
         self.modal_horarios.resizable(False, False)
-        self.modal_horarios.configure(fg_color="white")
+        self.modal_horarios.configure(fg_color=colors.BG)
         self.modal_horarios.grid_columnconfigure(0, weight=1)
         self.modal_horarios.grid_rowconfigure(1, weight=1)
         self.modal_horarios.grab_set()
@@ -762,7 +801,7 @@ class ModuloAgenda:
             width=34,
             height=34,
             fg_color=colors.GRAY_LIGHT,
-            hover_color="#E5E7EB",
+            hover_color=colors.GRAY_HOVER,
             text_color=colors.MUTED,
             corner_radius=17,
             command=self.modal_horarios.destroy,
@@ -804,7 +843,7 @@ class ModuloAgenda:
             border_width=0,
             corner_radius=12,
             button_color=colors.GRAY_LIGHT,
-            button_hover_color="#E5E7EB",
+            button_hover_color=colors.GRAY_HOVER,
             text_color=colors.TEXT,
             font=ctk.CTkFont(family="Helvetica", size=12),
         )
@@ -828,7 +867,7 @@ class ModuloAgenda:
             text=tr("Cancelar"),
             height=48,
             fg_color=colors.GRAY_LIGHT,
-            hover_color="#E5E7EB",
+            hover_color=colors.GRAY_HOVER,
             text_color=colors.MUTED,
             corner_radius=12,
             font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),

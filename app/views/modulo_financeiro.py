@@ -1,11 +1,42 @@
 import customtkinter as ctk
 from app.core.i18n import tr
+from app.core.theme import is_dark_mode
+
+
+class Colors:
+    PRIMARY = "#A855F7"
+    SUCCESS = "#22C55E"
+    DANGER = "#EF4444"
+
+    def __init__(self):
+        self.apply_appearance()
+
+    def apply_appearance(self):
+        if is_dark_mode():
+            self.BG = "#111827"
+            self.CARD_BG = "#1F2937"
+            self.BORDER = "#374151"
+            self.TEXT = "#F9FAFB"
+            self.TEXT_MUTED = "#9CA3AF"
+            return
+
+        self.BG = "#F8FAFC"
+        self.CARD_BG = "#FFFFFF"
+        self.BORDER = "#E2E8F0"
+        self.TEXT = "#1E293B"
+        self.TEXT_MUTED = "#64748B"
+
+
+colors = Colors()
 
 class ModuloFinanceiro:
     def __init__(self, content_frame):
         self.content = content_frame
 
     def tela_financeiro(self):
+        colors.apply_appearance()
+        self.content.configure(fg_color=colors.BG)
+
         # Limpa tudo que estava na área de conteúdo
         for widget in self.content.winfo_children():
             widget.destroy()
@@ -22,7 +53,8 @@ class ModuloFinanceiro:
         ctk.CTkLabel(
             scroll,
             text=tr("Painel Financeiro"),
-            font=("Arial", 24, "bold")
+            font=("Arial", 24, "bold"),
+            text_color=colors.TEXT
         ).pack(anchor="w", pady=(0, 25))
 
         # Cards de métricas no topo
@@ -44,10 +76,10 @@ class ModuloFinanceiro:
         # Área do gráfico (placeholder por enquanto)
         chart = ctk.CTkFrame(
             main_grid,
-            fg_color="white",
+            fg_color=colors.CARD_BG,
             corner_radius=20,
             border_width=1,
-            border_color="#E2E8F0"
+            border_color=colors.BORDER
         )
         chart.grid(row=0, column=0, sticky="nsew", padx=(0, 20), pady=10)
 
@@ -56,23 +88,24 @@ class ModuloFinanceiro:
             chart,
             text=tr("Gráfico de Entradas/Saídas (placeholder)"),
             font=("Arial", 16),
-            text_color="#64748B"
+            text_color=colors.TEXT_MUTED
         ).pack(expand=True)
 
         # Transações recentes
         trans = ctk.CTkFrame(
             main_grid,
-            fg_color="white",
+            fg_color=colors.CARD_BG,
             corner_radius=20,
             border_width=1,
-            border_color="#E2E8F0"
+            border_color=colors.BORDER
         )
         trans.grid(row=0, column=1, sticky="nsew", pady=10)
 
         ctk.CTkLabel(
             trans,
             text=tr("Transações Recentes"),
-            font=("Arial", 18, "bold")
+            font=("Arial", 18, "bold"),
+            text_color=colors.TEXT
         ).pack(pady=15, padx=15)
 
         # Exemplos de transações (depois virão do controller/banco)
@@ -88,24 +121,25 @@ class ModuloFinanceiro:
     def criar_card_fin_topo(self, master, titulo, valor, coluna):
         card = ctk.CTkFrame(
             master,
-            fg_color="white",
+            fg_color=colors.CARD_BG,
             corner_radius=25,
             border_width=1,
-            border_color="#E2E8F0"
+            border_color=colors.BORDER
         )
         card.grid(row=0, column=coluna, padx=10, sticky="ew")
 
         ctk.CTkLabel(
             card,
             text=titulo,
-            text_color="#64748B",
+            text_color=colors.TEXT_MUTED,
             font=("Arial", 12, "bold")
         ).pack(pady=(20, 5))
 
         ctk.CTkLabel(
             card,
             text=valor,
-            font=("Arial", 24, "bold")
+            font=("Arial", 24, "bold"),
+            text_color=colors.TEXT
         ).pack(pady=(0, 20))
 
     def criar_item_transacao(self, master, titulo, data, valor, cor="#22C55E"):
@@ -115,8 +149,8 @@ class ModuloFinanceiro:
         info = ctk.CTkFrame(item, fg_color="transparent")
         info.pack(side="left", fill="x", expand=True)
 
-        ctk.CTkLabel(info, text=titulo, font=("Arial", 13, "bold")).pack(anchor="w")
-        ctk.CTkLabel(info, text=data, font=("Arial", 11), text_color="#64748B").pack(anchor="w")
+        ctk.CTkLabel(info, text=titulo, font=("Arial", 13, "bold"), text_color=colors.TEXT).pack(anchor="w")
+        ctk.CTkLabel(info, text=data, font=("Arial", 11), text_color=colors.TEXT_MUTED).pack(anchor="w")
 
         ctk.CTkLabel(
             item,
