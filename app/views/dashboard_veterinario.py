@@ -90,8 +90,9 @@ class DashboardVeterinario(ctk.CTkFrame):
         super().__init__(master)
 
         self.current_user = current_user or {}
-        self.user_id = self.current_user.get('id')
-        self.user_name = self.current_user.get('name') or "Usuário"
+        self.user_id = self._get_user_id(self.current_user)
+        self.user_name = self._resolve_user_name(self.current_user)
+        self.profile_photo_key = None
         self.on_logout = on_logout
 
         # Controllers (garantindo que não seja None se user_id for None)
@@ -133,6 +134,41 @@ class DashboardVeterinario(ctk.CTkFrame):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=0, minsize=70)   # um pouco mais alto
         self.grid_rowconfigure(1, weight=1)
+
+    def _get_user_id(self, user=None):
+        user = user or self.current_user or {}
+        return user.get("id") or user.get("ID") or user.get("user_id") or user.get("veterinario_id")
+
+    def _resolve_user_name(self, user=None):
+        user = user or self.current_user or {}
+        return (
+            user.get("name")
+            or user.get("nome")
+            or user.get("NOME")
+            or user.get("full_name")
+            or "Usuário"
+        )
+
+    def _sync_profile_context(self):
+        perfil = None
+        try:
+            if self.foto_perfil_ctrl:
+                perfil = self.foto_perfil_ctrl.fetch_perfil_data()
+        except Exception:
+            perfil = None
+
+        if perfil:
+            self.user_name = (
+                perfil.get("NOME")
+                or perfil.get("nome")
+                or self._resolve_user_name(self.current_user)
+            )
+            self.profile_photo_key = perfil.get("imagem_perfil_veterinario")
+        else:
+            self.user_name = self._resolve_user_name(self.current_user)
+            self.profile_photo_key = None
+
+        return self.user_name
 
     def _build_sidebar(self):
         self.sidebar = ctk.CTkFrame(
@@ -233,7 +269,8 @@ class DashboardVeterinario(ctk.CTkFrame):
         )
         btn_notif.pack(side="left", padx=(0, 16))
 
-        # Try to load avatar synchronously from already-initialized ModuloConfiguracoes
+        self._sync_profile_context()
+
         initial_avatar = None
         try:
             perfil = None
@@ -242,7 +279,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             elif self.foto_perfil_ctrl:
                 perfil = self.foto_perfil_ctrl.fetch_perfil_data()
 
-            key = perfil.get('imagem_perfil_veterinario') if perfil else None
+            key = perfil.get('imagem_perfil_veterinario') if perfil else self.profile_photo_key
             if key:
                 url = get_url_s3(key, expires_in=604800)
                 if url:
@@ -272,7 +309,7 @@ class DashboardVeterinario(ctk.CTkFrame):
             command=self._toggle_profile_menu,
         )
         self.avatar_btn.pack(side="left", padx=(0, 8), pady=4)
-        self.avatar_image = None
+        self.avatar_image = initial_avatar
 
 
     def _build_content_frame(self):
@@ -620,11 +657,15 @@ class DashboardVeterinario(ctk.CTkFrame):
 
     def _load_avatar_background(self):
         try:
-            perfil = self.foto_perfil_ctrl.fetch_perfil_data()
-            key = perfil.get("imagem_perfil_veterinario")
+            self._sync_profile_context()
+            perfil = self.foto_perfil_ctrl.fetch_perfil_data() if self.foto_perfil_ctrl else None
+            key = None
+            if perfil:
+                key = perfil.get("imagem_perfil_veterinario") or self.profile_photo_key
+            else:
+                key = self.profile_photo_key
             if not key:
-                # Carrega um avatar padrão se não houver imagem
-                self.after(0, lambda: self.avatar_btn.configure(text="👤", image=None))
+                self.after(0, lambda: self.avatar_btn.configure(text=self.profile_button_text, image=None))
                 return
 
             url = get_url_s3(key, expires_in=604800)

@@ -1,10 +1,16 @@
 from datetime import datetime
+from io import BytesIO
 
 import customtkinter as ctk
+import requests
+import tkinter as tk
+from PIL import Image, ImageDraw
 
+from app.controllers.perfil_controller import FotoPerfil
 from app.core.i18n import tr
 from app.core.theme import is_dark_mode
 from app.services.realtime_client import RealtimeClient
+from app.services.s3_client import get_url_s3
 
 
 class Colors:
@@ -51,6 +57,11 @@ class ModuloChat:
         self.area_msg = None
         self.input_msg = None
         self.status_label = None
+        self.header_avatar = None
+        self.header_name_label = None
+        self.profile_name = None
+        self.profile_photo_key = None
+        self._carregar_dados_perfil()
 
     def tela_chat(self):
         colors.apply_appearance()
@@ -80,9 +91,25 @@ class ModuloChat:
 
         header = ctk.CTkFrame(janela_chat, fg_color="transparent", height=60)
         header.pack(fill="x", padx=25, pady=15)
-        ctk.CTkLabel(header, text=tr("Tempo real"), font=("Arial", 16, "bold"), text_color=colors.TEXT).pack(side="left")
+
+        left_header = ctk.CTkFrame(header, fg_color="transparent")
+        left_header.pack(side="left", fill="x", expand=True)
+
+        self.header_avatar = ctk.CTkLabel(left_header, text="👤", width=38, height=38, corner_radius=19, fg_color="#E5E7EB")
+        self.header_avatar.pack(side="left")
+
+        self.header_name_label = ctk.CTkLabel(
+            left_header,
+            text=self._obter_nome_header(),
+            font=("Arial", 16, "bold"),
+            text_color=colors.TEXT,
+        )
+        self.header_name_label.pack(side="left", padx=(10, 0))
+
         self.status_label = ctk.CTkLabel(header, text="Conectando...", font=("Arial", 12), text_color=colors.TEXT_MUTED)
         self.status_label.pack(side="right")
+
+        self.content.after(150, self._carregar_avatar_header)
 
         self.area_msg = ctk.CTkScrollableFrame(janela_chat, fg_color=colors.PANEL_BG, corner_radius=0)
         self.area_msg.pack(fill="both", expand=True)
@@ -102,8 +129,8 @@ class ModuloChat:
             return
 
         self.realtime = RealtimeClient(
-            on_message=lambda message: self.content.after(0, lambda: self._receber_mensagem(message)),
-            on_status=lambda status: self.content.after(0, lambda: self._atualizar_status(status)),
+            on_message=lambda message: self._agendar_ui(self._receber_mensagem, message),
+            on_status=lambda status: self._agendar_ui(self._atualizar_status, status),
             user_id=self.current_user_id,
             role="veterinario",
         )
@@ -131,6 +158,22 @@ class ModuloChat:
         except Exception as exc:
             self._atualizar_status(f"Falha ao enviar: {exc}")
 
+    def _agendar_ui(self, callback, *args):
+        try:
+            if not self.content or not self.content.winfo_exists():
+                return
+            self.content.after(0, lambda: self._executar_ui(callback, *args))
+        except tk.TclError:
+            pass
+
+    def _executar_ui(self, callback, *args):
+        try:
+            if not self.content or not self.content.winfo_exists():
+                return
+            callback(*args)
+        except (tk.TclError, RuntimeError):
+            pass
+
     def _receber_mensagem(self, message):
         event = message.get("event")
         if event in {"connected", "subscribed"}:
@@ -143,11 +186,62 @@ class ModuloChat:
 
         origem = payload.get("origem")
         tipo = "vet" if origem == "desktop" else "tutor"
-        self.criar_bolha_mensagem(self.area_msg, texto, self._hora_atual(), tipo)
+        if self.area_msg and self.area_msg.winfo_exists():
+            self.criar_bolha_mensagem(self.area_msg, texto, self._hora_atual(), tipo)
 
     def _atualizar_status(self, texto):
         if self.status_label:
-            self.status_label.configure(text=texto)
+            try:
+                if self.status_label.winfo_exists():
+                    self.status_label.configure(text=texto)
+            except tk.TclError:
+                pass
+
+    def _carregar_dados_perfil(self):
+        user_id = self.current_user.get("id") or self.current_user.get("ID") or self.current_user.get("veterinario_id")
+        if not user_id:
+            return
+
+        try:
+            foto_perfil = FotoPerfil(user_id)
+            dados = foto_perfil.fetch_perfil_data()
+            if dados:
+                self.profile_name = dados.get("NOME") or dados.get("nome") or self.current_user.get("name") or self.current_user.get("nome") or "Usuário"
+                self.profile_photo_key = dados.get("imagem_perfil_veterinario")
+        except Exception as exc:
+            print(f"Falha ao carregar perfil do chat: {exc}")
+
+    def _obter_nome_header(self):
+        return self.profile_name or self.current_user.get("name") or self.current_user.get("nome") or tr("Tempo real")
+
+    def _carregar_avatar_header(self):
+        if not self.header_avatar or not self.profile_photo_key:
+            return
+
+        try:
+            url = get_url_s3(self.profile_photo_key, expires_in=604800)
+            if not url:
+                return
+
+            response = requests.get(url, timeout=6)
+            response.raise_for_status()
+            img = Image.open(BytesIO(response.content)).convert("RGBA")
+            img = img.resize((38, 38))
+
+            mask = Image.new("L", (38, 38), 0)
+            draw = ImageDraw.Draw(mask)
+            draw.ellipse((0, 0, 37, 37), fill=255)
+
+            output = Image.new("RGBA", (38, 38), (0, 0, 0, 0))
+            output.paste(img, (0, 0), mask=mask)
+            img_ctk = ctk.CTkImage(light_image=output, size=(38, 38))
+
+            self.header_avatar.configure(image=img_ctk, text="")
+            self.header_avatar.image = img_ctk
+        except Exception as exc:
+            print(f"Falha ao carregar avatar do header: {exc}")
+            if self.header_avatar.winfo_exists():
+                self.header_avatar.configure(text="👤", image=None)
 
     def criar_item_contato(self, master, nome, avatar, sel=False):
         btn = ctk.CTkButton(

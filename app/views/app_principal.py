@@ -1,4 +1,11 @@
+from io import BytesIO
+
 import customtkinter as ctk
+import requests
+from PIL import Image, ImageDraw
+
+from app.controllers.perfil_controller import FotoPerfil
+from app.services.s3_client import get_url_s3
 from modulo_dashboard import ModuloDashboard
 from modulo_pacientes import ModuloPacientes
 from modulo_chat import ModuloChat
@@ -16,6 +23,10 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloDashboard, ModuloPacientes, Modul
         self.menu_dropdown = None
         self.notif_aberta = False
         self.notif_dropdown = None
+        self.current_user = {}
+        self.user_name = "Usuário"
+        self.profile_photo_key = None
+        self.foto_perfil_ctrl = None
 
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
@@ -25,12 +36,14 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloDashboard, ModuloPacientes, Modul
         # --- TOPBAR ---
         self.topbar = ctk.CTkFrame(self, fg_color="white", corner_radius=0)
         self.topbar.grid(row=0, column=0, columnspan=2, sticky="nsew") 
-        ctk.CTkLabel(self.topbar, text="Bom dia, Usuário!", font=("Arial", 16, "bold"), text_color="black").pack(side="left", padx=30)
+        self.topbar_title = ctk.CTkLabel(self.topbar, text="Bom dia, Usuário!", font=("Arial", 16, "bold"), text_color="black")
+        self.topbar_title.pack(side="left", padx=30)
         self.right_info = ctk.CTkFrame(self.topbar, fg_color="transparent"); self.right_info.pack(side="right", padx=20)
         self.btn_notif = ctk.CTkButton(self.right_info, text="🔔", font=("Arial", 20), width=40, height=40, fg_color="transparent", text_color="black", command=self.toggle_notifications)
         self.btn_notif.pack(side="left", padx=15)
         self.avatar = ctk.CTkButton(self.right_info, text="U", font=("Arial", 14, "bold"), width=38, height=38, fg_color="#A855F7", corner_radius=19, command=self.toggle_menu)
         self.avatar.pack(side="left")
+        self._carregar_dados_perfil()
         ctk.CTkFrame(self, fg_color="#E2E8F0", height=2).grid(row=0, column=0, columnspan=2, sticky="sew")
 
         # --- SIDEBAR ---
@@ -50,6 +63,47 @@ class DashboardVeterinario(ctk.CTkFrame, ModuloDashboard, ModuloPacientes, Modul
         self.criar_botao_sidebar("Financeiro", self.tela_financeiro)
         
         self.tela_dashboard()
+
+    def _carregar_dados_perfil(self):
+        try:
+            user = getattr(self, "current_user", {}) or {}
+            self.user_name = user.get("name") or user.get("nome") or user.get("NOME") or "Usuário"
+            user_id = user.get("id") or user.get("ID") or user.get("veterinario_id")
+            if user_id:
+                self.foto_perfil_ctrl = FotoPerfil(user_id)
+                perfil = self.foto_perfil_ctrl.fetch_perfil_data()
+                if perfil:
+                    self.user_name = perfil.get("NOME") or perfil.get("nome") or self.user_name
+                    self.profile_photo_key = perfil.get("imagem_perfil_veterinario")
+            if hasattr(self, "topbar_title"):
+                self.topbar_title.configure(text=f"Bom dia, {self.user_name}!")
+            if self.profile_photo_key:
+                self._carregar_avatar_s3()
+            else:
+                self.avatar.configure(text=self.user_name[:1].upper() or "U")
+        except Exception as exc:
+            print(f"Falha ao carregar perfil no app principal: {exc}")
+
+    def _carregar_avatar_s3(self):
+        try:
+            url = get_url_s3(self.profile_photo_key, expires_in=604800)
+            if not url:
+                return
+            response = requests.get(url, timeout=6)
+            response.raise_for_status()
+            img = Image.open(BytesIO(response.content)).convert("RGBA")
+            img = img.resize((38, 38))
+            mask = Image.new("L", (38, 38), 0)
+            draw = ImageDraw.Draw(mask)
+            draw.ellipse((0, 0, 37, 37), fill=255)
+            output = Image.new("RGBA", (38, 38), (0, 0, 0, 0))
+            output.paste(img, (0, 0), mask=mask)
+            img_ctk = ctk.CTkImage(light_image=output, size=(38, 38))
+            self.avatar.configure(image=img_ctk, text="")
+            self.avatar.image = img_ctk
+        except Exception as exc:
+            print(f"Falha ao carregar avatar no app principal: {exc}")
+            self.avatar.configure(text=self.user_name[:1].upper() or "U", image=None)
 
     def toggle_notifications(self):
         if self.notif_aberta:

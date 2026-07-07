@@ -255,11 +255,17 @@ class ModuloProntuario:
         )
 
     def _finalizar_carregamento_pets(self, pets):
-        nomes = [p.get("NOME", tr("Sem nome")) for p in pets]
-        for p in pets:
-            self.pets_map[p.get("NOME")] = p.get("id")
-        if nomes:
-            self.combo_paciente.configure(values=[tr("Selecione um paciente...")] + nomes)
+        nomes = [p.get("NOME", tr("Sem nome")) for p in pets if p.get("NOME")]
+        self.pets_map = {p.get("NOME"): p.get("id") for p in pets if p.get("NOME")}
+
+        if not getattr(self, "combo_paciente", None):
+            return
+
+        try:
+            if self.combo_paciente.winfo_exists():
+                self.combo_paciente.configure(values=[tr("Selecione um paciente...")] + nomes)
+        except tk.TclError:
+            pass
 
     def on_pet_selecionado(self, nome):
         # Lógica de atualização de histórico aqui (conforme seu controller)

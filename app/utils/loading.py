@@ -1,6 +1,23 @@
 from threading import Thread
 
 import customtkinter as ctk
+import tkinter as tk
+
+
+def _safe_execute(master, callback, *args, **kwargs):
+    if master is None or callback is None:
+        return
+
+    try:
+        if not hasattr(master, "winfo_exists") or not master.winfo_exists():
+            return
+    except tk.TclError:
+        return
+
+    try:
+        callback(*args, **kwargs)
+    except (tk.TclError, RuntimeError):
+        pass
 
 
 class LoadingOverlay:
@@ -78,7 +95,11 @@ class LoadingOverlay:
     def hide(self):
         self.is_active = False
         if self.overlay:
-            self.overlay.destroy()
+            try:
+                if self.overlay.winfo_exists():
+                    self.overlay.destroy()
+            except tk.TclError:
+                pass
             self.overlay = None
         self.spinner = None
         self.label = None
@@ -121,13 +142,12 @@ def run_backend_task(master, task, on_success=None, on_error=None, message="Proc
 
     def finish_success(result):
         loader.hide()
-        if on_success:
-            on_success(result)
+        _safe_execute(master, on_success, result)
 
     def finish_error(error):
         loader.hide()
         if on_error:
-            on_error(error)
+            _safe_execute(master, on_error, error)
         else:
             print(f"Erro em tarefa de backend: {error}")
 
