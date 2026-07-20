@@ -519,11 +519,11 @@ class ModuloPacientes:
             card_esq.grid(row=0, column=0, sticky="ew", padx=0, pady=(0, 15))
         else:
             card_esq = ctk.CTkFrame(container, fg_color=colors.CARD_BG, corner_radius=20, # Raio ajustado
-                                   width=350, border_width=1, border_color=colors.NEUTRAL_200)
-            card_esq.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
+                                   width=420, border_width=1, border_color=colors.NEUTRAL_200)
+            card_esq.grid(row=0, column=0, sticky="nsew", padx=(0, 30))
 
         # Container para imagem com botão de mudar
-        img_container = ctk.CTkFrame(card_esq, fg_color=colors.NEUTRAL_100, height=220, corner_radius=15) # Cor e raio ajustados
+        img_container = ctk.CTkFrame(card_esq, fg_color=colors.NEUTRAL_100, height=240, corner_radius=18) # Cor e raio ajustados
         img_container.pack(fill="x", padx=20, pady=20)
         img_container.pack_propagate(False)
         
@@ -552,21 +552,31 @@ class ModuloPacientes:
             text_color="white",
             fg_color=colors.ACCENT_GREEN,
             hover_color=colors.ACCENT_GREEN_HOVER,
-            height=35,
-            corner_radius=10,
+            height=38,
+            corner_radius=12,
             command=self.escolher_foto_pet
         )
-        btn_mudar.place(relx=0.5, rely=0.9, anchor="center")
+        btn_mudar.place(relx=0.5, rely=0.88, anchor="center")
 
-        ctk.CTkLabel(card_esq, text=nome_pet, font=("Helvetica", 28, "bold"), text_color=colors.TEXT_DARK).pack(pady=(5, 0))
-        ctk.CTkLabel(card_esq, text=raca_pet.upper(), font=("Helvetica", 11, "bold"), text_color=colors.ACCENT_GREEN).pack(pady=(2, 15))
-        
-        ctk.CTkLabel(card_esq, text=f"ID: {id_pet}", font=("Helvetica", 10), text_color=colors.NEUTRAL_500).pack(pady=(0, 8))
+        self.entry_nome_pet = ctk.CTkEntry(
+            card_esq,
+            fg_color=colors.NEUTRAL_100,
+            border_width=1,
+            border_color=colors.NEUTRAL_200,
+            corner_radius=18,
+            text_color=colors.TEXT_DARK,
+            font=ctk.CTkFont(family="Helvetica", size=24, weight="bold")
+        )
+        self.entry_nome_pet.insert(0, nome_pet)
+        self.entry_nome_pet.pack(fill="x", padx=20, pady=(10, 5))
+
+        ctk.CTkLabel(card_esq, text=raca_pet.upper(), font=("Helvetica", 11, "bold"), text_color=colors.ACCENT_GREEN).pack(pady=(0, 10))
+        ctk.CTkLabel(card_esq, text=f"ID: {id_pet}", font=("Helvetica", 10), text_color=colors.NEUTRAL_500).pack(pady=(0, 10))
 
         # Tutor box
         tutor_box = ctk.CTkFrame(card_esq, fg_color=colors.NEUTRAL_100, corner_radius=15) # Cor ajustada
         tutor_box.pack(fill="x", padx=15, pady=8)
-        ctk.CTkLabel(tutor_box, text=tr("TUTOR RESPONSÁVEL"), font=("Helvetica", 9, "bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=12, pady=(8, 0))
+        ctk.CTkLabel(tutor_box, text=tr("TUTOR RESPONSÁVEL"), font=("Helvetica", 9, "bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=12, pady=(10, 0))
         
         # Busca nome do tutor
         tutor_dados = self.pet_controller.buscar_tutor_por_pet(id_pet)
@@ -574,34 +584,42 @@ class ModuloPacientes:
                       tutor_dados.get('NOME') or 
                       'Não informado') if tutor_dados else 'Não informado'
         
-        ctk.CTkLabel(tutor_box, text=nome_tutor, font=("Helvetica", 13, "bold"), text_color=colors.TEXT_DARK).pack(anchor="w", padx=12, pady=(0, 8))
+        ctk.CTkLabel(tutor_box, text=nome_tutor, font=("Helvetica", 13, "bold"), text_color=colors.TEXT_DARK).pack(anchor="w", padx=12, pady=(0, 12))
 
         # Peso e Sexo - Dados do banco
-        peso = pet_dados.get('PESO', '? kg') if pet_dados else '? kg'
+        peso = pet_dados.get('PESO', '') if pet_dados else ''
         sexo = pet_dados.get('SEXO', 'Não informado') if pet_dados else 'Não informado'
         
-        if not isinstance(peso, str):
-            peso = f"{peso} kg"
-        elif peso and not peso.endswith('kg'):
-            peso = f"{peso} kg"
-        
+        peso_text = str(peso).replace(',', '.') if peso is not None else ''
+
         row_stats = ctk.CTkFrame(card_esq, fg_color="transparent")
         row_stats.pack(fill="x", padx=15, pady=15)
         
-        p_box = ctk.CTkFrame(row_stats, fg_color=colors.STATUS_HEALTHY_BG, corner_radius=12, height=70) # Cor ajustada
-        p_box.pack(side="left", fill="both", expand=True, padx=(0, 4))
-        ctk.CTkLabel(p_box, text=tr("PESO"), font=("Helvetica", 9, "bold"), text_color=colors.STATUS_HEALTHY_TEXT).pack(pady=(8, 0))
-        ctk.CTkLabel(p_box, text=str(peso), font=("Helvetica", 16, "bold"), text_color=colors.STATUS_HEALTHY_TEXT).pack(pady=(0, 5))
+        p_box = ctk.CTkFrame(row_stats, fg_color=colors.STATUS_HEALTHY_BG, corner_radius=18, height=100)
+        p_box.pack(side="left", fill="both", expand=True, padx=(0, 6))
+        ctk.CTkLabel(p_box, text=tr("PESO"), font=("Helvetica", 10, "bold"), text_color=colors.STATUS_HEALTHY_TEXT).pack(anchor="w", padx=12, pady=(10, 4))
+        self.entry_peso_pet = ctk.CTkEntry(
+            p_box,
+            fg_color=colors.NEUTRAL_100,
+            border_width=1,
+            border_color=colors.NEUTRAL_200,
+            corner_radius=12,
+            text_color=colors.TEXT_DARK,
+            height=40,
+            font=ctk.CTkFont(family="Helvetica", size=18, weight="bold")
+        )
+        self.entry_peso_pet.insert(0, peso_text)
+        self.entry_peso_pet.pack(fill="x", padx=12, pady=(0, 10))
 
-        s_box = ctk.CTkFrame(row_stats, fg_color=colors.NEUTRAL_100, corner_radius=12, height=70) # Cor ajustada
-        s_box.pack(side="left", fill="both", expand=True, padx=(4, 0))
-        ctk.CTkLabel(s_box, text=tr("SEXO"), font=("Helvetica", 9, "bold"), text_color=colors.TEXT_SECONDARY).pack(pady=(8, 0)) # Cor ajustada
-        ctk.CTkLabel(s_box, text=str(sexo), font=("Helvetica", 16, "bold"), text_color=colors.TEXT_PRIMARY).pack(pady=(0, 5)) # Cor ajustada
+        s_box = ctk.CTkFrame(row_stats, fg_color=colors.NEUTRAL_100, corner_radius=18, height=100)
+        s_box.pack(side="left", fill="both", expand=True, padx=(6, 0))
+        ctk.CTkLabel(s_box, text=tr("SEXO"), font=("Helvetica", 10, "bold"), text_color=colors.TEXT_SECONDARY).pack(anchor="w", padx=12, pady=(10, 4))
+        ctk.CTkLabel(s_box, text=str(sexo), font=("Helvetica", 18, "bold"), text_color=colors.TEXT_PRIMARY).pack(anchor="w", padx=12, pady=(0, 10))
 
         # Próxima consulta (assumindo que seja uma info dinâmica ou mockada)
-        prox_c = ctk.CTkFrame(card_esq, fg_color=colors.ACCENT_GREEN, corner_radius=30) # Cor ajustada
+        prox_c = ctk.CTkFrame(card_esq, fg_color=colors.ACCENT_GREEN, corner_radius=25)
         prox_c.pack(fill="x", padx=15, pady=15)
-        ctk.CTkLabel(prox_c, text=tr("Próxima consulta: 15 de Fev"), font=("Helvetica", 15, "bold"), text_color="white").pack(anchor="w", padx=15, pady=8)
+        ctk.CTkLabel(prox_c, text=tr("Próxima consulta: 15 de Fev"), font=("Helvetica", 15, "bold"), text_color="white").pack(anchor="w", padx=18, pady=16)
 
         # Coluna direita responsiva
         self.right_col = ctk.CTkFrame(container, fg_color=colors.CARD_BG, corner_radius=20, # Raio ajustado
@@ -623,21 +641,21 @@ class ModuloPacientes:
         abas = [
             (tr("SOBRE"), "sobre"),
             (tr("SAÚDE"), "saude"),
-            (tr("MEDICAMENTOS"), "medicamentos"),
             (tr("EMOCIONAL"), "emocional")
         ]
 
         for nome, chave in abas:
             btn = ctk.CTkButton(
-                tab_header, text=nome, width=110, corner_radius=10, # Raio menor
-                fg_color="transparent", text_color=colors.TEXT_PRIMARY, font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+                tab_header, text=nome, width=120, corner_radius=18,
+                fg_color="transparent", text_color=colors.TEXT_PRIMARY, font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"),
+                height=40,
                 command=lambda c=chave: self.mudar_aba_pet(c)
             )
-            btn.pack(side="left", padx=2, pady=2)
+            btn.pack(side="left", padx=6, pady=4)
             self.abas_botoes[chave] = btn
 
         self.container_abas = ctk.CTkFrame(self.right_col, fg_color="transparent")
-        self.container_abas.pack(fill="both", expand=True, padx=40)
+        self.container_abas.pack(fill="both", expand=True, padx=40, pady=(0, 20))
 
         self.mudar_aba_pet("sobre")
 
@@ -645,25 +663,50 @@ class ModuloPacientes:
 
     # --- ABA: SOBRE ---
     def _renderizar_aba_sobre(self):
-        ctk.CTkLabel(self.container_abas, text=tr("Sobre o pet:"), font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(10, 5))
-        
-        # Pega a descrição da coluna DESCRICAO do seu banco
-        desc_texto = self.dados_pet_atual.get('DESCRICAO') or tr("Sem descrição registrada.")
-        ctk.CTkLabel(self.container_abas, text=desc_texto, font=ctk.CTkFont(family="Helvetica", size=14), text_color=colors.TEXT_SECONDARY, wraplength=600, justify="left").pack(anchor="w", pady=(0, 20))
+        ctk.CTkLabel(self.container_abas, text=tr("Observações Gerais:"), font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(10, 10))
 
-        ctk.CTkLabel(self.container_abas, text=tr("Personalidade"), font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(0, 10))
-        
-        # Pega as tags da coluna PERSONALIDADE
-        tags_raw = self.dados_pet_atual.get('PERSONALIDADE') or "Dócil, Agitado"
-        tags = [t.strip() for t in tags_raw.split(',')]
-        
-        tags_frame = ctk.CTkFrame(self.container_abas, fg_color="transparent")
-        tags_frame.pack(anchor="w")
+        desc_texto = self.dados_pet_atual.get('DESCRICAO') or tr("Sem observações registradas.")
+        self.text_observacoes = ctk.CTkTextbox(
+            self.container_abas,
+            height=160,
+            fg_color=colors.NEUTRAL_100,
+            text_color=colors.TEXT_SECONDARY,
+            font=ctk.CTkFont(family="Helvetica", size=14),
+            border_width=1,
+            corner_radius=20,
+            wrap="word"
+        )
+        self.text_observacoes.pack(fill="x", pady=(0, 20))
+        self.text_observacoes.insert("0.0", desc_texto)
 
-        for t in tags:
-            tag = ctk.CTkFrame(tags_frame, fg_color=colors.NEUTRAL_100, corner_radius=15) # Cor ajustada
-            tag.pack(side="left", padx=5)
-            ctk.CTkLabel(tag, text=t, font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"), text_color=colors.TEXT_PRIMARY).pack(padx=15, pady=5)
+        ctk.CTkLabel(self.container_abas, text=tr("Comportamento"), font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", pady=(0, 10))
+
+        comportamento = self.dados_pet_atual.get('PERSONALIDADE') or tr("Nenhuma característica definida.")
+        self.text_comportamento = ctk.CTkTextbox(
+            self.container_abas,
+            height=140,
+            fg_color=colors.NEUTRAL_100,
+            text_color=colors.TEXT_SECONDARY,
+            font=ctk.CTkFont(family="Helvetica", size=14),
+            border_width=1,
+            corner_radius=20,
+            wrap="word"
+        )
+        self.text_comportamento.pack(fill="x", pady=(0, 20))
+        self.text_comportamento.insert("0.0", comportamento)
+
+        btn_salvar = ctk.CTkButton(
+            self.container_abas,
+            text=tr("Salvar Alterações"),
+            fg_color=colors.ACCENT_GREEN,
+            hover_color=colors.ACCENT_GREEN_HOVER,
+            text_color="white",
+            corner_radius=20,
+            height=45,
+            font=ctk.CTkFont(family="Helvetica", size=14, weight="bold"),
+            command=self.salvar_perfil_pet
+        )
+        btn_salvar.pack(anchor="e", pady=(10, 20))
 
     # --- ABA: SAÚDE (Vacinas) ---
     def _renderizar_aba_saude(self):
@@ -841,11 +884,43 @@ class ModuloPacientes:
             self._renderizar_aba_sobre()
         elif aba == "saude":
             self._renderizar_aba_saude()
-        elif aba == "medicamentos":
-            self._renderizar_aba_medicamentos()
         elif aba == "emocional":
             self._renderizar_aba_emocional()
-            
+
+    def salvar_perfil_pet(self):
+        if not hasattr(self, 'entry_nome_pet') or not hasattr(self, 'entry_peso_pet'):
+            messagebox.showwarning(tr("Aviso"), tr("Campos de edição não estão disponíveis."))
+            return
+
+        nome = self.entry_nome_pet.get().strip()
+        peso_text = self.entry_peso_pet.get().strip().replace(',', '.')
+        descricao = self.text_observacoes.get("0.0", "end").strip() if hasattr(self, 'text_observacoes') else ''
+        comportamento = self.text_comportamento.get("0.0", "end").strip() if hasattr(self, 'text_comportamento') else ''
+
+        if not nome:
+            messagebox.showwarning(tr("Aviso"), tr("O nome do pet é obrigatório."))
+            return
+
+        try:
+            peso = float(peso_text) if peso_text else None
+        except ValueError:
+            messagebox.showwarning(tr("Aviso"), tr("O peso deve ser um número válido."))
+            return
+
+        sucesso = self.pet_controller.atualizar_pet(
+            self.pet_atual_id,
+            nome,
+            peso,
+            descricao,
+            comportamento
+        )
+
+        if sucesso:
+            messagebox.showinfo(tr("Sucesso"), tr("Dados do pet salvos com sucesso."))
+            self.tela_perfil_pet(self.pet_atual_id, nome, self.dados_pet_atual.get('RACA', ''), "")
+        else:
+            messagebox.showerror(tr("Erro"), tr("Falha ao salvar os dados do pet."))
+
     def _renderizar_aba_medicamentos(self):
         header = ctk.CTkFrame(self.container_abas, fg_color="transparent")
         header.pack(fill="x", pady=(0, 20))

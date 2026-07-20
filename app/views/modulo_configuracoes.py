@@ -413,33 +413,67 @@ class ModuloConfiguracoes:
         frame = ctk.CTkFrame(self.content, fg_color="#F8FAFC")
         frame.pack(fill="both", expand=True, padx=40, pady=30)
 
-        title = ctk.CTkLabel(frame, text=self._t("Alterar minha senha"), font=("Helvetica", 18, "bold"), text_color="#1E293B")
-        title.pack(anchor="w", pady=(0, 16))
+        title = ctk.CTkLabel(frame, text=self._t("Alterar minha senha"), font=("Helvetica", 20, "bold"), text_color="#0F172A")
+        title.pack(anchor="w", pady=(0, 10))
+
+        ctk.CTkLabel(
+            frame,
+            text=self._t("Atualize sua senha para manter sua conta segura."),
+            font=("Helvetica", 12),
+            text_color="#475569",
+        ).pack(anchor="w", pady=(0, 22))
 
         form = ctk.CTkFrame(frame, fg_color="white", corner_radius=14, border_width=1, border_color="#E2E8F0")
         form.pack(fill="x", expand=False)
         inner = ctk.CTkFrame(form, fg_color="transparent")
         inner.pack(padx=18, pady=18, fill="x")
 
-        ctk.CTkLabel(inner, text=self._t("Senha atual"), font=("Helvetica", 11, "bold"), text_color="#475569").pack(anchor="w")
-        self._current_pwd = ctk.CTkEntry(inner, placeholder_text="••••••••", show="•", height=36, corner_radius=8)
-        self._current_pwd.pack(fill="x", pady=(4, 10))
+        ctk.CTkLabel(inner, text=self._t("Senha atual"), font=("Helvetica", 12, "bold"), text_color="#334155").pack(anchor="w")
+        self._current_pwd = ctk.CTkEntry(inner, placeholder_text="••••••••", show="•", height=44, corner_radius=12)
+        self._current_pwd.pack(fill="x", pady=(6, 16))
 
-        ctk.CTkLabel(inner, text=self._t("Nova senha"), font=("Helvetica", 11, "bold"), text_color="#475569").pack(anchor="w")
-        self._new_pwd = ctk.CTkEntry(inner, placeholder_text=self._t("Mínimo 8 caracteres"), show="•", height=36, corner_radius=8)
-        self._new_pwd.pack(fill="x", pady=(4, 10))
+        ctk.CTkLabel(inner, text=self._t("Nova senha"), font=("Helvetica", 12, "bold"), text_color="#334155").pack(anchor="w")
+        self._new_pwd = ctk.CTkEntry(inner, placeholder_text=self._t("Mínimo 8 caracteres"), show="•", height=44, corner_radius=12)
+        self._new_pwd.pack(fill="x", pady=(6, 10))
 
-        ctk.CTkLabel(inner, text=self._t("Confirmar nova senha"), font=("Helvetica", 11, "bold"), text_color="#475569").pack(anchor="w")
-        self._confirm_pwd = ctk.CTkEntry(inner, placeholder_text=self._t("Repita a nova senha"), show="•", height=36, corner_radius=8)
-        self._confirm_pwd.pack(fill="x", pady=(4, 8))
+        ctk.CTkLabel(
+            inner,
+            text=self._t("Use uma senha forte com letras, números e símbolos."),
+            font=("Helvetica", 10),
+            text_color="#64748B",
+        ).pack(anchor="w", pady=(0, 14))
 
-        self._pwd_msg = ctk.CTkLabel(inner, text="", font=("Helvetica", 10), text_color="#DC2626")
-        self._pwd_msg.pack(anchor="w", pady=(4, 12))
+        ctk.CTkLabel(inner, text=self._t("Confirmar nova senha"), font=("Helvetica", 12, "bold"), text_color="#334155").pack(anchor="w")
+        self._confirm_pwd = ctk.CTkEntry(inner, placeholder_text=self._t("Repita a nova senha"), show="•", height=44, corner_radius=12)
+        self._confirm_pwd.pack(fill="x", pady=(6, 14))
+
+        self._pwd_msg = ctk.CTkLabel(inner, text="", font=("Helvetica", 11), text_color="#DC2626")
+        self._pwd_msg.pack(anchor="w", pady=(4, 14))
 
         btns = ctk.CTkFrame(inner, fg_color="transparent")
         btns.pack(fill="x", pady=(4, 0))
-        ctk.CTkButton(btns, text=self._t("CANCELAR"), fg_color="#F1F5F9", text_color="#475569", height=36, corner_radius=8, font=("Helvetica", 11, "bold"), command=self.tela_configuracoes_gerais).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(btns, text=self._t("SALVAR"), fg_color="#14B8A6", text_color="white", height=36, corner_radius=8, font=("Helvetica", 11, "bold"), command=self._on_submit_change_password).pack(side="right", expand=True, fill="x")
+        ctk.CTkButton(
+            btns,
+            text=self._t("CANCELAR"),
+            fg_color="#F8FAFC",
+            text_color="#475569",
+            border_width=1,
+            border_color="#E2E8F0",
+            height=44,
+            corner_radius=12,
+            font=("Helvetica", 12, "bold"),
+            command=self.tela_visualizar_perfil,
+        ).pack(side="left", padx=(0, 12), ipadx=8)
+        ctk.CTkButton(
+            btns,
+            text=self._t("SALVAR"),
+            fg_color="#14B8A6",
+            text_color="white",
+            height=44,
+            corner_radius=12,
+            font=("Helvetica", 12, "bold"),
+            command=self._on_submit_change_password,
+        ).pack(side="right", expand=True, fill="x")
 
     def _on_submit_change_password(self):
         cur = self._current_pwd.get().strip()

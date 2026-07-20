@@ -137,6 +137,29 @@ class PetAll:
             print(f"Erro ao atualizar imagem: {e}")
             return False
 
+    @staticmethod
+    def atualizar_pet(id_pet, nome, peso, descricao, personalidade):
+        try:
+            conn = connectdb()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                UPDATE pet
+                SET NOME = %s,
+                    PESO = %s,
+                    DESCRICAO = %s,
+                    PERSONALIDADE = %s
+                WHERE id = %s
+            """, (nome, peso, descricao, personalidade, id_pet))
+
+            conn.commit()
+            conn.close()
+            return True
+
+        except Exception as e:
+            print(f"Erro ao atualizar pet: {e}")
+            return False
+
     # =========================
     # TUTOR
     # =========================

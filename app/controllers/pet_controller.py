@@ -42,6 +42,13 @@ class PetController:
             print(f"Erro ao atualizar imagem: {e}")
             return False
 
+    def atualizar_pet(self, id_pet: str, nome: str, peso: float, descricao: str, personalidade: str) -> bool:
+        try:
+            return self.pet_model.atualizar_pet(id_pet, nome, peso, descricao, personalidade)
+        except Exception as e:
+            print(f"Erro ao atualizar pet: {e}")
+            return False
+
     def buscar_tutor_por_pet(self, id_pet: str) -> dict:
         try:
             return self.pet_model.buscar_tutor_por_pet_id(id_pet)

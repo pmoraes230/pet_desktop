@@ -57,8 +57,8 @@ class ModalAgendamento:
 
     def criar_modal(self):
         self.janela = ctk.CTkToplevel(self.parent)
-        self.janela.title(tr("Novo Agendamento"))
-        self.janela.geometry("700x620")
+        self.janela.title(tr("Marcar Retorno"))
+        self.janela.geometry("560x740")
         self.janela.resizable(False, False)
         self.janela.configure(fg_color=self.colors["background"])
 
@@ -70,14 +70,14 @@ class ModalAgendamento:
 
         ctk.CTkLabel(
             header_frame,
-            text=tr("Novo Agendamento"),
+            text=tr("Marcar Retorno"),
             font=("Arial", 26, "bold"),
             text_color=self.colors["text_main"],
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             header_frame,
-            text=tr("Escolha o pet e a data"),
+            text=tr("Selecione o pet e informe data, horário e serviço."),
             font=("Arial", 13),
             text_color=self.colors["text_label"],
         ).pack(anchor="w", pady=(5, 0))
@@ -95,8 +95,11 @@ class ModalAgendamento:
             hover_color=self.colors["cancel_hover"],
         ).place(relx=0.92, rely=0.06, anchor="center")
 
-        container = ctk.CTkScrollableFrame(self.janela, fg_color="transparent")
-        container.pack(fill="both", expand=True, padx=40, pady=(0, 30))
+        content_frame = ctk.CTkFrame(self.janela, fg_color=self.colors["card"], corner_radius=30)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        container = ctk.CTkFrame(content_frame, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=24, pady=24)
 
         def create_label(master, text):
             return ctk.CTkLabel(
@@ -106,25 +109,23 @@ class ModalAgendamento:
                 text_color=self.colors["text_label"],
             )
 
-        create_label(container, "Qual pet?").pack(anchor="w", pady=(0, 8))
-
-        pet_names = [tr("Carregando...")]
-
+        create_label(container, "Pet").pack(anchor="w", pady=(0, 12))
         self.combo_pet = ctk.CTkComboBox(
             container,
-            values=pet_names,
+            values=[],
             fg_color=self.colors["input_bg"],
             border_width=0,
-            corner_radius=12,
-            height=45,
+            corner_radius=20,
+            height=55,
             button_color=self.colors["input_bg"],
             button_hover_color=self.colors["input_hover"],
             text_color=self.colors["text_main"],
-            placeholder_text_color=self.colors["placeholder"],
-            font=("Arial", 12),
+            font=("Arial", 13),
         )
-        self.combo_pet.pack(fill="x", pady=(0, 25))
+        self.combo_pet.pack(fill="x", pady=(0, 30))
         self.combo_pet.set(tr("Selecione um pet..."))
+
+        self.pets = []
         run_backend_task(
             self.janela,
             lambda: self.controller.listar_pets(self.id_veterinario),
@@ -137,70 +138,70 @@ class ModalAgendamento:
         row2.pack(fill="x", pady=(0, 25))
         row2.columnconfigure((0, 1), weight=1)
 
-        col_data = ctk.CTkFrame(row2, fg_color="transparent")
+        col_data = ctk.CTkFrame(row2, fg_color=self.colors["input_bg"], corner_radius=20)
         col_data.grid(row=0, column=0, padx=(0, 10), sticky="ew")
-        create_label(col_data, "Data").pack(anchor="w", pady=(0, 8))
+        create_label(col_data, "Data").pack(anchor="w", pady=(10, 0), padx=12)
         self.entry_data = ctk.CTkEntry(
             col_data,
-            placeholder_text="dd/mm/yyyy",
-            height=45,
+            placeholder_text="dd/mm/aaaa",
+            height=55,
             fg_color=self.colors["input_bg"],
             border_width=0,
-            corner_radius=12,
+            corner_radius=20,
             text_color=self.colors["text_main"],
             placeholder_text_color=self.colors["placeholder"],
             font=("Arial", 12),
         )
-        self.entry_data.pack(fill="x")
+        self.entry_data.pack(fill="x", pady=(0, 12), padx=12)
         if self.data_inicial:
             self.entry_data.insert(0, self.data_inicial.strftime("%d/%m/%Y"))
 
-        col_hora = ctk.CTkFrame(row2, fg_color="transparent")
+        col_hora = ctk.CTkFrame(row2, fg_color=self.colors["input_bg"], corner_radius=20)
         col_hora.grid(row=0, column=1, padx=(10, 0), sticky="ew")
-        create_label(col_hora, "Horario").pack(anchor="w", pady=(0, 8))
+        create_label(col_hora, "Horário").pack(anchor="w", pady=(10, 0), padx=12)
         self.entry_hora = ctk.CTkEntry(
             col_hora,
-            placeholder_text="HH:MM",
-            height=45,
+            placeholder_text="--:--",
+            height=55,
             fg_color=self.colors["input_bg"],
             border_width=0,
-            corner_radius=12,
+            corner_radius=20,
             text_color=self.colors["text_main"],
             font=("Arial", 12),
         )
-        self.entry_hora.pack(fill="x")
+        self.entry_hora.pack(fill="x", pady=(0, 12), padx=12)
 
-        create_label(container, "Tipo de Servico").pack(anchor="w", pady=(0, 8))
+        create_label(container, "Tipo de Serviço").pack(anchor="w", pady=(0, 8))
         self.combo_tipo = ctk.CTkComboBox(
             container,
             values=[tr("Consulta Geral"), tr("Vacinacao"), tr("Limpeza"), tr("Cirurgia"), tr("Ultrassom"), tr("Outros")],
             fg_color=self.colors["input_bg"],
             border_width=0,
-            corner_radius=12,
-            height=45,
+            corner_radius=20,
+            height=55,
             text_color=self.colors["text_main"],
-            font=("Arial", 12),
+            font=("Arial", 13),
             button_color=self.colors["input_bg"],
             button_hover_color=self.colors["input_hover"],
         )
         self.combo_tipo.pack(fill="x", pady=(0, 25))
         self.combo_tipo.set(tr("Consulta Geral"))
 
-        create_label(container, "Observacoes").pack(anchor="w", pady=(0, 8))
+        create_label(container, "Observações").pack(anchor="w", pady=(0, 8))
         self.text_obs = ctk.CTkTextbox(
             container,
-            height=80,
+            height=100,
             fg_color=self.colors["input_bg"],
             border_width=0,
-            corner_radius=12,
+            corner_radius=20,
             text_color=self.colors["text_main"],
             font=("Arial", 12),
         )
         self.text_obs.pack(fill="x", pady=(0, 25))
-        self.text_obs.insert("1.0", tr("Descreva brevemente..."))
+        self.text_obs.insert("1.0", tr("Sintomas ou notas extras..."))
 
-        btn_frame = ctk.CTkFrame(self.janela, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=40, pady=(0, 30))
+        btn_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=24, pady=(0, 30))
         btn_frame.columnconfigure((0, 1), weight=1)
 
         ctk.CTkButton(
@@ -208,32 +209,46 @@ class ModalAgendamento:
             text=tr("Cancelar"),
             height=50,
             fg_color=self.colors["cancel"],
-            text_color=self.colors["cancel_text"],
+            text_color=self.colors["text_main"],
             font=("Arial", 14, "bold"),
-            corner_radius=12,
+            corner_radius=20,
             hover_color=self.colors["cancel_hover"],
             command=self.janela.destroy,
-            border_width=1,
-            border_color=self.colors["border"],
+            border_width=0,
         ).grid(row=0, column=0, padx=(0, 10), sticky="ew")
 
         ctk.CTkButton(
             btn_frame,
-            text=tr("Agendar Agora"),
+            text=tr("Confirmar"),
             height=50,
             fg_color=self.colors["primary"],
             text_color="white",
             font=("Arial", 14, "bold"),
-            corner_radius=12,
+            corner_radius=20,
             hover_color=self.colors["primary_hover"],
             command=self.agendar_consulta,
         ).grid(row=0, column=1, padx=(10, 0), sticky="ew")
 
     def _finalizar_carregamento_pets(self, pets):
         self.pets = pets or []
-        pet_names = [p["nome"] for p in self.pets] if self.pets else [tr("Nenhum pet disponivel")]
+        self._atualizar_lista_pets()
+
+    def _atualizar_lista_pets(self):
+        if not self.pets:
+            pet_names = [tr("Nenhum pet disponivel")]
+            placeholder = tr("Nenhum pet disponivel")
+        else:
+            pet_names = [pet.get("nome", tr("Sem nome")) for pet in self.pets]
+            placeholder = tr("Selecione um pet...")
+
         self.combo_pet.configure(values=pet_names)
-        self.combo_pet.set(tr("Selecione um pet...") if self.pets else tr("Nenhum pet disponivel"))
+        self.combo_pet.set(placeholder)
+
+    def _filtrar_pets(self, event=None):
+        pass
+
+    def _limpar_filtros(self):
+        self._atualizar_lista_pets()
 
     def agendar_consulta(self):
         if self.combo_pet.get() in [tr("Selecione um pet..."), tr("Nenhum pet disponivel"), ""]:
