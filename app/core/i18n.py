@@ -214,6 +214,7 @@ TRANSLATIONS = {
         "TENDÊNCIA SEMANAL": "WEEKLY TREND",
         "HUMOR REGISTRADO": "RECORDED MOOD",
         "NOTA DO TUTOR": "OWNER NOTE",
+        "Atualizar": "Refresh",
         "Novo Medicamento": "New Medication",
         "Nome do Medicamento": "Medication Name",
         "Dosagem (ex: 50mg)": "Dosage (ex: 50mg)",

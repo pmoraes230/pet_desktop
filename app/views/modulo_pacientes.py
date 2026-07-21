@@ -13,6 +13,7 @@ import numpy as np
 from app.controllers.pet_controller import PetController
 from app.core.i18n import tr
 from app.core.theme import is_dark_mode
+from app.services.realtime_client import RealtimeClient
 from app.services.s3_client import upload_foto_pet_s3, get_url_s3
 from app.utils.loading import run_backend_task
 import uuid
@@ -98,6 +99,8 @@ class ModuloPacientes:
         self.content = content_frame
         self.pet_controller = pet_controller
         self.default_pet_image = None  # Para a imagem padrão do pet
+        self.realtime = None
+        self.active_aba = None
         self._load_default_pet_image() # Carrega imagem padrão
 
     def _load_default_pet_image(self):
@@ -131,6 +134,7 @@ class ModuloPacientes:
     def tela_pacientes(self):
         colors.apply_appearance()
         self.content.configure(fg_color=colors.NEUTRAL_50)
+        self._fechar_tempo_real_pet_profile()
 
         for widget in self.content.winfo_children():
             widget.destroy()
@@ -633,9 +637,9 @@ class ModuloPacientes:
         self.dados_pet_atual = pet_dados
 
         # --- Trecho corrigido do Header das Abas ---
-        tab_header = ctk.CTkFrame(self.right_col, fg_color=colors.GRAY_LIGHT, corner_radius=15, height=45) # Cor e raio ajustados
-        tab_header.pack(pady=30, padx=30, anchor="w")
-        tab_header.pack_propagate(False) # Garante que o height seja respeitado
+        tab_header = ctk.CTkFrame(self.right_col, fg_color=colors.GRAY_LIGHT, corner_radius=15, height=45)
+        tab_header.pack(fill="x", pady=30, padx=30)
+        tab_header.pack_propagate(False)
 
         self.abas_botoes = {}
         abas = [
@@ -644,20 +648,93 @@ class ModuloPacientes:
             (tr("EMOCIONAL"), "emocional")
         ]
 
-        for nome, chave in abas:
+        for index, (nome, chave) in enumerate(abas):
             btn = ctk.CTkButton(
-                tab_header, text=nome, width=120, corner_radius=18,
+                tab_header, text=nome, corner_radius=18,
                 fg_color="transparent", text_color=colors.TEXT_PRIMARY, font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"),
                 height=40,
                 command=lambda c=chave: self.mudar_aba_pet(c)
             )
-            btn.pack(side="left", padx=6, pady=4)
+            btn.pack(side="left", fill="both", expand=True, padx=(0 if index == 0 else 6, 6), pady=4)
             self.abas_botoes[chave] = btn
 
         self.container_abas = ctk.CTkFrame(self.right_col, fg_color="transparent")
         self.container_abas.pack(fill="both", expand=True, padx=40, pady=(0, 20))
 
+        self._abrir_tempo_real_pet_profile()
         self.mudar_aba_pet("sobre")
+
+    def _abrir_tempo_real_pet_profile(self):
+        if not self.pet_controller or not getattr(self.pet_controller, 'vet_id', None):
+            return
+
+        if self.realtime:
+            self._fechar_tempo_real_pet_profile()
+
+        vet_id = self.pet_controller.vet_id
+        pet_channel = f"pet:{self.pet_atual_id}" if getattr(self, 'pet_atual_id', None) else None
+        channels = [f"veterinario:{vet_id}"]
+        if pet_channel:
+            channels.append(pet_channel)
+
+        self.realtime = RealtimeClient(
+            on_message=self._on_realtime_message_pet,
+            on_status=lambda status: self._agendar_ui(self._on_realtime_status, status),
+            user_id=vet_id,
+            role="veterinario",
+        )
+        self.realtime.connect(channels)
+
+    def _fechar_tempo_real_pet_profile(self):
+        if self.realtime:
+            try:
+                self.realtime.close()
+            except Exception:
+                pass
+            self.realtime = None
+
+    def _agendar_ui(self, callback, *args):
+        try:
+            if not self.content or not self.content.winfo_exists():
+                return
+            self.content.after(0, lambda: callback(*args))
+        except Exception:
+            pass
+
+    def _on_realtime_status(self, status):
+        # Opcional: podemos logar ou exibir status em outro lugar.
+        print(f"Realtime Pet Profile: {status}")
+
+    def _on_realtime_message_pet(self, message):
+        if not message or not isinstance(message, dict):
+            return
+
+        event = message.get('event')
+        if event in {"connected", "subscribed"}:
+            return
+
+        payload = message.get('payload') or {}
+        pet_id = payload.get('pet_id') or payload.get('id_pet') or payload.get('ID_PET')
+        if pet_id and str(pet_id) != str(getattr(self, 'pet_atual_id', '')):
+            return
+
+        if event in {"emocional_atualizado", "diario_emocional_atualizado", "novo_diario_emocional", "mensagem_emocional"}:
+            self._agendar_ui(self._refresh_aba_emocional)
+            return
+
+        # Quando a mensagem vier de tutor e conter atualização de pet, atualiza a aba emocional
+        if payload.get('tipo') == 'emocional' or payload.get('tipo') == 'diario_emocional':
+            self._agendar_ui(self._refresh_aba_emocional)
+            return
+
+    def _refresh_aba_emocional(self):
+        if getattr(self, 'active_aba', None) != 'emocional':
+            return
+        if not hasattr(self, 'container_abas') or not self.container_abas.winfo_exists():
+            return
+        for child in self.container_abas.winfo_children():
+            child.destroy()
+        self._renderizar_aba_emocional()
 
     # --- MÉTODOS DE RENDERIZAÇÃO DAS ABAS ---
 
@@ -1013,66 +1090,85 @@ class ModuloPacientes:
                 {'data': '2024-02-05', 'nivel': 3, 'nota': 'Cheio de energia!'}
             ]
 
-        if not historico: # Caso ainda não haja dados mesmo com a simulação
-            datas = []
-            niveis = []
-            status_humor = "Não registrado"
-            emoji_humor = "❓"
-            nota_tutor = "Nenhuma nota registrada."
-        else:
-            datas = [
-                datetime.strptime(h.get('data', ''), "%Y-%m-%d").strftime("%d/%m")
-                for h in historico
-            ]
-            niveis = [h.get('nivel', 0) for h in historico]
-            
+        datas = []
+        niveis = []
+        status_humor = "Não registrado"
+        emoji_humor = "❓"
+        nota_tutor = "Nenhuma nota registrada."
+
+        if historico:
+            for h in historico:
+                data_texto = h.get('data', '')
+                try:
+                    data_texto = datetime.strptime(data_texto, "%Y-%m-%d").strftime("%d/%m")
+                except Exception:
+                    pass
+                datas.append(data_texto)
+                niveis.append(h.get('nivel', 0))
+
             ultimo = historico[-1]
             nota_tutor = ultimo.get('nota', 'Sem observações')
             nivel_atual = ultimo.get('nivel', 0)
-            
-            mapping = {3: ("Muito Feliz", "😊"), 2: ("Estável", "😐"), 1: ("Amuado", "😔")}
+            mapping = {3: ("Excelente!", "😊"), 2: ("Estável", "😐"), 1: ("Triste", "😔")}
             status_humor, emoji_humor = mapping.get(nivel_atual, ("Indefinido", "😶"))
 
         main_row = ctk.CTkFrame(self.container_abas, fg_color="transparent")
-        main_row.pack(fill="both", expand=True)
+        main_row.pack(fill="both", expand=True, padx=20, pady=10)
 
-        chart_container = ctk.CTkFrame(main_row, fg_color=colors.CARD_BG, corner_radius=20, border_width=1, border_color=colors.NEUTRAL_200)
-        chart_container.pack(side="left", fill="both", expand=True, padx=(0, 20))
+        chart_card = ctk.CTkFrame(main_row, fg_color=colors.CARD_BG, corner_radius=30, border_width=1, border_color=colors.NEUTRAL_200)
+        chart_card.pack(side="left", fill="both", expand=True, padx=(0, 20), pady=0)
 
-        ctk.CTkLabel(chart_container, text=tr("Bem-estar do Pet"), font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color=colors.TEXT_DARK).pack(anchor="w", padx=20, pady=(20, 0))
-        ctk.CTkLabel(chart_container, text=tr("TENDÊNCIA SEMANAL"), font=ctk.CTkFont(family="Helvetica", size=10, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=20)
+        header_row = ctk.CTkFrame(self.container_abas, fg_color="transparent")
+        header_row.pack(fill="x", pady=(0, 18))
+        ctk.CTkLabel(header_row, text=tr("Bem-estar do Pet"), font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"), text_color=colors.TEXT_DARK).pack(side="left")
+        ctk.CTkButton(
+            header_row,
+            text=tr("Atualizar"),
+            fg_color=colors.ACCENT_GREEN,
+            hover_color=colors.ACCENT_GREEN_HOVER,
+            text_color="white",
+            font=ctk.CTkFont(family="Helvetica", size=11, weight="bold"),
+            height=34,
+            corner_radius=12,
+            command=self._refresh_aba_emocional
+        ).pack(side="right")
 
-        fig, ax = plt.subplots(figsize=(5, 3), dpi=100)
+        ctk.CTkLabel(chart_card, text=tr("TENDÊNCIA SEMANAL"), font=ctk.CTkFont(family="Helvetica", size=10, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=24, pady=(0, 20))
+        ctk.CTkLabel(chart_card, text=tr("Nível de Felicidade"), font=ctk.CTkFont(family="Helvetica", size=12, weight="bold"), text_color=colors.ACCENT_GREEN).pack(anchor="w", padx=24, pady=(0, 16))
+
+        fig, ax = plt.subplots(figsize=(5, 2.7), dpi=100)
         fig.patch.set_facecolor(colors.CARD_BG)
         ax.set_facecolor(colors.CARD_BG)
-        
         ax.plot(datas, niveis, color=colors.ACCENT_GREEN, marker='o', linewidth=3, markersize=8)
-        ax.fill_between(datas, niveis, color=colors.ACCENT_GREEN, alpha=0.1)
-        
-        ax.set_ylim(0, 4)
+        ax.fill_between(datas, niveis, color=colors.ACCENT_GREEN, alpha=0.12)
+        ax.set_ylim(0.5, 3.5)
         ax.set_yticks([1, 2, 3])
-        ax.set_yticklabels(["😔", "😐", "😊"])
+        ax.set_yticklabels(["😔", "😐", "😊"], fontsize=10)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.grid(axis='y', linestyle='--', alpha=0.3)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_color(colors.NEUTRAL_200)
+        ax.tick_params(axis='x', colors=colors.TEXT_SECONDARY)
+        ax.tick_params(axis='y', colors=colors.TEXT_SECONDARY)
+        ax.grid(axis='y', linestyle='--', alpha=0.25)
         plt.tight_layout()
 
-        canvas = FigureCanvasTkAgg(fig, master=chart_container)
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        canvas = FigureCanvasTkAgg(fig, master=chart_card)
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=20, pady=(0, 24))
 
-        right_panel = ctk.CTkFrame(main_row, fg_color="transparent", width=250)
-        right_panel.pack(side="left", fill="y")
+        right_column = ctk.CTkFrame(main_row, fg_color="transparent", width=320)
+        right_column.pack(side="left", fill="y")
 
-        humor_card = ctk.CTkFrame(right_panel, fg_color=colors.ACCENT_GREEN, corner_radius=20)
-        humor_card.pack(fill="x", pady=(0, 20))
-        ctk.CTkLabel(humor_card, text=tr("HUMOR REGISTRADO"), font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color="white").pack(pady=(15, 5))
-        ctk.CTkLabel(humor_card, text=emoji_humor, font=("Arial", 40)).pack()
-        ctk.CTkLabel(humor_card, text=status_humor, font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color="white").pack(pady=(5, 15))
+        humor_card = ctk.CTkFrame(right_column, fg_color=colors.ACCENT_GREEN, corner_radius=30)
+        humor_card.pack(fill="x", pady=(0, 20), padx=(0, 0))
+        ctk.CTkLabel(humor_card, text=tr("HUMOR REGISTRADO"), font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color="white").pack(pady=(22, 6))
+        ctk.CTkLabel(humor_card, text=emoji_humor, font=ctk.CTkFont(family="Arial", size=44), text_color="white").pack()
+        ctk.CTkLabel(humor_card, text=status_humor, font=ctk.CTkFont(family="Helvetica", size=16, weight="bold"), text_color="white").pack(pady=(8, 22))
 
-        nota_card = ctk.CTkFrame(right_panel, fg_color=colors.NEUTRAL_100, corner_radius=15) # Cor ajustada
-        nota_card.pack(fill="x")
-        ctk.CTkLabel(nota_card, text=f"💬 {tr('NOTA DO TUTOR')}", font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=15, pady=(10, 0))
-        ctk.CTkLabel(nota_card, text=f'"{nota_tutor}"', font=ctk.CTkFont(family="Helvetica", size=12, weight="italic"), text_color=colors.TEXT_SECONDARY, wraplength=200).pack(anchor="w", padx=15, pady=(5, 15))
+        nota_card = ctk.CTkFrame(right_column, fg_color=colors.NEUTRAL_100, corner_radius=30)
+        nota_card.pack(fill="x", padx=(0, 0))
+        ctk.CTkLabel(nota_card, text=tr("NOTA DO TUTOR"), font=ctk.CTkFont(family="Helvetica", size=9, weight="bold"), text_color=colors.NEUTRAL_500).pack(anchor="w", padx=20, pady=(20, 8))
+        ctk.CTkLabel(nota_card, text=f'"{nota_tutor}"', wraplength=280, justify="left", font=ctk.CTkFont(family="Helvetica", size=12, slant="italic"), text_color=colors.TEXT_DARK).pack(anchor="w", padx=20, pady=(0, 20))
         
     def abrir_modal_novo_medicamento(self):
         self.overlay_med = ctk.CTkFrame(self.content.master, fg_color="black") # Cor preta para o overlay
