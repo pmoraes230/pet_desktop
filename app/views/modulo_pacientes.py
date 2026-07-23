@@ -548,19 +548,6 @@ class ModuloPacientes:
         # Tentar carregar foto do S3 se existir (com delay para garantir renderização)
         self.content.after(500, lambda: self._carregar_foto_pet_perfil(id_pet))
         
-        # Botão para mudar foto (overlay)
-        btn_mudar = ctk.CTkButton(
-            img_container,
-            text=f"📷 {tr('Mudar Foto')}",
-            font=("Helvetica", 12, "bold"), # Fonte ajustada
-            text_color="white",
-            fg_color=colors.ACCENT_GREEN,
-            hover_color=colors.ACCENT_GREEN_HOVER,
-            height=38,
-            corner_radius=12,
-            command=self.escolher_foto_pet
-        )
-        btn_mudar.place(relx=0.5, rely=0.88, anchor="center")
 
         self.entry_nome_pet = ctk.CTkEntry(
             card_esq,
